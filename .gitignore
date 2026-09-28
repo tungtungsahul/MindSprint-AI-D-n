@@ -1,0 +1,18 @@
+# Python
+a/.venv/
+**/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+
+# OS/editor
+.DS_Store
+*.swp
+*.swo
+.vscode/
