@@ -1,0 +1,264 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MindSprint.Api.Data;
+using MindSprint.Api.Models;
+using MindSprint.Api.Services;
+using UglyToad.PdfPig;
+
+namespace MindSprint.Api.Controllers;
+
+public record TitleDto(string Title);
+public record TextSourceDto(string Title, string Text);
+public record UrlSourceDto(string Url);
+public record ChatDto(string Question, List<ChatTurn>? History);
+public record GenDto(string Type, string? Focus, int Count = 10);
+public record NoteDto(string Title, string Content);
+public record SaveCardsDto(List<GeneratedCard> Cards);
+
+/// <summary>Sổ tay học tập kiểu NotebookLM: nguồn tài liệu, hỏi đáp có trích dẫn, tạo tài liệu ôn tập, ghi chú.</summary>
+[Authorize, Route("api/notebooks")]
+public class NotebooksController(AppDbContext db, NotebookAi ai, IHttpClientFactory httpFactory) : ApiBase
+{
+    private const int MaxSources = 20;
+    private const int MaxCharsPerSource = 200_000;
+    private const long MaxFileBytes = 10 * 1024 * 1024;
+
+    private Task<Notebook?> Own(int id) => db.Notebooks.FirstOrDefaultAsync(n => n.Id == id && n.UserId == UserId);
+    private Task<List<NotebookSource>> SourcesOf(int id) => db.NotebookSources.Where(s => s.NotebookId == id).OrderBy(s => s.Id).ToListAsync();
+
+    // ---------- Notebook ----------
+    [HttpGet]
+    public async Task<IActionResult> List() => Ok(await db.Notebooks.Where(n => n.UserId == UserId)
+        .OrderByDescending(n => n.Id).Select(n => new { n.Id, n.Title, sources = n.Sources.Count }).ToListAsync());
+
+    [HttpPost]
+    public async Task<IActionResult> Create(TitleDto dto)
+    {
+        var n = new Notebook { UserId = UserId, Title = string.IsNullOrWhiteSpace(dto.Title) ? "Sổ tay mới" : dto.Title.Trim() };
+        db.Notebooks.Add(n);
+        await db.SaveChangesAsync();
+        return Ok(new { n.Id, n.Title, sources = 0 });
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var n = await Own(id);
+        if (n is null) return NotFound();
+        db.Notebooks.Remove(n);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    // ---------- Sources ----------
+    [HttpGet("{id:int}/sources")]
+    public async Task<IActionResult> Sources(int id)
+    {
+        if (await Own(id) is null) return NotFound();
+        return Ok((await SourcesOf(id)).Select(s => new { s.Id, s.Title, s.Type, s.Origin, chars = s.Content.Length }));
+    }
+
+    [HttpPost("{id:int}/sources/text")]
+    public async Task<IActionResult> AddText(int id, TextSourceDto dto)
+    {
+        if (await Own(id) is null) return NotFound();
+        if (string.IsNullOrWhiteSpace(dto.Text)) return BadRequest(new { message = "Nội dung trống." });
+        return await Store(id, string.IsNullOrWhiteSpace(dto.Title) ? "Văn bản dán" : dto.Title.Trim(), "text", null, dto.Text);
+    }
+
+    [HttpPost("{id:int}/sources/file"), RequestSizeLimit(MaxFileBytes)]
+    public async Task<IActionResult> AddFile(int id, IFormFile file)
+    {
+        if (await Own(id) is null) return NotFound();
+        if (file is null || file.Length == 0) return BadRequest(new { message = "File trống." });
+        if (file.Length > MaxFileBytes) return BadRequest(new { message = "File tối đa 10MB." });
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        string text, type;
+        try
+        {
+            if (ext == ".pdf")
+            {
+                using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                ms.Position = 0;
+                using var pdf = PdfDocument.Open(ms);
+                text = string.Join("\n\n", pdf.GetPages().Select(p => p.Text));
+                type = "pdf";
+            }
+            else if (ext is ".txt" or ".md" or ".csv")
+            {
+                using var r = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
+                text = await r.ReadToEndAsync();
+                type = "file";
+            }
+            else return BadRequest(new { message = "Chỉ hỗ trợ PDF, TXT, MD, CSV." });
+        }
+        catch (Exception) { return BadRequest(new { message = "Không đọc được file này." }); }
+
+        if (string.IsNullOrWhiteSpace(text)) return BadRequest(new { message = "Không trích xuất được chữ (PDF dạng ảnh scan chưa được hỗ trợ)." });
+        return await Store(id, Path.GetFileNameWithoutExtension(file.FileName), type, file.FileName, text);
+    }
+
+    [HttpPost("{id:int}/sources/url")]
+    public async Task<IActionResult> AddUrl(int id, UrlSourceDto dto)
+    {
+        if (await Own(id) is null) return NotFound();
+        if (!Uri.TryCreate(dto.Url, UriKind.Absolute, out var uri) || !await IsPublicHttpAsync(uri))
+            return BadRequest(new { message = "URL không hợp lệ hoặc không được phép." });
+        try
+        {
+            var http = httpFactory.CreateClient("web");
+            using var res = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+            if (!res.IsSuccessStatusCode) return BadRequest(new { message = $"Trang trả về lỗi {(int)res.StatusCode} (không theo redirect)." });
+            var buf = new byte[2_000_000];
+            using var stream = await res.Content.ReadAsStreamAsync();
+            int n = 0, r;
+            while (n < buf.Length && (r = await stream.ReadAsync(buf.AsMemory(n))) > 0) n += r;
+            var html = Encoding.UTF8.GetString(buf, 0, n);
+
+            var title = Regex.Match(html, "<title[^>]*>(.*?)</title>", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value;
+            html = Regex.Replace(html, "<(script|style|noscript)[\\s\\S]*?</\\1>", " ", RegexOptions.IgnoreCase);
+            var text = WebUtility.HtmlDecode(Regex.Replace(Regex.Replace(html, "<[^>]+>", " "), "\\s+", " ")).Trim();
+            if (text.Length < 50) return BadRequest(new { message = "Không lấy được nội dung từ trang này." });
+            return await Store(id, WebUtility.HtmlDecode(title).Trim() is { Length: > 0 } t ? t : uri.Host, "url", uri.ToString(), text);
+        }
+        catch (Exception) { return BadRequest(new { message = "Không tải được URL." }); }
+    }
+
+    [HttpDelete("{id:int}/sources/{sid:int}")]
+    public async Task<IActionResult> DeleteSource(int id, int sid)
+    {
+        if (await Own(id) is null) return NotFound();
+        var s = await db.NotebookSources.FirstOrDefaultAsync(x => x.Id == sid && x.NotebookId == id);
+        if (s is null) return NotFound();
+        db.NotebookSources.Remove(s);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    // ---------- AI ----------
+    [HttpPost("{id:int}/chat")]
+    public async Task<IActionResult> Chat(int id, ChatDto dto)
+    {
+        if (await Own(id) is null) return NotFound();
+        var src = await SourcesOf(id);
+        if (src.Count == 0) return BadRequest(new { message = "Hãy thêm ít nhất một nguồn trước khi hỏi." });
+        if (string.IsNullOrWhiteSpace(dto.Question)) return BadRequest(new { message = "Câu hỏi trống." });
+        return await Guard(() => ai.ChatAsync(src, dto.Question.Trim(), dto.History));
+    }
+
+    [HttpGet("{id:int}/suggestions")]
+    public async Task<IActionResult> Suggestions(int id)
+    {
+        if (await Own(id) is null) return NotFound();
+        var src = await SourcesOf(id);
+        if (src.Count == 0) return Ok(Array.Empty<string>());
+        return await Guard(() => ai.SuggestQuestionsAsync(src));
+    }
+
+    [HttpPost("{id:int}/generate")]
+    public async Task<IActionResult> Generate(int id, GenDto dto)
+    {
+        if (await Own(id) is null) return NotFound();
+        var src = await SourcesOf(id);
+        if (src.Count == 0) return BadRequest(new { message = "Hãy thêm ít nhất một nguồn trước." });
+        return await Guard(async () =>
+        {
+            var (isJson, content) = await ai.GenerateAsync(src, dto.Type, dto.Focus, dto.Count);
+            return new { type = dto.Type, isJson, content };
+        });
+    }
+
+    // Lưu flashcard AI tạo vào thư viện thẻ (cùng hệ thống SRS)
+    [HttpPost("{id:int}/save-cards")]
+    public async Task<IActionResult> SaveCards(int id, SaveCardsDto dto)
+    {
+        var nb = await Own(id);
+        if (nb is null) return NotFound();
+        var cards = dto.Cards.Where(c => !string.IsNullOrWhiteSpace(c.Question) && !string.IsNullOrWhiteSpace(c.Answer)).Take(50).ToList();
+        db.Flashcards.AddRange(cards.Select(c => new Flashcard
+        {
+            Category = "general", SubCategory = nb.Title, Question = c.Question, Answer = c.Answer, Example = c.Example, OwnerId = UserId
+        }));
+        await db.SaveChangesAsync();
+        return Ok(new { saved = cards.Count });
+    }
+
+    // ---------- Notes ----------
+    [HttpGet("{id:int}/notes")]
+    public async Task<IActionResult> Notes(int id)
+    {
+        if (await Own(id) is null) return NotFound();
+        return Ok(await db.NotebookNotes.Where(n => n.NotebookId == id).OrderByDescending(n => n.Id).ToListAsync());
+    }
+
+    [HttpPost("{id:int}/notes")]
+    public async Task<IActionResult> AddNote(int id, NoteDto dto)
+    {
+        if (await Own(id) is null) return NotFound();
+        var n = new NotebookNote { NotebookId = id, Title = string.IsNullOrWhiteSpace(dto.Title) ? "Ghi chú" : dto.Title.Trim(), Content = dto.Content };
+        db.NotebookNotes.Add(n);
+        await db.SaveChangesAsync();
+        return Ok(n);
+    }
+
+    [HttpDelete("{id:int}/notes/{nid:int}")]
+    public async Task<IActionResult> DeleteNote(int id, int nid)
+    {
+        if (await Own(id) is null) return NotFound();
+        var n = await db.NotebookNotes.FirstOrDefaultAsync(x => x.Id == nid && x.NotebookId == id);
+        if (n is null) return NotFound();
+        db.NotebookNotes.Remove(n);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    // ---------- helpers ----------
+    private async Task<IActionResult> Store(int id, string title, string type, string? origin, string text)
+    {
+        if (await db.NotebookSources.CountAsync(s => s.NotebookId == id) >= MaxSources)
+            return BadRequest(new { message = $"Tối đa {MaxSources} nguồn mỗi sổ tay." });
+        text = text.Trim();
+        if (text.Length > MaxCharsPerSource) text = text[..MaxCharsPerSource];
+        var s = new NotebookSource { NotebookId = id, Title = title.Length > 200 ? title[..200] : title, Type = type, Origin = origin, Content = text };
+        db.NotebookSources.Add(s);
+        await db.SaveChangesAsync();
+        return Ok(new { s.Id, s.Title, s.Type, s.Origin, chars = s.Content.Length });
+    }
+
+    private static async Task<IActionResult> GuardImpl<T>(Func<Task<T>> work)
+    {
+        try { return new OkObjectResult(await work()); }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException or ArgumentException or TaskCanceledException)
+        { return new ObjectResult(new { message = "AI gặp lỗi: " + ex.Message }) { StatusCode = 502 }; }
+    }
+    private Task<IActionResult> Guard<T>(Func<Task<T>> work) => GuardImpl(work);
+
+    // Chống SSRF: chỉ http/https tới IP công khai
+    private static async Task<bool> IsPublicHttpAsync(Uri u)
+    {
+        if (u.Scheme is not ("http" or "https")) return false;
+        try
+        {
+            var ips = await Dns.GetHostAddressesAsync(u.Host);
+            return ips.Length > 0 && ips.All(ip => !IsPrivate(ip));
+        }
+        catch { return false; }
+    }
+
+    private static bool IsPrivate(IPAddress ip)
+    {
+        if (IPAddress.IsLoopback(ip)) return true;
+        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
+        if (ip.AddressFamily == AddressFamily.InterNetworkV6)
+            return ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || (ip.GetAddressBytes()[0] & 0xFE) == 0xFC;
+        var b = ip.GetAddressBytes();
+        return b[0] is 0 or 10 or 127 || (b[0] == 172 && b[1] is >= 16 and <= 31) || (b[0] == 192 && b[1] == 168) || (b[0] == 169 && b[1] == 254);
+    }
+}
