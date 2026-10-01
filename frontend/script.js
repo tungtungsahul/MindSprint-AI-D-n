@@ -405,6 +405,45 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateStats();
                 }
             }).catch(err => console.warn('Không tải được thẻ từ server:', err.message));
+
+            // #14 – Load study schedule from server
+            MindSprintApi.studyGetSchedule().then(slots => {
+                if (Array.isArray(slots) && slots.length) {
+                    timetableSlots.length = 0;
+                    slots.forEach(s => {
+                        // Convert server format to frontend format
+                        // dayOfWeek: 0=Sun..6=Sat -> dayVal: 2=Mon..8=Sun
+                        const dayVal = s.dayOfWeek === 0 ? 8 : s.dayOfWeek + 2;
+                        const [hh, mm] = s.startTime.split(':').map(Number);
+                        const endMinutes = hh * 60 + mm + s.durationMinutes;
+                        const endH = Math.floor(endMinutes / 60);
+                        const endM = endMinutes % 60;
+                        const startStr = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+                        const endStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                        
+                        timetableSlots.push({
+                            id: Date.now() + Math.random(), // temporary, will be replaced
+                            serverId: s.id,
+                            day: dayVal,
+                            start: startStr,
+                            end: endStr,
+                            category: s.label?.split(' - ')[0] || 'mixed',
+                            note: s.label?.includes(' - ') ? s.label.split(' - ').slice(1).join(' - ') : '',
+                            durationMinutes: s.durationMinutes,
+                            dayOfWeek: s.dayOfWeek
+                        });
+                    });
+                    localStorage.setItem('timetable-slots', JSON.stringify(timetableSlots));
+                }
+            }).catch(err => console.warn('Không tải được lịch học từ server:', err.message));
+
+            // #14 – Load streak from server
+            MindSprintApi.studyGetStreak().then(streak => {
+                if (streak) {
+                    localStorage.setItem('study-streak', streak.currentStreak.toString());
+                    updateStats(); // updates home streak display
+                }
+            }).catch(err => console.warn('Không tải được streak từ server:', err.message));
         }
 
         // Setup views
@@ -1095,6 +1134,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (window.MindSprintApi && MindSprintApi.isLoggedIn()) {
             MindSprintApi.review(card.id, score === 5).catch(err => console.warn('Sync SRS lỗi:', err.message));
+
+            // #14 – Upsert study day (VN date)
+            const vnDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }); // YYYY-MM-DD in VN timezone
+            MindSprintApi.studyUpsertDay(vnDate, 1, 1).catch(err => console.warn('Sync study day lỗi:', err.message));
         }
         updateStats();
     }
@@ -2196,7 +2239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeTimetableModalBtn.addEventListener('click', () => timetableModal.classList.remove('active'));
         cancelTimetableModalBtn.addEventListener('click', () => timetableModal.classList.remove('active'));
 
-        timetableForm.addEventListener('submit', (e) => {
+        timetableForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const dayVal = parseInt(document.getElementById('slot-day').value, 10);
@@ -2210,29 +2253,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Calculate duration in minutes
+            const [sh, sm] = startVal.split(':').map(Number);
+            const [eh, em] = endVal.split(':').map(Number);
+            const durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+
+            // Map dayVal (2=Mon..8=Sun) to DayOfWeek (0=Sun..6=Sat)
+            const dayOfWeek = dayVal === 8 ? 0 : dayVal;
+
+            const newSlot = {
+                day: dayVal,
+                start: startVal,
+                end: endVal,
+                category: catVal,
+                note: noteVal,
+                durationMinutes: durationMinutes,
+                dayOfWeek: dayOfWeek
+            };
+
             if (editingSlotId === null) {
                 // Add new slot
-                const newSlot = {
-                    id: Date.now(),
-                    day: dayVal,
-                    start: startVal,
-                    end: endVal,
-                    category: catVal,
-                    note: noteVal
-                };
+                newSlot.id = Date.now();
                 timetableSlots.push(newSlot);
             } else {
                 // Edit existing slot
                 const idx = timetableSlots.findIndex(s => s.id === editingSlotId);
                 if (idx !== -1) {
-                    timetableSlots[idx] = {
-                        id: editingSlotId,
-                        day: dayVal,
-                        start: startVal,
-                        end: endVal,
-                        category: catVal,
-                        note: noteVal
-                    };
+                    timetableSlots[idx] = { ...timetableSlots[idx], ...newSlot };
                 }
             }
 
@@ -2243,6 +2290,31 @@ document.addEventListener('DOMContentLoaded', () => {
             
             renderTimetable();
             updateTodayWidget();
+
+            // #14 – Sync to server if logged in
+            if (MindSprintApi.isLoggedIn()) {
+                try {
+                    if (editingSlotId === null) {
+                        // Create new schedule on server
+                        const result = await MindSprintApi.studyCreateSchedule(dayOfWeek, startVal, durationMinutes, catVal + (noteVal ? ' - ' + noteVal : ''));
+                        // Update local slot with server ID
+                        const localSlot = timetableSlots.find(s => s.id === newSlot.id);
+                        if (localSlot) localSlot.serverId = result.id;
+                    } else {
+                        // Update existing schedule on server
+                        const localSlot = timetableSlots.find(s => s.id === editingSlotId);
+                        if (localSlot?.serverId) {
+                            await MindSprintApi.studyUpdateSchedule(localSlot.serverId, dayOfWeek, startVal, durationMinutes, catVal + (noteVal ? ' - ' + noteVal : ''));
+                        }
+                    }
+                    localStorage.setItem('timetable-slots', JSON.stringify(timetableSlots));
+                } catch (err) {
+                    console.warn('Lỗi đồng bộ lịch học:', err.message);
+                    // Queue for offline sync if needed
+                }
+            }
+            
+            editingSlotId = null;
         });
 
         // Toggle browser notifications settings
@@ -2318,9 +2390,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Delete event handler
             const delBtn = slotDiv.querySelector('.delete-slot-btn');
-            delBtn.addEventListener('click', (e) => {
+            delBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 if (confirm(`Bạn có muốn xóa giờ học (${slot.start} - ${slot.end}) khỏi lịch trình không?`)) {
+                    // #14 – Delete from server if logged in
+                    if (MindSprintApi.isLoggedIn() && slot.serverId) {
+                        try {
+                            await MindSprintApi.studyDeleteSchedule(slot.serverId);
+                        } catch (err) {
+                            console.warn('Lỗi xóa lịch học trên server:', err.message);
+                        }
+                    }
                     timetableSlots = timetableSlots.filter(s => s.id !== slot.id);
                     localStorage.setItem('timetable-slots', JSON.stringify(timetableSlots));
                     renderTimetable();
