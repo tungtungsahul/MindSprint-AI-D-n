@@ -13,6 +13,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<NotebookSource> NotebookSources => Set<NotebookSource>();
     public DbSet<NotebookNote> NotebookNotes => Set<NotebookNote>();
 
+    // #5 – Refresh token
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    // #14 – Streak & lịch học
+    public DbSet<UserStudyDay> UserStudyDays => Set<UserStudyDay>();
+    public DbSet<StudySchedule> StudySchedules => Set<StudySchedule>();
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         b.Entity<User>().HasIndex(u => u.Email).IsUnique();
@@ -24,5 +31,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<Notebook>().HasMany(n => n.Sources).WithOne().HasForeignKey(x => x.NotebookId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<Notebook>().HasMany(n => n.Notes).WithOne().HasForeignKey(x => x.NotebookId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<KanbanTask>().HasIndex(t => new { t.UserId, t.Status, t.Position });
+
+        // #5 – Refresh token: unique index để lookup nhanh và thu hồi
+        b.Entity<RefreshToken>().HasIndex(r => r.Token).IsUnique();
+        b.Entity<RefreshToken>().HasOne(r => r.User).WithMany()
+            .HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        // #14 – Ngày học không trùng trên cùng 1 user; index lịch học
+        b.Entity<UserStudyDay>().HasIndex(d => new { d.UserId, d.StudyDate }).IsUnique();
+        b.Entity<StudySchedule>().HasIndex(s => new { s.UserId, s.DayOfWeek });
     }
 }

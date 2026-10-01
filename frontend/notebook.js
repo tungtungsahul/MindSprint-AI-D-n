@@ -267,7 +267,7 @@
         const act = el.dataset.act;
         if (act === 'auth-toggle') { e.preventDefault(); authMode = authMode === 'login' ? 'register' : 'login'; return renderAuth(); }
         if (act === 'auth-submit') return submitAuth(el);
-        if (act === 'logout') { stopAudio(); api.logout(); state.nb = null; return renderAuth(); }
+        if (act === 'logout') { stopAudio(); api.revokeAllSessions(); state.nb = null; return renderAuth(); }
         if (act === 'nb-new') {
             const t = prompt('Tên sổ tay mới:'); if (!t || !t.trim()) return;
             return run(el, async () => { const n = await api.nbCreate(t.trim()); state.notebooks.unshift(n); await loadNotebook(n.id); renderMain(); });
