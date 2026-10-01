@@ -161,6 +161,21 @@
 
         // Gemini
         aiFlashcards: (text, count = 10) => request('/api/ai/flashcards', { method: 'POST', body: { text, count } }),
-        aiQuiz: (text, count = 10) => request('/api/ai/quiz', { method: 'POST', body: { text, count } })
+        aiQuiz: (text, count = 10) => request('/api/ai/quiz', { method: 'POST', body: { text, count } }),
+
+        // Study Stats (Issue #14)
+        studyGetDays: (from, to) => {
+            const params = new URLSearchParams();
+            if (from) params.append('from', from);
+            if (to) params.append('to', to);
+            return request('/api/study/days?' + params.toString());
+        },
+        studyUpsertDay: (studyDate, cardsReviewed, minutesStudied) => request('/api/study/days', { method: 'POST', body: { studyDate, cardsReviewed, minutesStudied } }),
+        studyGetStreak: () => request('/api/study/streak'),
+        studyGetSchedule: () => request('/api/study/schedule'),
+        studyCreateSchedule: (dayOfWeek, startTime, durationMinutes, label) => request('/api/study/schedule', { method: 'POST', body: { dayOfWeek, startTime, durationMinutes, label } }),
+        studyUpdateSchedule: (id, dayOfWeek, startTime, durationMinutes, label) => request('/api/study/schedule/' + id, { method: 'PUT', body: { dayOfWeek, startTime, durationMinutes, label } }),
+        studyToggleSchedule: (id) => request('/api/study/schedule/' + id + '/toggle', { method: 'PATCH' }),
+        studyDeleteSchedule: (id) => request('/api/study/schedule/' + id, { method: 'DELETE' })
     };
 })();
