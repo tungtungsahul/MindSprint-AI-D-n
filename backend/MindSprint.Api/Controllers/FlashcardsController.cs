@@ -6,7 +6,23 @@ using MindSprint.Api.Models;
 
 namespace MindSprint.Api.Controllers;
 
-public record CardDto(string? ExternalId, string Category, string? SubCategory, string Question, string Answer, string? Example);
+public record CardDto(string? ExternalId, string Category, string? SubCategory, string Question, string Answer, string? Example, int? Version);
+public class CardResponse
+{
+    public string Id { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string? SubCategory { get; set; }
+    public string Question { get; set; } = "";
+    public string Answer { get; set; } = "";
+    public string? Example { get; set; }
+    public string Status { get; set; } = "";
+    public int Repetition { get; set; }
+    public int Interval { get; set; }
+    public double EFactor { get; set; }
+    public long NextReviewDate { get; set; }
+    public int Version { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
 
 [Authorize, Route("api/flashcards")]
 public class FlashcardsController(AppDbContext db) : ApiBase
@@ -22,16 +38,22 @@ public class FlashcardsController(AppDbContext db) : ApiBase
 
         var rows = await q.GroupJoin(db.CardProgresses.Where(p => p.UserId == uid), f => f.Id, p => p.FlashcardId,
                 (f, ps) => new { f, p = ps.FirstOrDefault() })
-            .Select(x => new
+            .Select(x => new CardResponse
             {
-                id = x.f.ExternalId, category = x.f.Category, subCategory = x.f.SubCategory,
-                question = x.f.Question, answer = x.f.Answer, example = x.f.Example,
-                status = x.p != null ? x.p.Status : "new",
-                repetition = x.p != null ? x.p.Repetition : 0,
-                interval = x.p != null ? x.p.IntervalDays : 1,
-                efactor = x.p != null ? x.p.EFactor : 2.5,
-                nextReviewDate = x.p != null && x.p.NextReviewDate != null
-                    ? EF.Functions.DateDiffSecond(new DateTime(1970, 1, 1), x.p.NextReviewDate.Value) * 1000L : 0L
+                Id = x.f.ExternalId,
+                Category = x.f.Category,
+                SubCategory = x.f.SubCategory,
+                Question = x.f.Question,
+                Answer = x.f.Answer,
+                Example = x.f.Example,
+                Status = x.p != null ? x.p.Status : "new",
+                Repetition = x.p != null ? x.p.Repetition : 0,
+                Interval = x.p != null ? x.p.IntervalDays : 1,
+                EFactor = x.p != null ? x.p.EFactor : 2.5,
+                NextReviewDate = x.p != null && x.p.NextReviewDate != null
+                    ? EF.Functions.DateDiffSecond(new DateTime(1970, 1, 1), x.p.NextReviewDate.Value) * 1000L : 0L,
+                Version = x.f.Version,
+                UpdatedAt = x.f.UpdatedAt
             }).ToListAsync();
         return Ok(rows);
     }
@@ -42,12 +64,14 @@ public class FlashcardsController(AppDbContext db) : ApiBase
         var card = new Flashcard
         {
             Category = dto.Category, SubCategory = dto.SubCategory, Question = dto.Question,
-            Answer = dto.Answer, Example = dto.Example, OwnerId = UserId
+            Answer = dto.Answer, Example = dto.Example, OwnerId = UserId,
+            UpdatedAt = DateTime.UtcNow,
+            Version = 1
         };
         if (!string.IsNullOrWhiteSpace(dto.ExternalId)) card.ExternalId = dto.ExternalId;
         db.Flashcards.Add(card);
         await db.SaveChangesAsync();
-        return Ok(new { id = card.ExternalId });
+        return Ok(new { id = card.ExternalId, version = card.Version, updatedAt = card.UpdatedAt });
     }
 
     [HttpPut("{externalId}")]
@@ -55,17 +79,52 @@ public class FlashcardsController(AppDbContext db) : ApiBase
     {
         var card = await db.Flashcards.FirstOrDefaultAsync(f => f.ExternalId == externalId && f.OwnerId == UserId);
         if (card is null) return NotFound();
-        (card.Category, card.SubCategory, card.Question, card.Answer, card.Example) =
-            (dto.Category, dto.SubCategory, dto.Question, dto.Answer, dto.Example);
+
+        // #9 – Optimistic locking: check version
+        if (dto.Version.HasValue && dto.Version.Value != card.Version)
+        {
+            return Conflict(new { message = "Thẻ đã được sửa bởi thiết bị khác. Vui lòng tải lại.", serverVersion = card.Version, serverCard = new CardResponse
+            {
+                Id = card.ExternalId,
+                Category = card.Category,
+                SubCategory = card.SubCategory,
+                Question = card.Question,
+                Answer = card.Answer,
+                Example = card.Example,
+                Status = "new",
+                Repetition = 0,
+                Interval = 1,
+                EFactor = 2.5,
+                NextReviewDate = 0,
+                Version = card.Version,
+                UpdatedAt = card.UpdatedAt
+            }});
+        }
+
+        card.Category = dto.Category;
+        card.SubCategory = dto.SubCategory;
+        card.Question = dto.Question;
+        card.Answer = dto.Answer;
+        card.Example = dto.Example;
+        card.UpdatedAt = DateTime.UtcNow;
+        card.Version++;
+
         await db.SaveChangesAsync();
-        return NoContent();
+        return Ok(new { version = card.Version, updatedAt = card.UpdatedAt });
     }
 
     [HttpDelete("{externalId}")]
-    public async Task<IActionResult> Delete(string externalId)
+    public async Task<IActionResult> Delete(string externalId, [FromQuery] int? version)
     {
         var card = await db.Flashcards.FirstOrDefaultAsync(f => f.ExternalId == externalId && f.OwnerId == UserId);
         if (card is null) return NotFound();
+
+        // #9 – Optional version check on delete
+        if (version.HasValue && version.Value != card.Version)
+        {
+            return Conflict(new { message = "Thẻ đã thay đổi. Vui lòng tải lại.", serverVersion = card.Version });
+        }
+
         db.Flashcards.Remove(card);
         await db.SaveChangesAsync();
         return NoContent();

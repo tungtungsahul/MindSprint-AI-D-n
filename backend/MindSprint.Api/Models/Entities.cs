@@ -38,6 +38,8 @@ public class Flashcard
     public string? Example { get; set; }
     public int? OwnerId { get; set; }
     public User? Owner { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow; // #9 – optimistic locking
+    public int Version { get; set; } = 1;                     // #9 – optimistic locking
 }
 
 /// <summary>Trạng thái Spaced Repetition của từng người dùng trên từng thẻ.</summary>

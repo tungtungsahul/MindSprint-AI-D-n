@@ -173,7 +173,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (card.interval === undefined) card.interval = 1;
         if (card.efactor === undefined) card.efactor = 2.5;
         if (card.nextReviewDate === undefined) card.nextReviewDate = 0;
+        if (card.version === undefined) card.version = 1; // #9 – optimistic locking
+        if (card.updatedAt === undefined) card.updatedAt = new Date().toISOString();
     });
+    
+    // #9 – Offline queue for flashcard operations
+    const OFFLINE_QUEUE_KEY = 'ms-offline-queue';
+    let offlineQueue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+    
+    function saveOfflineQueue() {
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(offlineQueue));
+    }
+    
+    async function processOfflineQueue() {
+        if (!MindSprintApi.isLoggedIn() || offlineQueue.length === 0) return;
+        
+        const queue = [...offlineQueue];
+        offlineQueue = [];
+        saveOfflineQueue();
+        
+        for (const op of queue) {
+            try {
+                await op.fn();
+            } catch (e) {
+                // Re-queue failed operations
+                offlineQueue.push(op);
+            }
+        }
+        saveOfflineQueue();
+    }
+    
+    // Process queue when online
+    window.addEventListener('online', processOfflineQueue);
     
     // Variables for App State
     let currentCategory = 'all';
@@ -1299,7 +1330,7 @@ document.addEventListener('DOMContentLoaded', () => {
         closeAddModalBtn.addEventListener('click', () => addModal.classList.remove('active'));
         cancelAddModalBtn.addEventListener('click', () => addModal.classList.remove('active'));
 
-        addCardForm.addEventListener('submit', (e) => {
+        addCardForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const category = document.getElementById('new-category').value;
@@ -1317,21 +1348,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 repetition: 0,
                 interval: 1,
                 efactor: 2.5,
-                nextReviewDate: 0
+                nextReviewDate: 0,
+                version: 1,
+                updatedAt: new Date().toISOString()
             };
 
-            flashcards.push(newCard);
-            addCardForm.reset();
-            addModal.classList.remove('active');
-            updateStats();
+            // #9 – Sync to server if logged in
+            const syncToServer = async () => {
+                try {
+                    const result = await MindSprintApi.createCard(newCard);
+                    newCard.version = result.version;
+                    newCard.updatedAt = result.updatedAt;
+                } catch (err) {
+                    if (err.isConflict) {
+                        // Shouldn't happen on create, but handle anyway
+                        console.warn('Create conflict:', err);
+                    }
+                    throw err;
+                }
+            };
+
+            const doAdd = async () => {
+                flashcards.push(newCard);
+                addCardForm.reset();
+                addModal.classList.remove('active');
+                updateStats();
+                
+                if (currentCategory === 'all' || currentCategory === category) {
+                    filterDeck();
+                    currentIndex = filteredCards.length - 1;
+                    renderCard();
+                } else {
+                    alert("Đã thêm thẻ mới thành công! Bạn có thể xem trong mục danh mục tương ứng.");
+                }
+                
+                // Sync to server if logged in
+                if (MindSprintApi.isLoggedIn()) {
+                    try {
+                        await syncToServer();
+                    } catch (err) {
+                        if (!navigator.onLine || err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+                            // Queue for later
+                            offlineQueue.push({ fn: syncToServer, cardId: newCard.id, type: 'create' });
+                            saveOfflineQueue();
+                            console.log('Offline: queued card creation');
+                        } else {
+                            alert('Lỗi đồng bộ: ' + err.message);
+                        }
+                    }
+                }
+            };
             
-            if (currentCategory === 'all' || currentCategory === category) {
-                filterDeck();
-                currentIndex = filteredCards.length - 1;
-                renderCard();
-            } else {
-                alert("Đã thêm thẻ mới thành công! Bạn có thể xem trong mục danh mục tương ứng.");
-            }
+            await doAdd();
         });
 
         // PWA Installation handling
@@ -1526,6 +1594,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const answer = document.getElementById('edit-answer').value;
         const example = document.getElementById('edit-example').value;
 
+        // Store old values for rollback
+        const oldValues = {
+            category: flashcards[cardIndex].category,
+            question: flashcards[cardIndex].question,
+            answer: flashcards[cardIndex].answer,
+            example: flashcards[cardIndex].example,
+            version: flashcards[cardIndex].version,
+            updatedAt: flashcards[cardIndex].updatedAt
+        };
+
+        // Optimistic update
         flashcards[cardIndex].category = category;
         flashcards[cardIndex].question = question;
         flashcards[cardIndex].answer = answer;
@@ -1539,13 +1618,94 @@ document.addEventListener('DOMContentLoaded', () => {
         
         currentIndex = Math.min(prevIndex, filteredCards.length - 1);
         renderCard();
-    }
+
+        // #9 – Sync to server if logged in
+        if (MindSprintApi.isLoggedIn()) {
+            const syncToServer = async () => {
+                try {
+                    const result = await MindSprintApi.updateCard({
+                        ...flashcards[cardIndex],
+                        version: flashcards[cardIndex].version
+                    });
+                    flashcards[cardIndex].version = result.version;
+                    flashcards[cardIndex].updatedAt = result.updatedAt;
+                } catch (err) {
+                    if (err.isConflict) {
+                        // Conflict detected - show server version and let user choose
+                        const serverCard = err.serverData.serverCard;
+                        const userChoice = confirm(
+                            `Thẻ này đã được sửa trên thiết bị khác!\n\n` +
+                            `Phiên bản server:\n${serverCard.question}\n${serverCard.answer}\n\n` +
+                            `Chọn "OK" để giữ bản server, "Cancel" để giữ bản cục bộ và ghi đè.`
+                        );
+                        
+                        if (userChoice) {
+                            // Use server version
+                            flashcards[cardIndex].category = serverCard.category;
+                            flashcards[cardIndex].question = serverCard.question;
+                            flashcards[cardIndex].answer = serverCard.answer;
+                            flashcards[cardIndex].example = serverCard.example;
+                            flashcards[cardIndex].version = serverCard.version;
+                            flashcards[cardIndex].updatedAt = serverCard.updatedAt;
+                        } else {
+                            // Force push local version with server's version number
+                            try {
+                                const forceResult = await MindSprintApi.updateCard({
+                                    ...flashcards[cardIndex],
+                                    version: serverCard.version // Use server version to force
+                                });
+                                flashcards[cardIndex].version = forceResult.version;
+                                flashcards[cardIndex].updatedAt = forceResult.updatedAt;
+                            } catch (e) {
+                                console.error('Force update failed:', e);
+                                alert('Không thể ghi đè. Vui lòng thử lại.');
+                                // Rollback
+                                Object.assign(flashcards[cardIndex], oldValues);
+                            }
+                        }
+                        filterDeck();
+                        renderCard();
+                        updateStats();
+                    } else if (!navigator.onLine || err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+                        // Queue for later
+                        offlineQueue.push({ 
+                            fn: async () => {
+                                const result = await MindSprintApi.updateCard({
+                                    ...flashcards[cardIndex],
+                                    version: flashcards[cardIndex].version
+                                });
+                                flashcards[cardIndex].version = result.version;
+                                flashcards[cardIndex].updatedAt = result.updatedAt;
+                            }, 
+                            cardId: flashcards[cardIndex].id, 
+                            type: 'update' 
+                        });
+                        saveOfflineQueue();
+                        console.log('Offline: queued card update');
+                    } else {
+                        alert('Lỗi đồng bộ: ' + err.message);
+                        // Rollback on other errors
+                        Object.assign(flashcards[cardIndex], oldValues);
+                        filterDeck();
+                        renderCard();
+                        updateStats();
+                    }
+                }
+            };
+            
+            syncToServer();
+        }
 
     function deleteCurrentCard() {
         if (filteredCards.length === 0) return;
         const currentCard = filteredCards[currentIndex];
+        const cardVersion = currentCard.version;
 
         if (confirm(`Bạn có chắc chắn muốn xóa thẻ học này (${currentCard.question}) không?`)) {
+            // Store for rollback
+            const deletedCard = { ...currentCard };
+            const deletedIndex = flashcards.findIndex(c => c.id == currentCard.id);
+            
             flashcards = flashcards.filter(c => c.id != currentCard.id);
             updateStats();
             
@@ -1557,6 +1717,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderCard();
             } else {
                 renderCard();
+            }
+
+            // #9 – Sync to server if logged in
+            if (MindSprintApi.isLoggedIn()) {
+                const syncToServer = async () => {
+                    try {
+                        await MindSprintApi.deleteCard(currentCard.id, cardVersion);
+                    } catch (err) {
+                        if (err.isConflict) {
+                            // Card was modified, ask user
+                            const userChoice = confirm(
+                                `Thẻ này đã thay đổi trên thiết bị khác!\n\n` +
+                                `Chọn "OK" để xóa theo phiên bản server, "Cancel" để khôi phục thẻ.`
+                            );
+                            if (userChoice) {
+                                // Force delete with server version
+                                try {
+                                    await MindSprintApi.deleteCard(currentCard.id, err.serverData.serverVersion);
+                                } catch (e) {
+                                    console.error('Force delete failed:', e);
+                                }
+                            } else {
+                                // Restore card
+                                flashcards.splice(deletedIndex, 0, deletedCard);
+                                updateStats();
+                                filterDeck();
+                                renderCard();
+                            }
+                        } else if (!navigator.onLine || err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+                            // Queue for later
+                            offlineQueue.push({ 
+                                fn: async () => {
+                                    await MindSprintApi.deleteCard(currentCard.id, cardVersion);
+                                }, 
+                                cardId: currentCard.id, 
+                                type: 'delete' 
+                            });
+                            saveOfflineQueue();
+                            console.log('Offline: queued card deletion');
+                        } else {
+                            alert('Lỗi đồng bộ xóa: ' + err.message);
+                            // Restore on error
+                            flashcards.splice(deletedIndex, 0, deletedCard);
+                            updateStats();
+                            filterDeck();
+                            renderCard();
+                        }
+                    }
+                };
+                
+                syncToServer();
             }
         }
     }
