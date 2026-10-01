@@ -20,7 +20,7 @@
     let isRefreshing = false;
     let pendingRequests = [];
 
-    async function request(path, { method = 'GET', body, auth = true, retry = true } = {}) {
+    async function request(path, { method = 'GET', body, auth = true, retry = true, allowConflict = false } = {}) {
         const headers = { 'Content-Type': 'application/json' };
         if (auth && getToken()) headers.Authorization = 'Bearer ' + getToken();
         const res = await fetch(API_BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
@@ -30,7 +30,7 @@
             const newToken = await refreshAccessToken();
             if (newToken) {
                 // Retry original request with new token
-                return request(path, { method, body, auth, retry: false });
+                return request(path, { method, body, auth, retry: false, allowConflict });
             }
             // Refresh failed, clear tokens and throw
             clearTokens();
@@ -40,6 +40,14 @@
         if (res.status === 401 && auth) {
             clearTokens();
             throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        }
+
+        if (res.status === 409) {
+            const err = await res.json().catch(() => ({}));
+            const conflictError = new Error(err.message || 'Xung đột dữ liệu');
+            conflictError.isConflict = true;
+            conflictError.serverData = err;
+            throw conflictError;
         }
 
         if (!res.ok) {
@@ -121,8 +129,8 @@
         // Flashcards + trạng thái SRS
         getCards: () => request('/api/flashcards'),
         createCard: (c) => request('/api/flashcards', { method: 'POST', body: { externalId: String(c.id), category: c.category, subCategory: c.subCategory || null, question: c.question, answer: c.answer, example: c.example || null } }),
-        updateCard: (c) => request('/api/flashcards/' + encodeURIComponent(c.id), { method: 'PUT', body: { category: c.category, subCategory: c.subCategory || null, question: c.question, answer: c.answer, example: c.example || null } }),
-        deleteCard: (id) => request('/api/flashcards/' + encodeURIComponent(id), { method: 'DELETE' }),
+        updateCard: (c) => request('/api/flashcards/' + encodeURIComponent(c.id), { method: 'PUT', body: { category: c.category, subCategory: c.subCategory || null, question: c.question, answer: c.answer, example: c.example || null, version: c.version } }, { allowConflict: true }),
+        deleteCard: (id, version) => request('/api/flashcards/' + encodeURIComponent(id) + (version ? '?version=' + version : ''), { method: 'DELETE' }, { allowConflict: true }),
 
         // Spaced Repetition: gửi kết quả ôn, server tính NextReviewDate
         review: (cardId, remembered) => request('/api/review', { method: 'POST', body: { cardId: String(cardId), remembered } }),
