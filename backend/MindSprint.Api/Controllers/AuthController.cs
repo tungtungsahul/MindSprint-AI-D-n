@@ -10,6 +10,8 @@ namespace MindSprint.Api.Controllers;
 
 public record RegisterDto([Required, EmailAddress] string Email, [Required, MinLength(6)] string Password, [Required] string DisplayName);
 public record LoginDto([Required] string Email, [Required] string Password);
+public record RefreshDto([Required] string RefreshToken, string? DeviceHint);
+public record RevokeDto(string? RefreshToken);
 
 [Route("api/auth")]
 public class AuthController(AppDbContext db, IPasswordHasher<User> hasher, TokenService tokens) : ApiBase
@@ -24,7 +26,9 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> hasher, Token
         user.PasswordHash = hasher.HashPassword(user, dto.Password);
         db.Users.Add(user);
         await db.SaveChangesAsync();
-        return Ok(new { token = tokens.Create(user), user = new { user.Id, user.Email, user.DisplayName } });
+
+        var rt = await tokens.CreateRefreshTokenAsync(user, null);
+        return Ok(new { token = tokens.CreateAccessToken(user), refreshToken = rt.Token, user = new { user.Id, user.Email, user.DisplayName } });
     }
 
     [HttpPost("login")]
@@ -34,6 +38,38 @@ public class AuthController(AppDbContext db, IPasswordHasher<User> hasher, Token
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
         if (user is null || hasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password) == PasswordVerificationResult.Failed)
             return Unauthorized(new { message = "Sai email hoặc mật khẩu." });
-        return Ok(new { token = tokens.Create(user), user = new { user.Id, user.Email, user.DisplayName } });
+
+        var rt = await tokens.CreateRefreshTokenAsync(user, null);
+        return Ok(new { token = tokens.CreateAccessToken(user), refreshToken = rt.Token, user = new { user.Id, user.Email, user.DisplayName } });
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshDto dto)
+    {
+        var newRt = await tokens.RotateAsync(dto.RefreshToken, dto.DeviceHint);
+        if (newRt is null) return Unauthorized(new { message = "Refresh token không hợp lệ hoặc đã hết hạn." });
+        return Ok(new { token = tokens.CreateAccessToken(newRt.User!), refreshToken = newRt.Token });
+    }
+
+    [HttpPost("revoke")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> Revoke(RevokeDto dto)
+    {
+        var uid = UserId;
+        if (string.IsNullOrEmpty(dto.RefreshToken))
+        {
+            await tokens.RevokeAllAsync(uid);
+            return Ok(new { message = "Đã thu hồi toàn bộ phiên." });
+        }
+        var ok = await tokens.RevokeAsync(dto.RefreshToken, uid);
+        return ok ? Ok(new { message = "Đã thu hồi phiên." }) : NotFound(new { message = "Không tìm thấy phiên." });
+    }
+
+    [HttpPost("revoke-all")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> RevokeAll()
+    {
+        await tokens.RevokeAllAsync(UserId);
+        return Ok(new { message = "Đã đăng xuất khỏi mọi thiết bị." });
     }
 }

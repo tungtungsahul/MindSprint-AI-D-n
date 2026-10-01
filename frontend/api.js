@@ -1,17 +1,47 @@
 // MindSprint API client - nối frontend (HTML/CSS/JS) với backend ASP.NET Core.
 // Đổi API_BASE thành URL backend khi deploy (Render/SmarterASP).
 (function () {
-    const DEFAULT_API_BASE = 'http://localhost:5100';
+    const DEFAULT_API_BASE = 'http://localhost:5000';
     const API_BASE = localStorage.getItem('api-base') || DEFAULT_API_BASE;
     const TOKEN_KEY = 'ms-token';
+    const REFRESH_TOKEN_KEY = 'ms-refresh-token';
 
     const getToken = () => localStorage.getItem(TOKEN_KEY);
+    const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
+    const setTokens = (access, refresh) => {
+        localStorage.setItem(TOKEN_KEY, access);
+        localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+    };
+    const clearTokens = () => {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+    };
 
-    async function request(path, { method = 'GET', body, auth = true } = {}) {
+    let isRefreshing = false;
+    let pendingRequests = [];
+
+    async function request(path, { method = 'GET', body, auth = true, retry = true } = {}) {
         const headers = { 'Content-Type': 'application/json' };
         if (auth && getToken()) headers.Authorization = 'Bearer ' + getToken();
         const res = await fetch(API_BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-        if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); throw new Error('Phiên đăng nhập hết hạn.'); }
+
+        if (res.status === 401 && auth && retry && getRefreshToken()) {
+            // Try to refresh token
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                // Retry original request with new token
+                return request(path, { method, body, auth, retry: false });
+            }
+            // Refresh failed, clear tokens and throw
+            clearTokens();
+            throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        }
+
+        if (res.status === 401 && auth) {
+            clearTokens();
+            throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        }
+
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.message || 'Lỗi ' + res.status);
@@ -19,15 +49,63 @@
         return res.status === 204 ? null : res.json();
     }
 
+    async function refreshAccessToken() {
+        if (isRefreshing) {
+            // Wait for ongoing refresh
+            return new Promise(resolve => {
+                pendingRequests.push(resolve);
+            });
+        }
+
+        isRefreshing = true;
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) {
+            isRefreshing = false;
+            return null;
+        }
+
+        try {
+            const res = await fetch(API_BASE + '/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken, deviceHint: navigator.userAgent })
+            });
+
+            if (!res.ok) {
+                return null;
+            }
+
+            const data = await res.json();
+            setTokens(data.token, data.refreshToken);
+
+            // Resolve all pending requests
+            pendingRequests.forEach(resolve => resolve(data.token));
+            pendingRequests = [];
+            return data.token;
+        } catch {
+            return null;
+        } finally {
+            isRefreshing = false;
+        }
+    }
+
     async function authenticate(path, payload) {
         const data = await request(path, { method: 'POST', body: payload, auth: false });
-        localStorage.setItem(TOKEN_KEY, data.token);
+        setTokens(data.token, data.refreshToken);
         return data.user;
     }
 
     async function upload(path, formData) {
         const res = await fetch(API_BASE + path, { method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: formData });
-        if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); throw new Error('Phiên đăng nhập hết hạn.'); }
+        if (res.status === 401) {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                const retryRes = await fetch(API_BASE + path, { method: 'POST', headers: { Authorization: 'Bearer ' + newToken }, body: formData });
+                if (retryRes.ok) return retryRes.json();
+            }
+            clearTokens();
+            throw new Error('Phiên đăng nhập hết hạn.');
+        }
         if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || 'Lỗi ' + res.status); }
         return res.json();
     }
@@ -36,7 +114,9 @@
         isLoggedIn: () => !!getToken(),
         login: (email, password) => authenticate('/api/auth/login', { email, password }),
         register: (email, password, displayName) => authenticate('/api/auth/register', { email, password, displayName }),
-        logout: () => localStorage.removeItem(TOKEN_KEY),
+        logout: () => clearTokens(),
+        revokeCurrentSession: () => request('/api/auth/revoke', { method: 'POST', body: { refreshToken: getRefreshToken() } }),
+        revokeAllSessions: () => request('/api/auth/revoke-all', { method: 'POST' }),
 
         // Flashcards + trạng thái SRS
         getCards: () => request('/api/flashcards'),
