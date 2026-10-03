@@ -46,6 +46,8 @@
     }
 
     function logout() {
+        // #5 – Thu hồi tất cả phiên trên server trước khi xóa token local
+        api.revokeAllSessions().catch(() => {}); // ignore errors
         api.logout();
         saveUser(null);
     }

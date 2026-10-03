@@ -1605,23 +1605,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-
-        // Sidebar logout link
-        const sidebarLogout = document.querySelector('.footer-link:has(.fa-sign-out-alt)');
-        if (sidebarLogout) {
-            sidebarLogout.style.cursor = 'pointer';
-            sidebarLogout.addEventListener('click', async () => {
-                if (confirm('Bạn có chắc muốn đăng xuất khỏi mọi thiết bị?')) {
-                    try {
-                        await MindSprintApi.revokeAllSessions();
-                    } catch (e) {
-                        console.warn('Logout error:', e.message);
-                    }
-                    MindSprintApi.logout();
-                    location.reload();
-                }
-            });
-        }
     }
 
     function openEditCardModal() {
