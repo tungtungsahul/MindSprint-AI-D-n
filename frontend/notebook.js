@@ -4,9 +4,10 @@
 (function () {
     const pane = document.getElementById('tab-content-notebook');
     const api = window.MindSprintApi;
-    if (!pane || !api) return;
+    const auth = window.MindSprintAuth;
+    if (!pane || !api || !auth) return;
 
-    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[c]));
     const $ = (sel) => pane.querySelector(sel);
 
     const state = { notebooks: [], nb: null, sources: [], notes: [], history: [], quiz: null, audio: null, lastText: null, lastTitle: '', lastCards: null };
@@ -37,41 +38,11 @@
         try { return await fn(); } catch (e) { alert(e.message || 'Có lỗi xảy ra'); } finally { busy(btn, false); }
     }
 
-    // ---------- render: đăng nhập ----------
-    let authMode = 'login';
-    function renderAuth(err = '') {
-        pane.innerHTML = `
-        <header class="main-header"><div class="header-info"><h1>Sổ tay AI</h1>
-            <p>Đăng nhập để tạo sổ tay, thêm tài liệu và hỏi đáp cùng AI.</p></div></header>
-        <div class="nb-auth glass-panel">
-            <h3>${authMode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h3>
-            ${authMode === 'register' ? '<input id="nb-name" type="text" placeholder="Tên hiển thị" maxlength="60">' : ''}
-            <input id="nb-email" type="email" placeholder="Email" autocomplete="email">
-            <input id="nb-pass" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="${authMode === 'login' ? 'current-password' : 'new-password'}">
-            <div class="nb-err" id="nb-auth-err">${esc(err)}</div>
-            <button class="btn btn-primary" data-act="auth-submit">${authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'}</button>
-            <a href="#" data-act="auth-toggle" style="font-size:.85rem;color:var(--primary-color)">${authMode === 'login' ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'}</a>
-        </div>`;
-    }
-
-    async function submitAuth(btn) {
-        const email = $('#nb-email').value.trim(), pass = $('#nb-pass').value, name = ($('#nb-name') || {}).value?.trim();
-        if (!/^\S+@\S+\.\S+$/.test(email)) return renderAuth('Email không hợp lệ.');
-        if (pass.length < 6) return renderAuth('Mật khẩu tối thiểu 6 ký tự.');
-        if (authMode === 'register' && !name) return renderAuth('Vui lòng nhập tên hiển thị.');
-        busy(btn, true);
-        try {
-            if (authMode === 'login') await api.login(email, pass); else await api.register(email, pass, name);
-            await start();
-        } catch (e) { renderAuth(e.message); }
-    }
-
-    // ---------- render: giao diện chính ----------
+// ---------- render: giao diện chính ----------
     function renderMain() {
         pane.innerHTML = `
         <header class="main-header">
             <div class="header-info"><h1>Sổ tay AI</h1><p>Thêm tài liệu, hỏi đáp có trích dẫn và tạo tài liệu ôn tập từ chính nguồn của bạn.</p></div>
-            <div class="header-actions"><button class="btn btn-secondary" data-act="logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</button></div>
         </header>
         <div class="nb-layout">
             <section class="nb-col nb-sources glass-panel">
@@ -144,19 +115,36 @@
     }
 
     // ---------- dữ liệu ----------
-    async function loadNotebook(id) {
-        state.nb = state.notebooks.find(n => n.id === Number(id)) || null;
-        state.history = [];
-        if (!state.nb) { state.sources = []; state.notes = []; return; }
-        [state.sources, state.notes] = await Promise.all([api.nbSources(state.nb.id), api.nbNotes(state.nb.id)]);
+    function renderAuthRequired() {
+        pane.innerHTML = `
+        <header class="main-header"><div class="header-info"><h1>Sổ tay AI</h1>
+            <p>Đăng nhập để tạo sổ tay, thêm tài liệu và hỏi đáp cùng AI.</p></div></header>
+        <div class="nb-auth glass-panel" style="text-align:center;padding:2rem">
+            <i class="fas fa-lock" style="font-size:3rem;color:var(--primary-color);margin-bottom:1rem"></i>
+            <h3>Yêu cầu đăng nhập</h3>
+            <p style="color:var(--text-secondary);margin-bottom:1.5rem">Vui lòng đăng nhập từ thanh bên (sidebar) để sử dụng Sổ tay AI.</p>
+            <button class="btn btn-primary" onclick="window.MindSprintAuth?.renderAuthModal()"><i class="fas fa-sign-in-alt"></i> Đăng nhập / Đăng ký</button>
+        </div>`;
     }
+
     async function start() {
+        if (!auth.isLoggedIn()) {
+            renderAuthRequired();
+            return;
+        }
         try {
             state.notebooks = await api.nbList();
             if (!state.notebooks.length) state.notebooks = [await api.nbCreate('Sổ tay đầu tiên')];
             await loadNotebook(state.nb ? state.nb.id : state.notebooks[0].id);
             renderMain();
-        } catch (e) { renderAuth(e.message); }
+        } catch (e) {
+            if (e.message?.includes('401') || e.message?.includes('hết hạn')) {
+                auth.logout();
+                renderAuthRequired();
+            } else {
+                alert(e.message || 'Có lỗi xảy ra');
+            }
+        }
     }
     async function refreshSources() { state.sources = await api.nbSources(state.nb.id); renderSources(); }
     async function refreshNotes() { state.notes = await api.nbNotes(state.nb.id); renderNotes(); }
@@ -265,9 +253,6 @@
         if (gen) return generate(gen.dataset.gen, gen);
         const el = e.target.closest('[data-act]'); if (!el) return;
         const act = el.dataset.act;
-        if (act === 'auth-toggle') { e.preventDefault(); authMode = authMode === 'login' ? 'register' : 'login'; return renderAuth(); }
-        if (act === 'auth-submit') return submitAuth(el);
-        if (act === 'logout') { stopAudio(); api.revokeAllSessions(); state.nb = null; return renderAuth(); }
         if (act === 'nb-new') {
             const t = prompt('Tên sổ tay mới:'); if (!t || !t.trim()) return;
             return run(el, async () => { const n = await api.nbCreate(t.trim()); state.notebooks.unshift(n); await loadNotebook(n.id); renderMain(); });
@@ -322,10 +307,21 @@
     pane.addEventListener('change', (e) => {
         if (e.target.id === 'nb-select') run(null, async () => { stopAudio(); await loadNotebook(e.target.value); renderMain(); });
     });
-    pane.addEventListener('keydown', (e) => {
+pane.addEventListener('keydown', (e) => {
         if (e.target.id === 'nb-q' && e.key === 'Enter') { e.preventDefault(); sendQuestion(e.target.value, pane.querySelector('[data-act="send"]')); }
     });
 
+    // ---------- auth change listener ----------
+    auth.onAuthChange((user) => {
+        if (user) {
+            start();
+        } else {
+            state.nb = null;
+            state.notebooks = [];
+            renderAuthRequired();
+        }
+    });
+
     // ---------- khởi động ----------
-    if (api.isLoggedIn()) start(); else renderAuth();
+    if (auth.isLoggedIn()) start(); else renderAuthRequired();
 })();
