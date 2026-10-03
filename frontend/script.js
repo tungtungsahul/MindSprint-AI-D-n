@@ -1,5 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
+    // AUTH INITIALIZATION
+    // ==========================================================================
+    if (window.MindSprintAuth) {
+        window.MindSprintAuth.initAuthUI('#sidebar-auth', '#sidebar-auth');
+        window.MindSprintAuth.onAuthChange((user) => {
+            const nameEl = document.getElementById('sidebar-user-name');
+            if (nameEl) nameEl.textContent = user ? user.DisplayName : 'Khách';
+        });
+    }
+
+    // ==========================================================================
     // DEFAULT DATA (Mẫu flashcard ban đầu)
     // ==========================================================================
     const defaultFlashcards = [
