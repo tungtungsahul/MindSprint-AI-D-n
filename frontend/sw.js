@@ -1,16 +1,28 @@
-const CACHE_NAME = 'smartflash-cache-v27';
+const CACHE_NAME = 'smartflash-cache-v32';
+const MATH_FONTS = [
+  'AMS-Regular', 'Caligraphic-Bold', 'Caligraphic-Regular', 'Fraktur-Bold', 'Fraktur-Regular',
+  'Main-Bold', 'Main-BoldItalic', 'Main-Italic', 'Main-Regular', 'Math-BoldItalic', 'Math-Italic',
+  'SansSerif-Bold', 'SansSerif-Italic', 'SansSerif-Regular', 'Script-Regular',
+  'Size1-Regular', 'Size2-Regular', 'Size3-Regular', 'Size4-Regular', 'Typewriter-Regular'
+];
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=23',
-  './script.js?v=23',
-  './vocab_data.js?v=23',
-  './api.js?v=23',
-  './notebook.js?v=23',
+  './style.css?v=32',
+  './script.js?v=30',
+  './vocab_data.js?v=24',
+  './api.js?v=32',
+  './auth.js?v=30',
+  './notebook.js?v=32',
+  './text-renderer.js?v=31',
+  './vendor/katex/katex.min.css',
+  './vendor/katex/katex.min.js',
+  './vendor/katex/contrib/auto-render.min.js',
+  ...MATH_FONTS.map(name => `./vendor/katex/fonts/KaTeX_${name}.woff2`),
   './manifest.json',
   './icon-192.jpg',
   './icon-512.jpg',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
@@ -31,20 +43,42 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key.startsWith('smartflash-cache-') && key !== CACHE_NAME) {
             console.log('[Service Worker] Removing old cache', key);
             return caches.delete(key);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  return self.clients.claim();
 });
 
 // Fetch Service Worker
 self.addEventListener('fetch', (e) => {
   if (e.request.url.includes('/api/')) return; // luôn gọi mạng cho API
+  if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const isAppFile = url.origin === self.location.origin &&
+    (e.request.mode === 'navigate' || /\.(html|js|css)$/.test(url.pathname));
+  if (isAppFile) {
+    e.respondWith(
+      fetch(e.request).then((response) => {
+        if (response.ok) {
+          e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(e.request, response.clone())));
+        }
+        return response;
+      }).catch(async (error) => {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        if (e.request.mode === 'navigate') {
+          const offlinePage = await caches.match('./index.html');
+          if (offlinePage) return offlinePage;
+        }
+        throw error;
+      })
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       return cachedResponse || fetch(e.request).then((networkResponse) => {
@@ -57,7 +91,7 @@ self.addEventListener('fetch', (e) => {
         return networkResponse;
       });
     }).catch(() => {
-      if (e.request.headers.get('accept').includes('text/html')) {
+      if ((e.request.headers.get('accept') || '').includes('text/html')) {
         return caches.match('./index.html');
       }
     })
