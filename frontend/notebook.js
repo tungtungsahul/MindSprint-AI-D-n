@@ -7,43 +7,52 @@
     const auth = window.MindSprintAuth;
     if (!pane || !api || !auth) return;
 
-    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[c]));
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const $ = (sel) => pane.querySelector(sel);
 
-    const state = { notebooks: [], nb: null, sources: [], notes: [], history: [], quiz: null, audio: null, lastText: null, lastTitle: '', lastCards: null };
+    const emptyState = () => ({ notebooks: [], nb: null, sources: [], notes: [], history: [], quiz: null, audio: null, lastText: null, lastTitle: '', lastCards: null });
+    const state = emptyState();
+    let workspaceVersion = 0;
+    let notebookRequest = 0;
+    let chatPending = false;
+    let studioPending = false;
     const MAX_FILE = 10 * 1024 * 1024;
 
     // ---------- helpers ----------
     const srcTitle = (n) => (state.sources[Number(n) - 1] || {}).title || 'Nguồn ' + n;
 
-    function inline(t) {
-        return t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\[(\d{1,2})\]/g, (m, n) => `<sup class="nb-cite" title="${esc(srcTitle(n))}">${n}</sup>`);
-    }
     function md(src) {
-        const out = []; let inList = false;
-        for (const raw of esc(src).split('\n')) {
-            let m;
-            if ((m = raw.match(/^\s*[-*]\s+(.*)/))) { if (!inList) { out.push('<ul>'); inList = true; } out.push('<li>' + inline(m[1]) + '</li>'); continue; }
-            if (inList) { out.push('</ul>'); inList = false; }
-            if ((m = raw.match(/^(#{1,4})\s+(.*)/))) { const l = m[1].length + 2; out.push(`<h${l}>${inline(m[2])}</h${l}>`); }
-            else if (raw.trim()) out.push('<p>' + inline(raw) + '</p>');
-        }
-        if (inList) out.push('</ul>');
-        return out.join('');
+        return window.MindSprintText.markdown(src, srcTitle);
     }
     function busy(btn, on) { if (btn) { btn.disabled = on; btn.style.opacity = on ? 0.6 : 1; } }
+    function aiError(error) {
+        let message = error.message || 'AI chưa xử lý được yêu cầu. Vui lòng thử lại.';
+        const seconds = Number(error.retryAfterSeconds);
+        if (error.code === 'ai_rate_limited' && seconds > 0) {
+            const wait = seconds >= 3600 ? Math.ceil(seconds / 3600) + ' giờ' : Math.ceil(seconds / 60) + ' phút';
+            message += ` Thời gian chờ dự kiến: ${wait}.`;
+        }
+        return `<span>${esc(message)}</span>`;
+    }
     async function run(btn, fn) {
         busy(btn, true);
         try { return await fn(); } catch (e) { alert(e.message || 'Có lỗi xảy ra'); } finally { busy(btn, false); }
     }
+    function ensureLoggedIn() {
+        if (auth.isLoggedIn()) return true;
+        const status = $('#nb-status');
+        status.textContent = 'Đăng nhập bằng tài khoản chung ở thanh bên để lưu dữ liệu sổ tay.';
+        status.hidden = false;
+        return false;
+    }
 
-// ---------- render: giao diện chính ----------
+    // ---------- render: giao diện chính ----------
     function renderMain() {
         pane.innerHTML = `
         <header class="main-header">
             <div class="header-info"><h1>Sổ tay AI</h1><p>Thêm tài liệu, hỏi đáp có trích dẫn và tạo tài liệu ôn tập từ chính nguồn của bạn.</p></div>
         </header>
+        <p id="nb-status" class="nb-err" role="status" hidden></p>
         <div class="nb-layout">
             <section class="nb-col nb-sources glass-panel">
                 <h3><i class="fas fa-folder-open"></i> Sổ tay & Nguồn</h3>
@@ -88,7 +97,8 @@
                     <button data-gen="quiz"><i class="fas fa-edit"></i> Trắc nghiệm</button>
                     <button data-gen="audio"><i class="fas fa-podcast"></i> Audio overview</button>
                 </div>
-                <input class="nb-input" id="nb-focus" type="text" placeholder="Trọng tâm (tuỳ chọn), vd: chương 3" maxlength="200">
+                <input class="nb-input" id="nb-focus" type="text" placeholder="Trọng tâm (tuỳ chọn), vd: chương 3" maxlength="200" autocomplete="off">
+                <div id="nb-studio-status" role="status" hidden></div>
                 <div class="nb-out" id="nb-out"><div class="nb-muted">Kết quả sẽ hiển thị ở đây.</div></div>
                 <h3><i class="fas fa-sticky-note"></i> Ghi chú</h3>
                 <div id="nb-notes"></div>
@@ -115,39 +125,64 @@
     }
 
     // ---------- dữ liệu ----------
-    function renderAuthRequired() {
-        pane.innerHTML = `
-        <header class="main-header"><div class="header-info"><h1>Sổ tay AI</h1>
-            <p>Đăng nhập để tạo sổ tay, thêm tài liệu và hỏi đáp cùng AI.</p></div></header>
-        <div class="nb-auth glass-panel" style="text-align:center;padding:2rem">
-            <i class="fas fa-lock" style="font-size:3rem;color:var(--primary-color);margin-bottom:1rem"></i>
-            <h3>Yêu cầu đăng nhập</h3>
-            <p style="color:var(--text-secondary);margin-bottom:1.5rem">Vui lòng đăng nhập từ thanh bên (sidebar) để sử dụng Sổ tay AI.</p>
-            <button class="btn btn-primary" onclick="window.MindSprintAuth?.renderAuthModal()"><i class="fas fa-sign-in-alt"></i> Đăng nhập / Đăng ký</button>
-        </div>`;
+    function resetWorkspace() {
+        workspaceVersion++;
+        notebookRequest++;
+        chatPending = false; studioPending = false;
+        stopAudio();
+        Object.assign(state, emptyState());
+        renderMain();
+    }
+
+    async function loadNotebook(id) {
+        const version = workspaceVersion;
+        const request = ++notebookRequest;
+        const notebook = state.notebooks.find(n => n.id === Number(id)) || null;
+        if (!notebook) return false;
+        const [sources, notes] = await Promise.all([api.nbSources(notebook.id), api.nbNotes(notebook.id)]);
+        if (version !== workspaceVersion || request !== notebookRequest || !auth.isLoggedIn()) return false;
+        state.nb = notebook;
+        workspaceVersion++;
+        chatPending = false; studioPending = false;
+        state.history = [];
+        state.sources = sources;
+        state.notes = notes;
+        return true;
     }
 
     async function start() {
+        const version = workspaceVersion;
         if (!auth.isLoggedIn()) {
-            renderAuthRequired();
+            resetWorkspace();
             return;
         }
         try {
-            state.notebooks = await api.nbList();
-            if (!state.notebooks.length) state.notebooks = [await api.nbCreate('Sổ tay đầu tiên')];
-            await loadNotebook(state.nb ? state.nb.id : state.notebooks[0].id);
+            let notebooks = await api.nbList();
+            if (version !== workspaceVersion || !auth.isLoggedIn()) return;
+            if (!notebooks.length) notebooks = [await api.nbCreate('Sổ tay đầu tiên')];
+            if (version !== workspaceVersion || !auth.isLoggedIn()) return;
+            state.notebooks = notebooks;
+            if (!await loadNotebook(state.nb ? state.nb.id : notebooks[0].id)) return;
             renderMain();
         } catch (e) {
+            if (version !== workspaceVersion) return;
             if (e.message?.includes('401') || e.message?.includes('hết hạn')) {
-                auth.logout();
-                renderAuthRequired();
+                resetWorkspace();
             } else {
                 alert(e.message || 'Có lỗi xảy ra');
             }
         }
     }
-    async function refreshSources() { state.sources = await api.nbSources(state.nb.id); renderSources(); }
-    async function refreshNotes() { state.notes = await api.nbNotes(state.nb.id); renderNotes(); }
+    async function refreshSources() {
+        const version = workspaceVersion, id = state.nb.id;
+        const sources = await api.nbSources(id);
+        if (version === workspaceVersion && state.nb?.id === id) { state.sources = sources; renderSources(); }
+    }
+    async function refreshNotes() {
+        const version = workspaceVersion, id = state.nb.id;
+        const notes = await api.nbNotes(id);
+        if (version === workspaceVersion && state.nb?.id === id) { state.notes = notes; renderNotes(); }
+    }
 
     // ---------- chat ----------
     function addMsg(role, html) {
@@ -157,33 +192,56 @@
         box.appendChild(d); box.scrollTop = box.scrollHeight; return d;
     }
     async function sendQuestion(q, btn) {
+        if (chatPending) return;
+        if (!ensureLoggedIn() || !state.nb) return;
         q = (q || '').trim(); if (!q) return;
         if (!state.sources.length) return alert('Hãy thêm ít nhất một nguồn trước.');
+        const version = workspaceVersion, notebookId = state.nb.id;
+        chatPending = true;
         $('#nb-q').value = '';
         addMsg('user', esc(q));
         const wait = addMsg('bot', '<span class="nb-muted"><i class="fas fa-spinner fa-spin"></i> Đang đọc nguồn...</span>');
         busy(btn, true);
+        busy($('[data-act="send"]'), true);
+        busy($('#nb-q'), true);
         try {
-            const r = await api.nbChat(state.nb.id, q, state.history);
+            const r = await api.nbChat(notebookId, q, state.history);
+            if (version !== workspaceVersion || state.nb?.id !== notebookId) return;
             state.history.push({ role: 'user', text: q }, { role: 'assistant', text: r.answer });
             const quotes = (r.citations || []).filter(c => c.quote).map(c => `<div><span class="nb-cite">${c.source}</span> <strong>${esc(srcTitle(c.source))}</strong>: “${esc(c.quote)}”</div>`).join('');
             wait.innerHTML = md(r.answer) + (quotes ? `<div class="nb-quotes">${quotes}</div>` : '') +
                 `<button class="nb-icon-btn" data-act="save-answer" style="margin-top:.5rem"><i class="fas fa-bookmark"></i> Lưu ghi chú</button>`;
             wait.dataset.raw = r.answer; wait.dataset.q = q;
-        } catch (e) { wait.innerHTML = `<span style="color:#ef4444">${esc(e.message)}</span>`; }
-        finally { busy(btn, false); }
+        } catch (e) {
+            if (version !== workspaceVersion || state.nb?.id !== notebookId) return;
+            wait.innerHTML = `<div class="nb-ai-error" role="status">${aiError(e)}
+                <button class="btn btn-secondary" data-act="retry-chat" data-q="${esc(q)}">Thử lại câu hỏi</button></div>`;
+        } finally {
+            if (version === workspaceVersion) {
+                chatPending = false; busy(btn, false);
+                busy($('[data-act="send"]'), false); busy($('#nb-q'), false);
+            }
+        }
     }
 
     // ---------- Studio ----------
     async function generate(type, btn) {
+        if (studioPending || !ensureLoggedIn() || !state.nb) return;
         if (!state.sources.length) return alert('Hãy thêm ít nhất một nguồn trước.');
         stopAudio();
-        const out = $('#nb-out');
-        out.innerHTML = '<span class="nb-muted"><i class="fas fa-spinner fa-spin"></i> AI đang tạo...</span>';
-        state.lastText = null; state.lastCards = null;
-        busy(btn, true);
+        const version = workspaceVersion, notebookId = state.nb.id;
+        const out = $('#nb-out'), status = $('#nb-studio-status');
+        const previous = { lastText: state.lastText, lastCards: state.lastCards, lastTitle: state.lastTitle, quiz: state.quiz, audio: state.audio };
+        status.hidden = false;
+        status.className = 'nb-muted';
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang tạo, tự thử lại nếu dịch vụ bận...';
+        studioPending = true;
+        pane.querySelectorAll('[data-gen], [data-act="retry-generate"]').forEach(button => busy(button, true));
         try {
-            const r = await api.nbGenerate(state.nb.id, type, $('#nb-focus').value.trim(), 10);
+            const r = await api.nbGenerate(notebookId, type, $('#nb-focus').value.trim(), 10);
+            if (version !== workspaceVersion || state.nb?.id !== notebookId) return;
+            status.hidden = true;
+            state.lastText = null; state.lastCards = null;
             const label = btn.textContent.trim();
             if (!r.isJson) {
                 state.lastText = r.content; state.lastTitle = label;
@@ -206,8 +264,18 @@
                     r.content.map((l, i) => `<div class="nb-audio-line" id="nb-al-${i}"><strong>${l.speaker === 'B' ? 'B' : 'A'}:</strong> ${esc(l.text)}</div>`).join('') +
                     `<p class="nb-muted">Dùng giọng đọc có sẵn của trình duyệt (Web Speech).</p>`;
             }
-        } catch (e) { out.innerHTML = `<span style="color:#ef4444">${esc(e.message)}</span>`; }
-        finally { busy(btn, false); }
+        } catch (e) {
+            if (version !== workspaceVersion || state.nb?.id !== notebookId) return;
+            Object.assign(state, previous);
+            status.hidden = false;
+            status.className = 'nb-ai-error';
+            status.innerHTML = aiError(e) + `<button class="btn btn-secondary" data-act="retry-generate" data-type="${esc(type)}">Thử lại</button>`;
+        } finally {
+            if (version === workspaceVersion) {
+                studioPending = false;
+                pane.querySelectorAll('[data-gen], [data-act="retry-generate"]').forEach(button => busy(button, false));
+            }
+        }
     }
     const saveBtn = () => `<button class="nb-icon-btn" data-act="save-text"><i class="fas fa-bookmark"></i> Lưu ghi chú</button>`;
     function tree(nodes) {
@@ -250,9 +318,14 @@
     // ---------- sự kiện (ủy quyền) ----------
     pane.addEventListener('click', async (e) => {
         const gen = e.target.closest('[data-gen]');
+        const el = e.target.closest('[data-act]');
+        if (!gen && !el) return;
+        if (!ensureLoggedIn()) return;
         if (gen) return generate(gen.dataset.gen, gen);
-        const el = e.target.closest('[data-act]'); if (!el) return;
         const act = el.dataset.act;
+        if (act !== 'nb-new' && !state.nb) return;
+        if (act === 'retry-chat') return sendQuestion(el.dataset.q, el);
+        if (act === 'retry-generate') return generate(el.dataset.type, pane.querySelector(`[data-gen="${el.dataset.type}"]`));
         if (act === 'nb-new') {
             const t = prompt('Tên sổ tay mới:'); if (!t || !t.trim()) return;
             return run(el, async () => { const n = await api.nbCreate(t.trim()); state.notebooks.unshift(n); await loadNotebook(n.id); renderMain(); });
@@ -295,7 +368,8 @@
         if (act === 'save-text') return run(el, async () => { await api.nbAddNote(state.nb.id, state.lastTitle, state.lastText); await refreshNotes(); });
         if (act === 'save-cards') return run(el, async () => {
             const r = await api.nbSaveCards(state.nb.id, state.lastCards);
-            alert(`Đã lưu ${r.saved} thẻ vào Thư viện (chủ đề "${state.nb.title}"). Tải lại trang để thấy thẻ mới.`);
+            window.dispatchEvent(new Event('ms-library-changed'));
+            alert(`Đã lưu ${r.saved} thẻ vào Thư viện (chủ đề "${state.nb.title}").`);
         });
         if (act === 'quiz-pick') return pickAnswer(el);
         if (act === 'audio-play') return playAudio();
@@ -305,23 +379,18 @@
     });
 
     pane.addEventListener('change', (e) => {
-        if (e.target.id === 'nb-select') run(null, async () => { stopAudio(); await loadNotebook(e.target.value); renderMain(); });
+        if (e.target.id === 'nb-select' && e.target.value && ensureLoggedIn()) run(null, async () => { stopAudio(); await loadNotebook(e.target.value); renderMain(); });
     });
 pane.addEventListener('keydown', (e) => {
         if (e.target.id === 'nb-q' && e.key === 'Enter') { e.preventDefault(); sendQuestion(e.target.value, pane.querySelector('[data-act="send"]')); }
     });
 
     // ---------- auth change listener ----------
+    renderMain();
     auth.onAuthChange((user) => {
+        resetWorkspace();
         if (user) {
-            start();
-        } else {
-            state.nb = null;
-            state.notebooks = [];
-            renderAuthRequired();
+            return start();
         }
     });
-
-    // ---------- khởi động ----------
-    if (auth.isLoggedIn()) start(); else renderAuthRequired();
 })();
