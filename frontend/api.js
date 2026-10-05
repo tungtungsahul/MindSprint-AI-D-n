@@ -177,6 +177,7 @@
         // Kanban
         getTasks: () => request('/api/tasks'),
         createTask: (t) => request('/api/tasks', { method: 'POST', body: t }),
+        updateTask: (id, t) => request('/api/tasks/' + id, { method: 'PUT', body: t }),
         moveTask: (id, status, position) => request(`/api/tasks/${id}/move`, { method: 'PATCH', body: { status, position } }),
         deleteTask: (id) => request('/api/tasks/' + id, { method: 'DELETE' }),
 

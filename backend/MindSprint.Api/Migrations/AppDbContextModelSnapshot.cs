@@ -131,6 +131,10 @@ namespace MindSprint.Api.Migrations
                     b.Property<int>("Position")
                         .HasColumnType("int");
 
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
