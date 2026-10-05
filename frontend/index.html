@@ -1,784 +1,1157 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MindSprint AI — Kanban Productivity & Spaced Repetition Mastery</title>
-  <meta name="description" content="Nền tảng quản lý công việc Kanban kết hợp ôn tập Flashcard ngắt quãng SM-2 và trí tuệ nhân tạo AI.">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFlash | Thẻ Học Thông Minh & Thời Khóa Biểu</title>
+    <meta name="description" content="Ứng dụng thẻ học thông minh, ôn luyện trắc nghiệm và lên lịch trình học tập tiếng Anh hiệu quả.">
 
-  <!-- Favicon SVG Data URI -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f8f9ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SmartFlash">
+    <link rel="apple-touch-icon" href="icon-192.jpg">
 
-  <!-- Primary Stylesheet with Seamless FastAPI /static or Direct Relative Fallback -->
-  <link rel="stylesheet" href="/static/css/style.css" id="app-stylesheet" onerror="this.onerror=null;this.href='css/style.css';">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="vendor/katex/katex.min.css">
+    <link rel="stylesheet" href="style.css?v=32">
+    <link rel="stylesheet" href="kanban.css?v=33">
 </head>
 <body>
+    <div class="app-container">
+        <!-- Sidebar / Navigation -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <i class="fas fa-copy logo-icon" style="color: var(--primary-color);"></i>
+                <span>Flashcard</span>
+            </div>
 
-  <!-- ========================================================================
-       1. Application Header & Navigation Bar
-       ======================================================================== -->
-  <header class="app-header">
-    <div class="header-container">
-      
-      <!-- Brand Logo Section -->
-      <div class="brand-section" id="brand-logo" title="MindSprint AI — Trang chủ">
-        <div class="brand-logo-icon">⚡</div>
-        <div class="brand-title">
-          MindSprint <span style="font-weight: 300;">AI</span>
-          <span class="brand-badge">v1.0</span>
-        </div>
-      </div>
+            <div class="user-profile">
+                <h4 class="profile-name" id="sidebar-user-name">Khách</h4>
+            </div>
 
-      <!-- Main Navigation Tabs -->
-      <nav class="nav-tabs" aria-label="Điều hướng chính">
-        <button class="nav-tab-btn active" id="nav-tab-kanban" data-tab="kanban">
-          <svg viewBox="0 0 24 24"><path d="M4 4h4v16H4V4zm6 0h4v10h-4V4zm6 0h4v14h-4V4z"/></svg>
-          Kanban Board
-        </button>
-        <button class="nav-tab-btn" id="nav-tab-flashcards" data-tab="flashcards">
-          <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
-          Ôn tập Flashcards
-        </button>
-        <button class="nav-tab-btn" id="nav-tab-stats" data-tab="stats">
-          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-          Tiến độ học tập
-        </button>
-      </nav>
+            <!-- Main Tabs Menu -->
+            <div class="menu-section">
+                <ul class="nav-tabs">
+                    <li class="nav-tab active" data-tab="home">
+                        <i class="fas fa-home"></i> Trang chủ
+                    </li>
+                    <li class="nav-tab" data-tab="overview">
+                        <i class="fas fa-chart-pie"></i> Tổng quan
+                    </li>
+                    <li class="nav-tab" data-tab="flashcards">
+                        <i class="fas fa-layer-group"></i> Thư viện
+                    </li>
+                    <li class="nav-tab" data-tab="quiz">
+                        <i class="fas fa-edit"></i> Luyện tập
+                    </li>
+                    <li class="nav-tab" data-tab="notebook">
+                        <i class="fas fa-book-reader"></i> Sổ tay AI
+                    </li>
+                    <li class="nav-tab" data-tab="timetable">
+                        <i class="fas fa-calendar-alt"></i> Lịch học
+                    </li>
+                    <li class="nav-tab" data-tab="kanban">
+                        <i class="fas fa-columns"></i> Công việc
+                    </li>
+                    <li class="nav-tab" data-tab="settings">
+                        <i class="fas fa-cog"></i> Cài đặt
+                    </li>
+                </ul>
+            </div>
 
-      <!-- Action Controls & User Session Area -->
-      <div class="header-actions">
-        
-        <!-- Quick Header Action Buttons -->
-        <button class="btn btn-primary btn-sm" id="header-btn-add-task" title="Tạo task mới">
-          + Task mới
-        </button>
-        <button class="btn btn-ai-gradient btn-sm" id="header-btn-ai" title="Tạo flashcard bằng AI">
-          ✨ AI Studio
-        </button>
-        <button class="btn btn-secondary btn-sm" id="header-btn-bulk" title="Nhập hàng loạt flashcards">
-          📥 Nhập Bulk
-        </button>
+            <!-- Category Filter Section (Conditional visibility inside script) -->
+            <div class="category-section" id="sidebar-categories" style="display: none;">
+                <h3>Danh mục</h3>
+                <ul class="category-list" id="category-list">
+                    <li class="category-item active" data-category="all">
+                        <i class="fas fa-tags"></i> Tất cả
+                    </li>
+                    <li class="category-item" data-category="english">
+                        <i class="fas fa-language"></i> Tiếng Anh
+                    </li>
+                    <li class="category-item" data-category="programming">
+                        <i class="fas fa-code"></i> Lập trình
+                    </li>
+                    <li class="category-item" data-category="general">
+                        <i class="fas fa-globe"></i> Kiến thức chung
+                    </li>
+                </ul>
+            </div>
 
-        <!-- Theme Switcher Toggle (Dark/Light) -->
-        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Chuyển chế độ giao diện" aria-label="Chuyển đổi giao diện Sáng / Tối">
-          🌙
-        </button>
+            <div class="sidebar-footer">
+                <button class="btn btn-primary btn-icon" id="sidebar-add-card-btn" style="margin-bottom: 1.5rem; width: 100%;">
+                    <i class="fas fa-plus"></i> Bộ thẻ mới
+                </button>
+                <div class="footer-links">
+                    <div class="footer-link"><i class="far fa-question-circle"></i> Trợ giúp</div>
+                    <div id="sidebar-auth" class="sidebar-auth"></div>
+                </div>
+            </div>
+        </aside>
 
-        <!-- Authentication / User Profile Container -->
-        <div class="auth-widget" id="auth-widget">
-          <!-- Unauthenticated State Button -->
-          <button class="btn btn-secondary btn-sm" id="btn-nav-login">
-            Đăng nhập / Đăng ký
-          </button>
+        <!-- Main Content Area -->
+        <main class="main-content">
 
-          <!-- Authenticated User Profile Badge (hidden by default) -->
-          <div class="user-profile-badge" id="user-profile-badge" style="display: none;">
-            <div class="user-avatar-circle" id="user-avatar-circle">U</div>
-            <span class="user-display-name" id="user-display-name">Username</span>
-            <button class="btn-logout" id="btn-logout" title="Đăng xuất" aria-label="Đăng xuất">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16 13v-2H7V8l-5 4 5 4v-3h9zM20 3H10c-1.1 0-2 .9-2 2v4h2V5h10v14H10v-4H8v4c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
-              </svg>
+            <!-- Floating Sidebar Toggle Button -->
+            <button class="sidebar-toggle-btn" id="sidebar-toggle" title="Ẩn thanh bên để tập trung học">
+                <i class="fas fa-indent"></i>
             </button>
-          </div>
-        </div>
 
-      </div>
+            <!-- TAB 0: HOME (Trang chủ) -->
+            <div id="tab-content-kanban" class="tab-pane">
+                <header class="main-header">
+                    <div class="header-info"><h1>Công việc</h1><p>Sắp xếp việc cần làm, theo dõi tiến độ và hạn hoàn thành.</p></div>
+                </header>
+                <div class="kanban-toolbar">
+                    <input id="kanban-search" type="search" placeholder="Tìm công việc..." aria-label="Tìm công việc">
+                    <select id="kanban-priority-filter" aria-label="Lọc mức ưu tiên">
+                        <option value="all">Tất cả mức ưu tiên</option><option value="High">Ưu tiên cao</option><option value="Medium">Ưu tiên trung bình</option><option value="Low">Ưu tiên thấp</option>
+                    </select>
+                    <button class="btn btn-primary" id="btn-new-task"><i class="fas fa-plus"></i> Thêm công việc</button>
+                </div>
+                <p id="kanban-status" role="status" aria-live="polite"></p>
+                <button class="btn btn-secondary" id="kanban-login" hidden>Đăng nhập để lưu công việc</button>
+                <button class="btn btn-secondary" id="kanban-reload" hidden>Thử tải lại</button>
+                <div class="kanban-board-grid">
+                    <section class="kanban-column col-todo" aria-label="Chưa bắt đầu">
+                        <div class="column-header"><h2>Chưa bắt đầu <span id="todo-count">0</span></h2><button class="btn-add-col-task" data-status="Todo" title="Thêm việc chưa bắt đầu">+</button></div>
+                        <div class="kanban-column-list" id="col-todo-list" data-status="Todo"></div>
+                    </section>
+                    <section class="kanban-column col-inprogress" aria-label="Đang làm">
+                        <div class="column-header"><h2>Đang làm <span id="inprogress-count">0</span></h2><button class="btn-add-col-task" data-status="InProgress" title="Thêm việc đang làm">+</button></div>
+                        <div class="kanban-column-list" id="col-inprogress-list" data-status="InProgress"></div>
+                    </section>
+                    <section class="kanban-column col-completed" aria-label="Hoàn thành">
+                        <div class="column-header"><h2>Hoàn thành <span id="completed-count">0</span></h2><button class="btn-add-col-task" data-status="Completed" title="Thêm việc đã hoàn thành">+</button></div>
+                        <div class="kanban-column-list" id="col-completed-list" data-status="Completed"></div>
+                    </section>
+                </div>
+            </div>
+            <div id="tab-content-home" class="tab-pane active">
+                <header class="main-header">
+                    <div class="header-info">
+                        <h1>Trang chủ</h1>
+                        <p>Chào mừng bạn trở lại với Flashcard. Hãy cùng củng cố kiến thức mỗi ngày!</p>
+                    </div>
+                </header>
 
+                <!-- Purple Welcome Banner -->
+                <div class="welcome-banner">
+                    <div class="welcome-banner-content">
+                        <span class="welcome-badge">CHÀO MỪNG QUAY LẠI, CMC STUDENT!</span>
+                        <h2>Hôm nay bạn muốn củng cố kiến thức gì?</h2>
+                        <p>Hệ thống AI đã chuẩn bị sẵn 10 câu hỏi gợi ý cho chủ đề Frontend React và Từ vựng TOEIC.</p>
+                        <div class="welcome-banner-buttons">
+                            <button class="btn btn-primary" id="home-start-quiz-btn">
+                                <i class="fas fa-play"></i> Vào Luyện Tập Ngay
+                            </button>
+                            <button class="btn btn-secondary" id="home-create-deck-btn" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white;">
+                                <i class="fas fa-plus"></i> Tạo bộ thẻ mới
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats horizontal grid -->
+                <div class="home-stats-grid">
+                    <div class="home-stat-box glass-panel" id="streak-stat-box">
+                        <div class="home-stat-icon" style="background: rgba(124, 58, 237, 0.15); color: #7c3aed;">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="home-stat-data">
+                            <span class="home-stat-val" id="home-streak-val">5 Ngày</span>
+                            <span class="home-stat-lbl">Chuỗi Streak</span>
+                        </div>
+                    </div>
+                    <div class="home-stat-box glass-panel">
+                        <div class="home-stat-icon" style="background: rgba(75, 65, 225, 0.15); color: #4b41e1;">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="home-stat-data">
+                            <span class="home-stat-val" id="home-answered-val">142 Câu</span>
+                            <span class="home-stat-lbl">Câu đã trả lời</span>
+                        </div>
+                    </div>
+                    <div class="home-stat-box glass-panel">
+                        <div class="home-stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="home-stat-data">
+                            <span class="home-stat-val" id="home-accuracy-val">88%</span>
+                            <span class="home-stat-lbl">Tỷ lệ chính xác</span>
+                        </div>
+                    </div>
+                    <div class="home-stat-box glass-panel">
+                        <div class="home-stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <div class="home-stat-data">
+                            <span class="home-stat-val" id="home-favorite-val">4 Bộ thẻ</span>
+                            <span class="home-stat-lbl">Bộ thẻ yêu thích</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggested Decks list -->
+                <div class="home-suggestions-section">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Bộ thẻ flashcard gợi ý</h3>
+                        <a href="#" id="home-view-all-decks" class="view-all-link" style="color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 0.9rem;">Xem tất cả <i class="fas fa-chevron-right"></i></a>
+                    </div>
+                    <div class="home-suggestions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem;">
+                        <!-- Card 1 -->
+                        <div class="suggestion-card glass-panel ai-glow-border" style="padding: 1.5rem; border-radius: var(--border-radius-md); display: flex; flex-direction: column; gap: 0.8rem; cursor: pointer; transition: transform 0.3s ease;">
+                            <span class="suggestion-badge" style="background: rgba(124, 58, 237, 0.15); color: #7c3aed; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; align-self: flex-start; letter-spacing: 0.5px;">CNTT</span>
+                            <h4 class="suggestion-title" style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Lập trình Frontend (React, Vue)</h4>
+                            <div class="suggestion-meta" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
+                                <span>25 thẻ kiến thức</span>
+                                <span class="suggestion-mastery" style="color: #7c3aed; font-weight: 600;">Độ thành thạo 80%</span>
+                            </div>
+                            <div class="suggestion-progress-bar" style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                                <div class="progress" style="width: 80%; height: 100%; background: #7c3aed; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="suggestion-card glass-panel" style="padding: 1.5rem; border-radius: var(--border-radius-md); display: flex; flex-direction: column; gap: 0.8rem; cursor: pointer; transition: transform 0.3s ease;">
+                            <span class="suggestion-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; align-self: flex-start; letter-spacing: 0.5px;">CNTT</span>
+                            <h4 class="suggestion-title" style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Cơ sở dữ liệu (SQL, NoSQL)</h4>
+                            <div class="suggestion-meta" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
+                                <span>18 thẻ kiến thức</span>
+                                <span class="suggestion-mastery" style="color: #10b981; font-weight: 600;">Độ thành thạo 65%</span>
+                            </div>
+                            <div class="suggestion-progress-bar" style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                                <div class="progress" style="width: 65%; height: 100%; background: #10b981; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 0.5: OVERVIEW (Tổng quan) -->
+            <div id="tab-content-overview" class="tab-pane">
+                <header class="main-header">
+                    <div class="header-info">
+                        <h1>Tổng quan & Phân tích tiến độ</h1>
+                        <p>Theo dõi mức độ thành thạo và gợi ý cải tiến từ AI.</p>
+                    </div>
+                </header>
+
+                <!-- Stat boxes horizontally -->
+                <div class="overview-stats-grid">
+                    <div class="overview-stat-card glass-panel">
+                        <div class="overview-card-header">
+                            <i class="fas fa-sparkles" style="color: #7c3aed; margin-right: 0.5rem;"></i>
+                            <span>Điểm thành thạo chung</span>
+                        </div>
+                        <h2 class="overview-card-val" id="overview-mastery-score">0/100</h2>
+                        <span class="overview-card-sub" style="color: #10b981; font-size: 0.8rem; font-weight: 600;"><i class="fas fa-arrow-up"></i> Tỷ lệ thuộc từ</span>
+                    </div>
+                    <div class="overview-stat-card glass-panel">
+                        <div class="overview-card-header">
+                            <i class="fas fa-clock" style="color: #4b41e1; margin-right: 0.5rem;"></i>
+                            <span>Số từ đã ôn hôm nay</span>
+                        </div>
+                        <h2 class="overview-card-val" id="overview-studied-today">0 từ</h2>
+                        <span class="overview-card-sub" style="font-size: 0.8rem; color: var(--text-secondary);">Đang nỗ lực học tập</span>
+                    </div>
+                    <div class="overview-stat-card glass-panel">
+                        <div class="overview-card-header">
+                            <i class="fas fa-book-open" style="color: #f59e0b; margin-right: 0.5rem;"></i>
+                            <span>Chủ đề cần cải thiện</span>
+                        </div>
+                        <h2 class="overview-card-val" id="overview-improve-subject" style="font-size: 1.15rem; margin-top: 0.6rem; margin-bottom: 0.6rem; font-weight: 700; color: var(--text-primary);">Chưa có</h2>
+                        <span class="overview-card-sub" style="color: #ef4444; font-size: 0.8rem; font-weight: 600;">Có điểm chính xác thấp nhất</span>
+                    </div>
+                </div>
+
+                <!-- Mastery levels list -->
+                <div class="mastery-analysis-section glass-panel">
+                    <h3>Độ thành thạo theo ngành học</h3>
+                    <div class="mastery-list">
+                        <!-- Item 1 -->
+                        <div class="mastery-item">
+                            <div class="mastery-info">
+                                <span>Lập trình Frontend (React, Vue)</span>
+                                <span class="mastery-pct">80%</span>
+                            </div>
+                            <div class="mastery-bar-container">
+                                <div class="mastery-bar" style="width: 80%; background: #7c3aed;"></div>
+                            </div>
+                        </div>
+                        <!-- Item 2 -->
+                        <div class="mastery-item">
+                            <div class="mastery-info">
+                                <span>Từ vựng TOEIC (English)</span>
+                                <span class="mastery-pct">90%</span>
+                            </div>
+                            <div class="mastery-bar-container">
+                                <div class="mastery-bar" style="width: 90%; background: #4b41e1;"></div>
+                            </div>
+                        </div>
+                        <!-- Item 3 -->
+                        <div class="mastery-item">
+                            <div class="mastery-info">
+                                <span>Ngữ pháp Tiếng Anh nâng cao</span>
+                                <span class="mastery-pct">72%</span>
+                            </div>
+                            <div class="mastery-bar-container">
+                                <div class="mastery-bar" style="width: 72%; background: #3b82f6;"></div>
+                            </div>
+                        </div>
+                        <!-- Item 4 -->
+                        <div class="mastery-item">
+                            <div class="mastery-info">
+                                <span>Cơ sở dữ liệu (SQL, NoSQL)</span>
+                                <span class="mastery-pct">65%</span>
+                            </div>
+                            <div class="mastery-bar-container">
+                                <div class="mastery-bar" style="width: 65%; background: #f59e0b;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 1: FLASHCARDS (Thư viện) -->
+            <div id="tab-content-flashcards" class="tab-pane">
+                <!-- Header -->
+                <header class="main-header">
+                    <div class="header-info">
+                        <h1>Thư viện bộ thẻ & Flashcards</h1>
+                        <p>Quản lý và lật thẻ kiến thức tự ghi nhớ.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="open-add-modal">
+                            <i class="fas fa-plus"></i> Tạo bộ thẻ mới
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Main Category Filter (Visible on Mobile) -->
+                <div class="mobile-categories-row">
+                    <div class="category-item active" data-category="all">
+                        <i class="fas fa-border-all"></i> Tất cả
+                    </div>
+                    <div class="category-item" data-category="english">
+                        <i class="fas fa-language"></i> Tiếng Anh
+                    </div>
+                    <div class="category-item" data-category="programming">
+                        <i class="fas fa-code"></i> CNTT
+                    </div>
+                    <div class="category-item" data-category="general">
+                        <i class="fas fa-lightbulb"></i> Chung
+                    </div>
+                </div>
+
+                <!-- Filters row (Subcategory + Spaced Repetition Toggle) -->
+                <div class="filters-row">
+                    <!-- Sub-category filter -->
+                    <div class="sub-filter-container glass-panel" id="sub-filter-container">
+                        <label><i class="fas fa-filter"></i> Chủ đề chi tiết:</label>
+                        <div class="searchable-select" id="topic-searchable-select">
+                            <div class="select-trigger" id="topic-select-trigger">
+                                <span id="topic-select-label">Tất cả chủ đề chi tiết</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="select-dropdown" id="topic-select-dropdown">
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="topic-search-input" placeholder="Tìm chủ đề..." autocomplete="off">
+                                </div>
+                                <ul class="options-list" id="topic-options-list">
+                                    <!-- Options populated dynamically in JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spaced Repetition Toggle -->
+                    <div class="srs-toggle-container glass-panel">
+                        <span class="srs-label"><i class="fas fa-brain"></i> Học ngắt quãng (SRS):</span>
+                        <label class="switch">
+                            <input type="checkbox" id="srs-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="srs-status-text" id="srs-status-text">Đang tắt</span>
+                    </div>
+                </div>
+
+                <!-- Library Decks Divided Sections -->
+                <div id="library-view-container" style="display: flex; flex-direction: column; gap: 2rem; width: 100%;">
+                    <!-- Section 1: Tiếng Anh -->
+                    <div class="library-section" id="english-library-section">
+                        <h3 class="library-section-header" style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 0.5rem; border-radius: var(--border-radius-md); transition: background 0.2s ease;">
+                            <span style="display: flex; align-items: center; gap: 0.6rem;">
+                                <i class="fas fa-language" style="color: #4b41e1; font-size: 1.4rem;"></i> 📚 Học từ vựng Tiếng Anh
+                            </span>
+                            <i class="fas fa-chevron-down section-toggle-icon" style="transition: transform 0.3s ease; font-size: 1rem; color: var(--text-muted);"></i>
+                        </h3>
+                        <div id="english-decks-grid" class="decks-grid">
+                            <!-- Dynamic English cards -->
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Công nghệ thông tin -->
+                    <div class="library-section" id="it-library-section">
+                        <h3 class="library-section-header" style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 0.5rem; border-radius: var(--border-radius-md); transition: background 0.2s ease;">
+                            <span style="display: flex; align-items: center; gap: 0.6rem;">
+                                <i class="fas fa-code" style="color: #7c3aed; font-size: 1.3rem;"></i> 💻 Chuyên ngành Công nghệ thông tin
+                            </span>
+                            <i class="fas fa-chevron-down section-toggle-icon" style="transition: transform 0.3s ease; font-size: 1rem; color: var(--text-muted);"></i>
+                        </h3>
+                        <div id="it-decks-grid" class="decks-grid">
+                            <!-- Dynamic IT/Programming cards -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: QUIZ PRACTICE -->
+            <div id="tab-content-quiz" class="tab-pane">
+                <header class="main-header">
+                    <div class="header-info">
+                        <h1>Luyện Tập & Ôn Luyện</h1>
+                        <p>Kiểm tra, đánh giá khả năng ghi nhớ hoặc tham gia trò chơi ghép cặp từ vựng sinh động.</p>
+                    </div>
+                </header>
+
+                <!-- Segmented Control Mode Toggle -->
+                <div class="practice-modes-toggle" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 0.3rem; border-radius: 10px; border: 1px solid var(--border-color); width: fit-content;">
+                    <button class="mode-toggle-btn active" data-practice-mode="quiz" type="button" style="padding: 0.6rem 1.2rem; border-radius: 8px; border: none; background: var(--primary-color); color: white; cursor: pointer; font-weight: 600; font-family: var(--font-heading); transition: all 0.2s ease; box-shadow: 0 4px 12px var(--primary-glow);">
+                        <i class="fas fa-edit"></i> Trắc nghiệm & Tự luận
+                    </button>
+                    <button class="mode-toggle-btn" data-practice-mode="game" type="button" style="padding: 0.6rem 1.2rem; border-radius: 8px; border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 600; font-family: var(--font-heading); transition: all 0.2s ease;">
+                        <i class="fas fa-gamepad"></i> Game Ghép Thẻ
+                    </button>
+                </div>
+
+                <!-- Quiz Practice Container Wrapper -->
+                <div id="quiz-practice-section">
+                    <!-- Setup View -->
+                    <div id="quiz-setup-container" class="glass-panel quiz-box">
+                    <h2>Cài đặt bài ôn tập</h2>
+                    <form id="quiz-setup-form" class="quiz-setup-form">
+                        <div class="form-grid">
+                            <div class="form-group-select">
+                                <label for="quiz-category"><i class="fas fa-tags"></i> Chọn danh mục học:</label>
+                                <select id="quiz-category">
+                                    <option value="all">Tất cả danh mục</option>
+                                    <option value="english">Tiếng Anh</option>
+                                    <option value="programming">Lập trình</option>
+                                    <option value="general">Kiến thức chung</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group-select searchable-select" id="quiz-sub-filter-group" style="display: none; position: relative;">
+                                <label><i class="fas fa-filter"></i> Chọn chủ đề chi tiết:</label>
+                                <div class="select-trigger" id="quiz-sub-trigger" style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 1rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--text-primary); cursor: pointer; min-height: 42px;">
+                                    <span id="quiz-sub-selected-text">Tất cả chủ đề</span>
+                                    <i class="fas fa-chevron-down" style="font-size: 0.8rem; color: var(--text-muted);"></i>
+                                </div>
+                                <div class="select-dropdown" id="quiz-sub-dropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; z-index: 150; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); box-shadow: var(--shadow-lg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); margin-top: 5px;">
+                                    <div class="search-box" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border-color);">
+                                        <i class="fas fa-search" style="color: var(--text-muted); font-size: 0.85rem;"></i>
+                                        <input type="text" id="quiz-sub-search-input" placeholder="Tìm kiếm chủ đề..." style="background: transparent; border: none; color: var(--text-primary); outline: none; font-size: 0.85rem; width: 100%;">
+                                    </div>
+                                    <div class="options-list" id="quiz-sub-options" style="max-height: 180px; overflow-y: auto; padding: 0.3rem 0;">
+                                        <!-- Dynamic options -->
+                                    </div>
+                                </div>
+                                <input type="hidden" id="quiz-subcategory" value="all">
+                            </div>
+
+                            <div class="form-group-select">
+                                <label for="quiz-mode"><i class="fas fa-tasks"></i> Chế độ kiểm tra:</label>
+                                <select id="quiz-mode">
+                                    <option value="choice">Trắc nghiệm (4 đáp án)</option>
+                                    <option value="write">Tự luận (Nhập từ vựng)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group-select">
+                                <label for="quiz-limit"><i class="fas fa-list-ol"></i> Số lượng câu hỏi:</label>
+                                <select id="quiz-limit">
+                                    <option value="10">10 câu</option>
+                                    <option value="20">20 câu</option>
+                                    <option value="50">50 câu</option>
+                                    <option value="all">Tất cả câu hỏi khả dụng</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-large">
+                            Bắt đầu ôn tập <i class="fas fa-play"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Ongoing Quiz View (hidden by default) -->
+                <div id="quiz-ongoing-container" class="quiz-box" style="display: none;">
+                    <div class="quiz-header-status glass-panel">
+                        <span class="quiz-progress-num" id="quiz-q-num">Câu hỏi 1 / 10</span>
+                        <div class="quiz-progress-bar-container">
+                            <div class="quiz-progress-bar" id="quiz-q-bar"></div>
+                        </div>
+                        <span class="quiz-score-num"><i class="fas fa-star" style="color: var(--warning-color)"></i> Điểm: <strong id="quiz-score">0</strong></span>
+                        <button class="btn btn-secondary" id="quiz-exit-ongoing-btn" title="Thoát bài học">
+                            <i class="fas fa-sign-out-alt"></i> Kết thúc
+                        </button>
+                    </div>
+
+                    <!-- Question Card -->
+                    <div class="quiz-question-card glass-panel ai-glow-border">
+                        <span class="card-category" id="quiz-card-cat">Danh mục</span>
+                        <div class="quiz-question-content">
+                            <span class="quiz-question-label" id="quiz-question-label">Câu hỏi:</span>
+                            <h2 id="quiz-question-text">Question text goes here?</h2>
+                            <p class="quiz-hint-text" id="quiz-hint-text"></p>
+                        </div>
+                    </div>
+
+                    <!-- Answers Options -->
+                    <div class="quiz-answers-container">
+                        <!-- Multiple Choice Options (dynamic) -->
+                        <div id="quiz-options-grid" class="quiz-options-grid"></div>
+
+                        <!-- Writing Input Panel (dynamic) -->
+                        <div id="quiz-write-panel" class="quiz-write-panel" style="display: none;">
+                            <input type="text" id="quiz-write-input" autocomplete="off" placeholder="Gõ câu trả lời của bạn tại đây...">
+                            <button class="btn btn-primary" id="quiz-write-submit-btn">Gửi đáp án</button>
+                        </div>
+                    </div>
+
+                    <div class="quiz-feedback-banner" id="quiz-feedback-banner" style="display: none;">
+                        <span id="quiz-feedback-text">Chính xác!</span>
+                        <button class="btn btn-primary" id="quiz-next-q-btn">Tiếp theo <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- Results Summary View (hidden by default) -->
+                <div id="quiz-results-container" class="glass-panel quiz-box text-center" style="display: none;">
+                    <i class="fas fa-trophy trophy-icon"></i>
+                    <h2>Hoàn Thành Bài Ôn Tập!</h2>
+                    <p class="results-subtext">Bạn đã hoàn thành các câu hỏi của bài kiểm tra.</p>
+
+                    <div class="results-stats-grid">
+                        <div class="result-stat-box">
+                            <span class="result-stat-num" id="res-score">8/10</span>
+                            <span class="result-stat-label">Số câu đúng</span>
+                        </div>
+                        <div class="result-stat-box">
+                            <span class="result-stat-num" id="res-percent">80%</span>
+                            <span class="result-stat-label">Độ chính xác</span>
+                        </div>
+                    </div>
+
+                    <div class="wrong-answers-section" id="wrong-answers-section" style="display: none;">
+                        <h3><i class="fas fa-exclamation-circle text-danger"></i> Các câu cần chú ý (Trả lời sai)</h3>
+                        <div class="wrong-answers-list-container">
+                            <table class="wrong-answers-table">
+                                <thead>
+                                    <tr>
+                                        <th>Câu hỏi/Từ vựng</th>
+                                        <th>Đáp án của bạn</th>
+                                        <th>Đáp án đúng</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wrong-answers-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="results-actions">
+                        <button class="btn btn-primary" id="quiz-retry-btn">
+                            Thử lại bài này <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="btn btn-secondary" id="quiz-exit-btn">
+                            Quay lại thiết lập <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+                </div> <!-- End #quiz-practice-section -->
+
+                <!-- Game Practice Section -->
+                <div id="game-practice-section" style="display: none;">
+                    <!-- Game Setup Panel -->
+                    <div id="game-setup-container" class="glass-panel quiz-box">
+                        <h2>Trò Chơi Ghép Thẻ Học</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6; font-size: 0.95rem;">Lật tìm các cặp từ tiếng Anh và nghĩa tiếng Việt tương ứng càng nhanh càng tốt để thử thách bản thân và lập kỷ lục mới!</p>
+
+                        <div class="form-grid" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="form-group-select">
+                                <label for="game-category"><i class="fas fa-tags"></i> Chọn danh mục học:</label>
+                                <select id="game-category">
+                                    <option value="all">Tất cả danh mục</option>
+                                    <option value="english">Tiếng Anh</option>
+                                    <option value="programming">Lập trình</option>
+                                    <option value="general">Kiến thức chung</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group-select searchable-select" id="game-sub-filter-group" style="display: none; position: relative;">
+                                <label><i class="fas fa-filter"></i> Chọn chủ đề chi tiết:</label>
+                                <div class="select-trigger" id="game-sub-trigger" style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 1rem; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--text-primary); cursor: pointer; min-height: 42px;">
+                                    <span id="game-sub-selected-text">Tất cả chủ đề</span>
+                                    <i class="fas fa-chevron-down" style="font-size: 0.8rem; color: var(--text-muted);"></i>
+                                </div>
+                                <div class="select-dropdown" id="game-sub-dropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; z-index: 150; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); box-shadow: var(--shadow-lg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); margin-top: 5px;">
+                                    <div class="search-box" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border-color);">
+                                        <i class="fas fa-search" style="color: var(--text-muted); font-size: 0.85rem;"></i>
+                                        <input type="text" id="game-sub-search-input" placeholder="Tìm kiếm chủ đề..." style="background: transparent; border: none; color: var(--text-primary); outline: none; font-size: 0.85rem; width: 100%;">
+                                    </div>
+                                    <div class="options-list" id="game-sub-options" style="max-height: 180px; overflow-y: auto; padding: 0.3rem 0;">
+                                        <!-- Dynamic options -->
+                                    </div>
+                                </div>
+                                <input type="hidden" id="game-subcategory" value="all">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1.5rem;">
+                            <button class="btn btn-primary btn-large" id="game-start-btn" type="button" style="width: 100%;">
+                                <i class="fas fa-play"></i> Bắt đầu trò chơi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Game Board Panel -->
+                    <div id="game-board-container" class="quiz-box" style="display: none; padding: 2rem;">
+                        <div class="game-header-status glass-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1.5rem; border-radius: var(--border-radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.8rem;">
+                            <span class="game-timer" style="font-family: var(--font-heading); font-weight: 700; color: var(--text-primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-stopwatch" style="color: #7c3aed;"></i> Thời gian: <span id="game-timer-val">0.0</span>s</span>
+                            <span class="game-best-time" style="font-family: var(--font-heading); font-weight: 700; color: #ffd700; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-trophy"></i> Kỷ lục: <span id="game-best-time-val">--</span>s</span>
+                        </div>
+
+                        <!-- Game instructions -->
+                        <div class="game-instruction" style="background: rgba(124, 58, 237, 0.08); border-left: 4px solid var(--primary-color); padding: 0.8rem 1.2rem; border-radius: 8px; margin-bottom: 1.5rem; color: var(--text-primary); font-size: 0.9rem; line-height: 1.5;">
+                            <strong>💡 HƯỚNG DẪN CHƠI:</strong> Nhấp chọn một ô ở cột <strong>CÂU HỎI</strong> bên trái, sau đó chọn ô tương ứng ở cột <strong>ĐÁP ÁN</strong> bên phải để ghép cặp.
+                        </div>
+
+                        <!-- Card columns wrapper with minmax columns to prevent overflow/cutoff -->
+                        <div class="game-columns-container" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.2rem; width: 100%;">
+                            <!-- Left Column (Questions / Terms) -->
+                            <div class="game-column" style="min-width: 0;">
+                                <h4 style="font-family: var(--font-heading); font-weight: 700; color: var(--primary-color); margin-bottom: 0.8rem; text-align: center; border-bottom: 2px solid var(--primary-glow); padding-bottom: 0.4rem; font-size: 1rem;"><i class="fas fa-question-circle"></i> CÂU HỎI / TỪ VỰNG</h4>
+                                <div id="game-left-grid" style="display: flex; flex-direction: column; gap: 0.8rem; min-width: 0;">
+                                    <!-- Left cards -->
+                                </div>
+                            </div>
+
+                            <!-- Right Column (Answers / Meanings) -->
+                            <div class="game-column" style="min-width: 0;">
+                                <h4 style="font-family: var(--font-heading); font-weight: 700; color: #10b981; margin-bottom: 0.8rem; text-align: center; border-bottom: 2px solid rgba(16, 185, 129, 0.2); padding-bottom: 0.4rem; font-size: 1rem;"><i class="fas fa-check-circle"></i> ĐÁP ÁN / Ý NGHĨA</h4>
+                                <div id="game-right-grid" style="display: flex; flex-direction: column; gap: 0.8rem; min-width: 0;">
+                                    <!-- Right cards -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="game-actions" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem;">
+                            <button class="btn btn-secondary" id="game-quit-btn" type="button">
+                                <i class="fas fa-sign-out-alt"></i> Thoát trò chơi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Game Victory Panel -->
+                    <div id="game-victory-container" class="glass-panel quiz-box text-center" style="display: none; padding: 2.5rem 2rem;">
+                        <i class="fas fa-award victory-icon" style="font-size: 5rem; color: #ffd700; filter: drop-shadow(0 0 15px rgba(255,215,0,0.6)); margin-bottom: 1rem; display: inline-block;"></i>
+                        <h2 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: #ffd700; margin-bottom: 0.5rem;">XUẤT SẮC! CHIẾN THẮNG!</h2>
+                        <p class="results-subtext" style="color: var(--text-secondary); margin-bottom: 1.5rem;">Bạn đã tìm thấy tất cả các cặp thẻ từ vựng trùng khớp!</p>
+
+                        <div class="results-stats-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2rem; margin-bottom: 2rem;">
+                            <div class="result-stat-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: var(--border-radius-md);">
+                                <span class="result-stat-num" id="game-your-time" style="display: block; font-size: 1.8rem; font-weight: 800; color: var(--text-primary);">12.5s</span>
+                                <span class="result-stat-label" style="font-size: 0.85rem; color: var(--text-secondary);">Thời gian hoàn thành</span>
+                            </div>
+                            <div class="result-stat-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 1.2rem; border-radius: var(--border-radius-md); position: relative;">
+                                <span class="result-stat-num" id="game-record-time" style="display: block; font-size: 1.8rem; font-weight: 800; color: #ffd700;">10.2s</span>
+                                <span class="result-stat-label" style="font-size: 0.85rem; color: var(--text-secondary);">Kỷ lục tốt nhất</span>
+                                <span id="new-record-badge" style="display: none; position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 20px; box-shadow: 0 4px 8px rgba(239,68,68,0.4); text-transform: uppercase;">NEW</span>
+                            </div>
+                        </div>
+
+                        <div class="results-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                            <button class="btn btn-primary" id="game-restart-btn" type="button">
+                                Chơi lại <i class="fas fa-redo"></i>
+                            </button>
+                            <button class="btn btn-secondary" id="game-exit-btn" type="button">
+                                Quay lại thiết lập <i class="fas fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: NOTEBOOK AI (kiểu NotebookLM) - nội dung dựng bằng notebook.js -->
+            <div id="tab-content-notebook" class="tab-pane"></div>
+
+            <!-- TAB 3: TIMETABLE PLANNER -->
+            <div id="tab-content-timetable" class="tab-pane">
+                <header class="main-header">
+                    <div class="header-info">
+                        <h1>Thời Khóa Biểu Học Tập</h1>
+                        <p>Lập kế hoạch học tập theo ngày và giờ để rèn luyện thói quen tự học.</p>
+                    </div>
+                    <div class="header-actions">
+                        <!-- Alarm Type Selector -->
+                        <div class="alarm-type-container">
+                            <label for="alarm-type-select"><i class="fas fa-cog"></i> Báo thức:</label>
+                            <select id="alarm-type-select">
+                                <option value="both" selected>Thông báo + Chuông</option>
+                                <option value="text">Chỉ thông báo chữ</option>
+                                <option value="sound">Chỉ chuông báo</option>
+                            </select>
+                        </div>
+                        <!-- Notification Toggle Button -->
+                        <button class="btn btn-secondary" id="notification-toggle-btn" title="Bật/Tắt thông báo nhắc nhở">
+                            <i class="fas fa-bell"></i> <span>Bật thông báo</span>
+                        </button>
+                        <button class="btn btn-primary" id="open-timetable-modal">
+                            <i class="fas fa-plus"></i> Thêm lịch học
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Notification Widget -->
+                <div class="timetable-widget glass-panel" id="timetable-today-widget">
+                    <div class="widget-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="widget-info">
+                        <h3 id="timetable-widget-title">Lịch học tiếp theo</h3>
+                        <p id="timetable-widget-desc">Đang tải lịch học của bạn...</p>
+                    </div>
+                </div>
+
+                <!-- Timetable Calendar Matrix Grid -->
+                <section class="timetable-grid-container glass-panel">
+                    <div class="timetable-grid-wrapper">
+                        <!-- Hour Label Column (Left Axis) -->
+                        <div class="timetable-hours-axis">
+                            <div class="axis-header-cell">Giờ</div>
+                            <div class="hour-cell">06:00</div>
+                            <div class="hour-cell">07:00</div>
+                            <div class="hour-cell">08:00</div>
+                            <div class="hour-cell">09:00</div>
+                            <div class="hour-cell">10:00</div>
+                            <div class="hour-cell">11:00</div>
+                            <div class="hour-cell">12:00</div>
+                            <div class="hour-cell">13:00</div>
+                            <div class="hour-cell">14:00</div>
+                            <div class="hour-cell">15:00</div>
+                            <div class="hour-cell">16:00</div>
+                            <div class="hour-cell">17:00</div>
+                            <div class="hour-cell">18:00</div>
+                            <div class="hour-cell">19:00</div>
+                            <div class="hour-cell">20:00</div>
+                            <div class="hour-cell">21:00</div>
+                            <div class="hour-cell">22:00</div>
+                            <div class="hour-cell">23:00</div>
+                        </div>
+
+                        <!-- Day Grid Columns (Monday to Sunday) -->
+                        <div class="timetable-days-grid">
+                            <!-- Mon -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Thứ Hai</div>
+                                <div class="day-column-body" id="grid-day-2"></div>
+                            </div>
+                            <!-- Tue -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Thứ Ba</div>
+                                <div class="day-column-body" id="grid-day-3"></div>
+                            </div>
+                            <!-- Wed -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Thứ Tư</div>
+                                <div class="day-column-body" id="grid-day-4"></div>
+                            </div>
+                            <!-- Thu -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Thứ Năm</div>
+                                <div class="day-column-body" id="grid-day-5"></div>
+                            </div>
+                            <!-- Fri -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Thứ Sáu</div>
+                                <div class="day-column-body" id="grid-day-6"></div>
+                            </div>
+                            <!-- Sat -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Thứ Bảy</div>
+                                <div class="day-column-body" id="grid-day-7"></div>
+                            </div>
+                            <!-- Sun -->
+                            <div class="day-grid-column">
+                                <div class="day-column-header">Chủ Nhật</div>
+                                <div class="day-column-body" id="grid-day-8"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- TAB 4: SETTINGS (Cài đặt) -->
+            <div id="tab-content-settings" class="tab-pane">
+                <header class="main-header">
+                    <div class="header-info">
+                        <h1>Cài đặt ứng dụng</h1>
+                        <p>Cấu hình thông báo, cài đặt PWA và tùy chọn giao diện màu sắc.</p>
+                    </div>
+                </header>
+
+                <div class="settings-container glass-panel" style="padding: 2rem; border-radius: var(--border-radius-lg); display: flex; flex-direction: column; gap: 2rem;">
+                    <!-- PWA Section -->
+                    <div class="settings-section" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="fas fa-mobile-alt" style="color: var(--primary-color);"></i> Ứng dụng di động PWA
+                        </h3>
+                        <p class="settings-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Cài đặt SmartFlash lên màn hình chính điện thoại để sử dụng offline và nhận thông báo học tập.</p>
+                        <button id="settings-install-btn" class="btn btn-primary" style="display: none; margin-top: 1rem;">
+                            <i class="fas fa-download"></i> Cài đặt ứng dụng ngay
+                        </button>
+                        <div id="settings-pwa-status" class="settings-status-success" style="margin-top: 0.8rem; color: var(--success-color); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-check-circle"></i> Ứng dụng đã được cài đặt hoặc đang chạy trực tiếp trên trình duyệt.
+                        </div>
+                    </div>
+
+                    <!-- Theme Section -->
+                    <div class="settings-section" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="fas fa-paint-brush" style="color: var(--secondary-color);"></i> Tùy chọn giao diện màu nền
+                        </h3>
+                        <p class="settings-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Chuyển đổi giữa chế độ nền tối (Dark) và nền sáng (Light).</p>
+                        <button id="settings-theme-toggle" class="btn btn-secondary" style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-moon"></i> Đổi màu nền (Sáng / Tối)
+                        </button>
+                    </div>
+
+                    <!-- Alarm style Section -->
+                    <div class="settings-section">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="fas fa-volume-up" style="color: var(--warning-color);"></i> Kiểu âm thanh báo lịch học
+                        </h3>
+                        <p class="settings-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Chọn kiểu thông báo âm thanh khi đến giờ học trên lịch.</p>
+                        <div class="alarm-options-grid" style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+                            <label class="alarm-option-card glass-panel" style="flex: 1; min-width: 120px; padding: 1.2rem; cursor: pointer; text-align: center; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); display: block; position: relative; transition: all 0.2s ease;">
+                                <input type="radio" name="settings-alarm-style" value="beep" style="margin-bottom: 0.5rem; display: block; margin-left: auto; margin-right: auto; cursor: pointer;">
+                                <i class="fas fa-bell" style="font-size: 1.5rem; color: #7c3aed; display: block; margin-bottom: 0.4rem;"></i>
+                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Chuông Beep</span>
+                            </label>
+                            <label class="alarm-option-card glass-panel" style="flex: 1; min-width: 120px; padding: 1.2rem; cursor: pointer; text-align: center; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); display: block; position: relative; transition: all 0.2s ease;">
+                                <input type="radio" name="settings-alarm-style" value="voice" style="margin-bottom: 0.5rem; display: block; margin-left: auto; margin-right: auto; cursor: pointer;">
+                                <i class="fas fa-comment-dots" style="font-size: 1.5rem; color: #4b41e1; display: block; margin-bottom: 0.4rem;"></i>
+                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Giọng nói AI</span>
+                            </label>
+                            <label class="alarm-option-card glass-panel" style="flex: 1; min-width: 120px; padding: 1.2rem; cursor: pointer; text-align: center; border-radius: var(--border-radius-md); border: 1px solid var(--border-color); display: block; position: relative; transition: all 0.2s ease;">
+                                <input type="radio" name="settings-alarm-style" value="both" style="margin-bottom: 0.5rem; display: block; margin-left: auto; margin-right: auto; cursor: pointer;">
+                                <i class="fas fa-volume-up" style="font-size: 1.5rem; color: #10b981; display: block; margin-bottom: 0.4rem;"></i>
+                                <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Cả hai</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Dev Simulation Section -->
+                    <!-- Dev Simulation Section -->
+                    <div class="settings-section" id="dev-sim-section" style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; margin-top: 1.5rem;">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="fas fa-flask" style="color: #10b981;"></i> Thử nghiệm mốc Streak (Giả lập) <span id="sim-lock-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: 600; display: flex; align-items: center; gap: 0.3rem;"><i class="fas fa-lock"></i> Đang khóa</span>
+                        </h3>
+                        <p class="settings-desc" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">Khu vực thử nghiệm của Quản trị viên. Cần mật khẩu để truy cập.</p>
+
+                        <!-- Password unlock form -->
+                        <div id="sim-unlock-container" style="display: flex; gap: 0.8rem; margin-top: 1rem; align-items: center; flex-wrap: wrap;">
+                            <input type="password" id="sim-pw-input" placeholder="Nhập mật khẩu..." class="glass-panel" style="padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--text-primary); outline: none; font-size: 0.9rem; width: 180px;">
+                            <button id="sim-unlock-btn" class="btn btn-primary" type="button" style="padding: 0.6rem 1.2rem;">
+                                <i class="fas fa-unlock-alt"></i> Mở khóa
+                            </button>
+                        </div>
+
+                        <!-- Hidden simulated streak controls (revealed after password check) -->
+                        <div id="sim-controls-container" style="display: none; gap: 1rem; margin-top: 1rem; align-items: center; flex-wrap: wrap;">
+                            <input type="number" id="test-streak-input" min="1" max="1000" value="30" class="glass-panel" style="padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--text-primary); width: 100px; text-align: center; outline: none; font-weight: 700;">
+                            <button id="test-streak-btn" class="btn btn-primary" type="button">
+                                <i class="fas fa-magic"></i> Kích hoạt giả lập Streak
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-  </header>
 
-  <!-- ========================================================================
-       2. Main Content Views (SPA Tab Switching)
-       ======================================================================== -->
-  <main class="app-main">
+    <!-- Streak Milestone Celebration Modal -->
+    <div class="modal-overlay" id="streak-milestone-modal" style="display: none; z-index: 3000;">
+        <div class="modal-content glass-panel text-center streak-celebration-content" style="max-width: 500px; padding: 2.5rem; border-radius: var(--border-radius-lg); position: relative; margin: auto;">
+            <button class="close-btn" id="close-streak-modal" style="position: absolute; top: 1.2rem; right: 1.2rem; background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;" type="button"><i class="fas fa-times"></i></button>
 
-    <!-- ----------------------------------------------------------------------
-         VIEW 1: KANBAN BOARD
-         ---------------------------------------------------------------------- -->
-    <section class="view-section active" id="kanban-view" aria-label="Bảng Kanban công việc">
-      
-      <!-- Kanban Toolbar & Filters -->
-      <div class="kanban-toolbar">
-        <div class="toolbar-title-group">
-          <h2>Bảng Quản Lý Công Việc (Kanban)</h2>
-          <p>Kéo thả trực quan giữa các cột để đồng bộ hóa trạng thái tiến độ tức thì.</p>
-        </div>
-        <div class="toolbar-controls">
-          <div class="search-input-wrapper">
-            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input type="text" class="search-input" id="kanban-search" placeholder="Tìm kiếm công việc...">
-          </div>
-          <select class="select-filter" id="kanban-priority-filter" aria-label="Lọc theo mức ưu tiên">
-            <option value="all">Mức ưu tiên: Tất cả</option>
-            <option value="High">Ưu tiên cao 🔥</option>
-            <option value="Medium">Ưu tiên trung bình ⚡</option>
-            <option value="Low">Ưu tiên thấp 🍃</option>
-          </select>
-          <button class="btn btn-primary" id="btn-new-task">
-            + Thêm Task
-          </button>
-        </div>
-      </div>
-
-      <!-- 3-Column Kanban Board Grid -->
-      <div class="kanban-board-grid">
-        
-        <!-- Column 1: Todo -->
-        <div class="kanban-column col-todo">
-          <div class="column-header">
-            <div class="column-header-title">
-              <span class="column-dot"></span>
-              <span>Chưa bắt đầu (Todo)</span>
-              <span class="column-count-badge" id="todo-count">1</span>
+            <div class="streak-badge-glow" style="margin-bottom: 1.5rem; display: inline-block;">
+                <i class="fas fa-fire streak-celebration-icon" style="font-size: 5rem; color: #ffd700; filter: drop-shadow(0 0 15px rgba(255,215,0,0.6));"></i>
             </div>
-            <button class="btn-icon btn-add-col-task" data-status="Todo" title="Thêm task vào cột này">+</button>
-          </div>
-          <div class="kanban-column-list" id="col-todo-list" data-status="Todo">
-            <div class="kanban-card" data-id="static-1">
-              <div class="card-top-bar">
-                <span class="badge badge-medium">⚡ Ưu tiên trung bình</span>
-                <div class="card-header-actions">
-                  <button class="btn-icon btn-card-delete" title="Xóa task">🗑️</button>
-                </div>
-              </div>
-              <h4 class="card-title">Tích hợp AI Flashcard Generator & Analytics</h4>
-              <p class="card-desc">Cho phép người dùng tạo nhanh bộ thẻ từ ghi chú và theo dõi tỷ lệ nhớ bài Ebbinghaus.</p>
-              <div class="card-footer">
-                <span class="card-date" title="Hạn hoàn thành">📅 2026-09-30</span>
-                <div class="card-move-actions">
-                  <button class="btn-move btn-move-right" title="Chuyển sang Đang làm (Doing)">→</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Column 2: Doing -->
-        <div class="kanban-column col-inprogress">
-          <div class="column-header">
-            <div class="column-header-title">
-              <span class="column-dot"></span>
-              <span>Đang làm (Doing)</span>
-              <span class="column-count-badge" id="inprogress-count">1</span>
-            </div>
-            <button class="btn-icon btn-add-col-task" data-status="InProgress" title="Thêm task vào cột này">+</button>
-          </div>
-          <div class="kanban-column-list" id="col-inprogress-list" data-status="InProgress">
-            <div class="kanban-card" data-id="static-2">
-              <div class="card-top-bar">
-                <span class="badge badge-high">🔥 Ưu tiên cao</span>
-                <div class="card-header-actions">
-                  <button class="btn-icon btn-card-delete" title="Xóa task">🗑️</button>
-                </div>
-              </div>
-              <h4 class="card-title">Thiết kế giao diện 3D Spaced Repetition Flashcard</h4>
-              <p class="card-desc">Tối ưu hiệu ứng lật thẻ 3D rotateY với CSS hardware acceleration và 4 mức đánh giá SM-2.</p>
-              <div class="card-footer">
-                <span class="card-date" title="Hạn hoàn thành">📅 2026-09-29</span>
-                <div class="card-move-actions">
-                  <button class="btn-move btn-move-left" title="Chuyển về Chưa làm (Todo)">←</button>
-                  <button class="btn-move btn-move-right" title="Chuyển sang Đã xong (Done)">→</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            <h2 id="streak-milestone-title" style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 1rem; color: #ffd700; text-transform: uppercase;">Mốc Chuỗi 30 Ngày!</h2>
 
-        <!-- Column 3: Done -->
-        <div class="kanban-column col-completed">
-          <div class="column-header">
-            <div class="column-header-title">
-              <span class="column-dot"></span>
-              <span>Đã xong (Done)</span>
-              <span class="column-count-badge" id="completed-count">1</span>
-            </div>
-            <button class="btn-icon btn-add-col-task" data-status="Completed" title="Thêm task vào cột này">+</button>
-          </div>
-          <div class="kanban-column-list" id="col-completed-list" data-status="Completed">
-            <div class="kanban-card" data-id="static-3">
-              <div class="card-top-bar">
-                <span class="badge badge-high">🔥 Ưu tiên cao</span>
-                <div class="card-header-actions">
-                  <button class="btn-icon btn-card-delete" title="Xóa task">🗑️</button>
-                </div>
-              </div>
-              <h4 class="card-title">Xây dựng Backend RESTful API với FastAPI</h4>
-              <p class="card-desc">Phát triển các module auth, tasks, flashcard review và bulk AI generator theo đúng interface contract.</p>
-              <div class="card-footer">
-                <span class="card-date" title="Hạn hoàn thành">📅 2026-09-28</span>
-                <div class="card-move-actions">
-                  <button class="btn-move btn-move-left" title="Chuyển lại Đang làm (Doing)">←</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            <p id="streak-milestone-desc" style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 2rem; font-size: 1rem;">Bạn đã rất xuất sắc khi kiên trì học tập liên tiếp 30 ngày. Hãy tiếp tục duy trì ngọn lửa nhiệt huyết này nhé!</p>
 
-      </div>
-
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         VIEW 2: FLASHCARDS & SPACED REPETITION (3D FLIP & SM-2)
-         ---------------------------------------------------------------------- -->
-    <section class="view-section" id="flashcards-view" aria-label="Giao diện ôn tập Flashcards">
-      
-      <!-- Flashcards Toolbar -->
-      <div class="flashcards-toolbar">
-        <div class="mode-toggle-group">
-          <button class="mode-toggle-btn active" id="btn-mode-study">Chế độ học (3D Study)</button>
-          <button class="mode-toggle-btn" id="btn-mode-deck">Quản lý bộ thẻ (Deck)</button>
-        </div>
-
-        <div class="toolbar-controls">
-          <button class="btn btn-secondary btn-sm" id="btn-open-add-card">
-            + Thêm thẻ mới
-          </button>
-          <button class="btn btn-ai-gradient btn-sm" id="btn-open-ai">
-            ✨ Tạo thẻ bằng AI
-          </button>
-          <button class="btn btn-secondary btn-sm" id="btn-open-bulk">
-            📥 Nhập Bulk JSON/Text
-          </button>
-        </div>
-      </div>
-
-      <!-- Mode 1: 3D Study Session Container -->
-      <div id="study-mode-container">
-        
-        <!-- Active Session Area -->
-        <div id="study-session-area">
-          <div class="study-header">
-            <div>
-              <span class="badge badge-category" id="card-category-badge">Chủ đề: Chung</span>
-            </div>
-            <div style="text-align: right;">
-              <span class="study-progress-info" id="study-progress-text">Thẻ 1 / 1</span>
-            </div>
-          </div>
-          
-          <div class="study-progress-bar-bg">
-            <div class="study-progress-bar-fill" id="study-progress-fill"></div>
-          </div>
-
-          <!-- 3D Hardware Accelerated Flashcard Stage -->
-          <div class="flashcard-stage" id="flashcard-stage" title="Bấm vào thẻ hoặc nhấn Space để lật">
-            <div class="flashcard-inner">
-              
-              <!-- Front Face: Question -->
-              <div class="flashcard-front">
-                <div class="card-content-top">
-                  <span>MẶT TRƯỚC (CÂU HỎI / KHÁI NIỆM)</span>
-                  <span>🔄 Bấm để lật</span>
-                </div>
-                
-                <div class="card-face-body">
-                  <div class="card-face-question" id="card-front-content">
-                    Đang tải câu hỏi flashcard...
-                  </div>
-                  <div class="card-hint-box" id="card-hint-content" style="display: none;"></div>
-                </div>
-
-                <div class="card-click-prompt">
-                  <button class="btn btn-secondary btn-sm" id="btn-flip-card">
-                    💡 Lật xem đáp án [Space]
-                  </button>
-                </div>
-              </div>
-
-              <!-- Back Face: Answer & SM-2 Ratings -->
-              <div class="flashcard-back">
-                <div class="card-content-top">
-                  <span>MẶT SAU (ĐÁP ÁN & GIẢI THÍCH)</span>
-                  <span>✅ Đánh giá mức độ nhớ bên dưới</span>
-                </div>
-
-                <div class="card-face-body">
-                  <div class="card-face-answer" id="card-back-content">
-                    Đang tải nội dung đáp án...
-                  </div>
-                </div>
-
-                <div class="card-click-prompt">
-                  <span>Lựa chọn điểm ghi nhớ để áp dụng thuật toán SM-2:</span>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Spaced Repetition (SM-2) Rating Action Buttons -->
-          <div class="review-actions-bar">
-            <button class="btn-review btn-review-again" data-rating="1" title="Quên hoàn toàn, cần học lại">
-              <span class="rating-label">🔴 Học lại (Again)</span>
-              <span class="rating-desc">Quên khái niệm (1 ngày)</span>
-              <span class="rating-key">Phím 1</span>
+            <button class="btn btn-primary btn-large" id="streak-milestone-claim-btn" style="width: 100%;" type="button">
+                Tuyệt vời, tiếp tục thôi!
             </button>
-            <button class="btn-review btn-review-hard" data-rating="2" title="Nhớ được nhưng rất khó khăn">
-              <span class="rating-label">🟡 Khó (Hard)</span>
-              <span class="rating-desc">Nhớ mất thời gian</span>
-              <span class="rating-key">Phím 2</span>
-            </button>
-            <button class="btn-review btn-review-good" data-rating="3" title="Nhớ chuẩn xác với nỗ lực vừa phải">
-              <span class="rating-label">🔵 Tốt (Good)</span>
-              <span class="rating-desc">Ghi nhớ đạt chuẩn</span>
-              <span class="rating-key">Phím 3</span>
-            </button>
-            <button class="btn-review btn-review-easy" data-rating="4" title="Nhớ lập tức, rất dễ dàng">
-              <span class="rating-label">🟢 Dễ (Easy)</span>
-              <span class="rating-desc">Thành thạo kiến thức</span>
-              <span class="rating-key">Phím 4</span>
-            </button>
-          </div>
-
-          <!-- Study Hotkeys Footer Guide -->
-          <div class="study-hotkeys-footer">
-            Phím tắt: <kbd>Space</kbd> Lật thẻ &nbsp;|&nbsp; <kbd>1</kbd> Học lại &nbsp;|&nbsp; <kbd>2</kbd> Khó &nbsp;|&nbsp; <kbd>3</kbd> Tốt &nbsp;|&nbsp; <kbd>4</kbd> Dễ
-          </div>
         </div>
-
-        <!-- Session Finished Celebration Card (Hidden until all cards reviewed) -->
-        <div class="session-complete-card" id="session-finished-area" style="display: none;">
-          <div class="trophy-icon">🏆</div>
-          <h3>Xuất sắc! Bạn đã hoàn thành phiên ôn tập</h3>
-          <p>Các khoảng cách ôn tập tiếp theo đã được tự động tính toán theo thuật toán Spaced Repetition SM-2.</p>
-          <div style="display: flex; justify-content: center; gap: 1rem;">
-            <button class="btn btn-primary" id="btn-restart-session">Ôn tập lại từ đầu</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('btn-mode-deck').click()">Xem danh sách bộ thẻ</button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Mode 2: Deck Management Table Container (Hidden by default) -->
-      <div id="deck-mode-container" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <input type="text" class="search-input" id="deck-search" placeholder="Tìm kiếm thẻ flashcard..." style="width: 320px;">
-          <button class="btn btn-primary btn-sm" onclick="document.getElementById('btn-open-add-card').click()">
-            + Thêm thẻ mới
-          </button>
-        </div>
-
-        <div class="deck-table-container">
-          <table class="deck-table">
-            <thead>
-              <tr>
-                <th>Mặt trước (Câu hỏi)</th>
-                <th>Mặt sau (Đáp án)</th>
-                <th>Chủ đề</th>
-                <th style="text-align: right;">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody id="deck-table-body">
-              <!-- Populated dynamically -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         VIEW 3: LEARNING PROGRESS STATISTICS DASHBOARD
-         ---------------------------------------------------------------------- -->
-    <section class="view-section" id="stats-view" aria-label="Báo cáo tiến độ học tập">
-      <div class="stats-header">
-        <h2>Báo Cáo Tiến Độ & Thống Kê Ghi Nhớ</h2>
-        <p>Phân tích dữ liệu học tập dựa trên mô hình đường cong lãng quên Ebbinghaus và thuật toán SM-2.</p>
-      </div>
-
-      <!-- KPI Summary Cards Grid -->
-      <div class="stats-kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-icon-box kpi-icon-indigo">📚</div>
-          <div>
-            <div class="kpi-info-label">Tổng số Flashcards</div>
-            <div class="kpi-info-value" id="stat-total-cards">0</div>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon-box kpi-icon-amber">⏳</div>
-          <div>
-            <div class="kpi-info-label">Cần ôn hôm nay</div>
-            <div class="kpi-info-value" id="stat-cards-due">0</div>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon-box kpi-icon-amber" style="background: rgba(245, 158, 11, 0.15); color: var(--color-warning);">⚡</div>
-          <div>
-            <div class="kpi-info-label">Đang rèn luyện</div>
-            <div class="kpi-info-value" id="stat-cards-learning">0</div>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon-box kpi-icon-emerald">🏆</div>
-          <div>
-            <div class="kpi-info-label">Đã thành thạo</div>
-            <div class="kpi-info-value" id="stat-cards-mastered">0</div>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon-box kpi-icon-rose">🔥</div>
-          <div>
-            <div class="kpi-info-label">Chuỗi ngày học</div>
-            <div class="kpi-info-value" id="stat-streak-days">1 ngày 🔥</div>
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-icon-box kpi-icon-indigo" style="background: rgba(14, 165, 233, 0.15); color: var(--color-info);">🎯</div>
-          <div>
-            <div class="kpi-info-label">Tổng lượt ôn tập</div>
-            <div class="kpi-info-value" id="stat-total-reviews">0</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Visual Mastery & Retention Row -->
-      <div class="stats-visual-row">
-        
-        <!-- Circular Progress Ring: Retention Rate -->
-        <div class="stats-card-panel">
-          <div class="panel-title">
-            <span>Tỷ lệ nhớ bài ước tính</span>
-            <span class="badge badge-category">Retention</span>
-          </div>
-
-          <div class="retention-ring-container">
-            <div class="circular-gauge">
-              <svg viewBox="0 0 160 160">
-                <defs>
-                  <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#6366f1" />
-                    <stop offset="100%" stop-color="#10b981" />
-                  </linearGradient>
-                </defs>
-                <circle class="gauge-bg" cx="80" cy="80" r="70"></circle>
-                <circle class="gauge-val" id="gauge-circle-val" cx="80" cy="80" r="70"></circle>
-              </svg>
-              <div class="gauge-text-center">
-                <span class="gauge-percentage" id="gauge-retention-text">88%</span>
-                <span class="gauge-subtext">Độ chuẩn xác</span>
-              </div>
-            </div>
-          </div>
-
-          <p style="text-align: center; font-size: 0.825rem; color: var(--text-secondary); margin-top: 1rem;">
-            Dựa trên tổng hợp số lượt đánh giá ôn tập đạt Tốt (Good) và Dễ (Easy).
-          </p>
-        </div>
-
-        <!-- Spaced Repetition Mastery Distribution Stacked Bar -->
-        <div class="stats-card-panel">
-          <div class="panel-title">
-            <span>Phân bố mức độ thành thạo SM-2</span>
-            <span class="badge badge-category">Mastery Levels</span>
-          </div>
-
-          <p style="font-size: 0.85rem; color: var(--text-secondary);">
-            Tiến độ rèn luyện kiến thức phân bổ theo các giai đoạn củng cố trí nhớ dài hạn.
-          </p>
-
-          <div class="mastery-progress-bar">
-            <div class="bar-segment bar-again" id="bar-again" style="width: 15%;" title="Cần học lại (Again)"></div>
-            <div class="bar-segment bar-hard" id="bar-hard" style="width: 25%;" title="Đang rèn luyện (Hard)"></div>
-            <div class="bar-segment bar-good" id="bar-good" style="width: 35%;" title="Ghi nhớ tốt (Good)"></div>
-            <div class="bar-segment bar-easy" id="bar-easy" style="width: 25%;" title="Thành thạo (Easy)"></div>
-          </div>
-
-          <div class="mastery-legend">
-            <div class="legend-item">
-              <span class="legend-color-dot" style="background: var(--color-danger);"></span>
-              <span>Cần học lại (Again)</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color-dot" style="background: var(--color-warning);"></span>
-              <span>Đang rèn luyện (Hard)</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color-dot" style="background: var(--accent-primary);"></span>
-              <span>Ghi nhớ ổn định (Good)</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-color-dot" style="background: var(--color-success);"></span>
-              <span>Thành thạo dài hạn (Easy)</span>
-            </div>
-          </div>
-
-          <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-surface-elevated); border-radius: var(--radius-md); font-size: 0.85rem; color: var(--text-secondary);">
-            💡 <strong>Mẹo học tập:</strong> Ôn tập đều đặn mỗi ngày vào khung giờ cố định giúp kích hoạt hiệu ứng củng cố synap thần kinh (Long-Term Potentiation), giúp bạn ghi nhớ hơn 90% kiến thức mà chỉ mất 20% thời gian ôn lại.
-          </div>
-        </div>
-
-      </div>
-
-    </section>
-
-  </main>
-
-  <!-- ========================================================================
-       3. Global Modals & Dialog Windows
-       ======================================================================== -->
-
-  <!-- Modal 1: Authentication (Login / Register) -->
-  <div class="modal-overlay" id="auth-modal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 id="auth-modal-title">Đăng nhập tài khoản</h3>
-        <button class="modal-close-btn" id="auth-modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        
-        <div class="modal-tabs">
-          <button class="modal-tab-btn active" id="auth-tab-login">Đăng nhập</button>
-          <button class="modal-tab-btn" id="auth-tab-register">Đăng ký mới</button>
-        </div>
-
-        <div class="form-error-banner" id="auth-error-banner"></div>
-
-        <form id="auth-form">
-          <div class="form-group">
-            <label class="form-label" for="auth-username">Tên người dùng (Username)</label>
-            <input type="text" class="form-input" id="auth-username" required placeholder="Nhập username...">
-          </div>
-
-          <div class="form-group" id="auth-email-group" style="display: none;">
-            <label class="form-label" for="auth-email">Địa chỉ Email</label>
-            <input type="email" class="form-input" id="auth-email" placeholder="example@mindsprint.ai">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="auth-password">Mật khẩu (Password)</label>
-            <input type="password" class="form-input" id="auth-password" required placeholder="Tối thiểu 6 ký tự...">
-          </div>
-
-          <div class="form-group" id="auth-confirm-password-group" style="display: none;">
-            <label class="form-label" for="auth-confirm-password">Xác nhận mật khẩu</label>
-            <input type="password" class="form-input" id="auth-confirm-password" placeholder="Nhập lại mật khẩu...">
-          </div>
-
-          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
-            <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="width: 100%;">
-              Đăng nhập
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-demo-login" style="width: 100%;">
-              ⚡ Dùng thử ngay với tài khoản Demo
-            </button>
-          </div>
-        </form>
-
-      </div>
     </div>
-  </div>
 
-  <!-- Modal 2: Create / Edit Kanban Task -->
-  <div class="modal-overlay" id="task-modal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 id="task-modal-title">+ Tạo Công Việc Mới (Task)</h3>
-        <button class="modal-close-btn" id="task-modal-close">&times;</button>
-      </div>
-      <form id="task-form">
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="task-title">Tiêu đề công việc <span style="color: var(--color-danger);">*</span></label>
-            <input type="text" class="form-input" id="task-title" required placeholder="Ví dụ: Lập trình router tasks.py">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="task-desc">Mô tả chi tiết</label>
-            <textarea class="form-textarea" id="task-desc" placeholder="Ghi chú nội dung, mục tiêu hoặc hướng dẫn thực hiện..."></textarea>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
-              <label class="form-label" for="task-priority">Mức ưu tiên</label>
-              <select class="form-select" id="task-priority">
-                <option value="High">Cao 🔥</option>
-                <option value="Medium" selected>Trung bình ⚡</option>
-                <option value="Low">Thấp 🍃</option>
-              </select>
+    <!-- Modal for Adding New Flashcard -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h2>Tạo Flashcard Mới</h2>
+                <button class="close-btn" id="close-add-modal"><i class="fas fa-times"></i></button>
             </div>
-
-            <div class="form-group">
-              <label class="form-label" for="task-status">Trạng thái ban đầu</label>
-              <select class="form-select" id="task-status">
-                <option value="Todo" selected>Chưa bắt đầu (Todo)</option>
-                <option value="InProgress">Đang làm (InProgress)</option>
-                <option value="Completed">Đã xong (Completed)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="task-due-date">Hạn hoàn thành (Due date)</label>
-            <input type="date" class="form-input" id="task-due-date">
-          </div>
+            <form id="add-card-form" class="add-card-form">
+                <div class="form-group">
+                    <select id="new-category" required>
+                        <option value="english">Tiếng Anh</option>
+                        <option value="programming">Lập trình</option>
+                        <option value="general" selected>Kiến thức chung</option>
+                    </select>
+                    <label for="new-category">Danh mục</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="new-question" required placeholder=" ">
+                    <label for="new-question">Câu hỏi / Từ vựng (Mặt trước)</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="new-answer" required placeholder=" ">
+                    <label for="new-answer">Đáp án / Giải nghĩa (Mặt sau)</label>
+                </div>
+                <div class="form-group">
+                    <textarea id="new-example" rows="2" placeholder=" "></textarea>
+                    <label for="new-example">Ví dụ minh họa (Nếu có)</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-add-modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary">Lưu thẻ học <i class="fas fa-save"></i></button>
+                </div>
+            </form>
         </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="task-modal-cancel">Hủy</button>
-          <button type="submit" class="btn btn-primary" id="task-modal-submit">Lưu công việc</button>
-        </div>
-      </form>
     </div>
-  </div>
 
-  <!-- Modal 3: Bulk Import Flashcards -->
-  <div class="modal-overlay" id="bulk-modal">
-    <div class="modal-dialog modal-dialog-large">
-      <div class="modal-header">
-        <h3>📥 Nhập Hàng Loạt Flashcards (Bulk Import)</h3>
-        <button class="modal-close-btn" id="bulk-modal-close">&times;</button>
-      </div>
-      <form id="bulk-form">
-        <div class="modal-body">
-          <div class="modal-tabs">
-            <button type="button" class="modal-tab-btn active" id="bulk-tab-json">Định dạng JSON</button>
-            <button type="button" class="modal-tab-btn" id="bulk-tab-text">Văn bản phân tách (Text)</button>
-          </div>
+    <!-- Modal for Adding Timetable Slot -->
+    <div class="modal-overlay" id="timetable-modal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h2 id="timetable-modal-title">Thêm Giờ Học Mới</h2>
+                <button class="close-btn" id="close-timetable-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="timetable-form" class="add-card-form">
+                <div class="form-group">
+                    <select id="slot-day" required>
+                        <option value="2">Thứ Hai</option>
+                        <option value="3">Thứ Ba</option>
+                        <option value="4">Thứ Tư</option>
+                        <option value="5">Thứ Năm</option>
+                        <option value="6">Thứ Sáu</option>
+                        <option value="7">Thứ Bảy</option>
+                        <option value="8">Chủ Nhật</option>
+                    </select>
+                    <label for="slot-day">Ngày trong tuần</label>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <input type="time" id="slot-start" required min="06:00" max="23:00" placeholder=" ">
+                        <label for="slot-start">Giờ bắt đầu</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="time" id="slot-end" required min="06:00" max="23:00" placeholder=" ">
+                        <label for="slot-end">Giờ kết thúc</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <select id="slot-category" required>
+                        <option value="english">Tiếng Anh</option>
+                        <option value="programming">Lập trình</option>
+                        <option value="general">Kiến thức chung</option>
+                        <option value="mixed" selected>Tất cả danh mục</option>
+                    </select>
+                    <label for="slot-category">Chủ đề học tập</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="slot-note" placeholder=" " maxlength="40">
+                    <label for="slot-note">Ghi chú thêm (ví dụ: Ôn từ vựng, làm bài tập...)</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-timetable-modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary">Lưu lịch học <i class="fas fa-save"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-          <div class="form-group">
-            <label class="form-label" for="bulk-input-text">Dán nội dung flashcards vào đây</label>
-            <textarea class="form-textarea" id="bulk-input-text" style="min-height: 160px; font-family: monospace;" placeholder="[\n  {\n    &quot;front&quot;: &quot;FastAPI là gì?&quot;,\n    &quot;back&quot;: &quot;Python Web Framework hiện đại, tốc độ cao...&quot;,\n    &quot;category&quot;: &quot;Python&quot;\n  }\n]"></textarea>
-            <div class="form-help">Hỗ trợ dán JSON mảng đối tượng hoặc từng dòng "Câu hỏi : Câu trả lời".</div>
-          </div>
+    <!-- Modal for Editing Flashcard -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h2>Chỉnh Sửa Thẻ Học</h2>
+                <button class="close-btn" id="close-edit-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="edit-card-form" class="add-card-form">
+                <div class="form-group">
+                    <select id="edit-category" required>
+                        <option value="english">Tiếng Anh</option>
+                        <option value="programming">Lập trình</option>
+                        <option value="general">Kiến thức chung</option>
+                    </select>
+                    <label for="edit-category">Danh mục</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="edit-question" required placeholder=" ">
+                    <label for="edit-question">Câu hỏi / Từ vựng (Mặt trước)</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="edit-answer" required placeholder=" ">
+                    <label for="edit-answer">Đáp án / Giải nghĩa (Mặt sau)</label>
+                </div>
+                <div class="form-group">
+                    <textarea id="edit-example" rows="2" placeholder=" "></textarea>
+                    <label for="edit-example">Ví dụ minh họa (Nếu có)</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-edit-modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi <i class="fas fa-save"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-bulk-preview">
-              🔍 Kiểm tra & Xem trước
+    <!-- STUDY FLASHCARDS OVERLAY MODAL -->
+    <div class="modal-overlay" id="study-overlay-modal" style="display: none;">
+        <div class="modal-content study-modal-content glass-panel ai-glow-border" style="max-width: 600px; padding: 2rem; width: 90%;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <h2 id="study-modal-title" style="font-family: var(--font-heading); font-size: 1.3rem; margin: 0; color: var(--text-primary);">Ôn tập bộ thẻ</h2>
+                <button class="close-btn" id="close-study-modal-btn" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="study-modal-body" style="width: 100%;">
+                <!-- Stats & Progress -->
+                <section class="progress-section" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.6rem; width: 100%;">
+                    <div class="progress-info" style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);">
+                        <span>Tiến trình học tập</span>
+                        <span id="progress-text">Thẻ 1 / 5</span>
+                    </div>
+                    <div class="progress-bar-container" style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 999px; overflow: hidden;">
+                        <div class="progress-bar" id="progress-bar" style="width: 0%; height: 100%; background: var(--primary-color); transition: width 0.3s ease;"></div>
+                    </div>
+                </section>
+
+                <!-- Flashcard Display Area -->
+                <section class="flashcard-container" style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem; position: relative; z-index: 1; width: 100%;">
+                    <div class="flashcard-wrapper ai-glow-border" style="position: relative; width: 100%; height: 330px; perspective: 1000px; margin-bottom: 1rem;">
+                        <!-- Flashcard 3D Card -->
+                        <div class="flashcard" id="flashcard" style="width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; position: relative;">
+                            <div class="card-face card-front" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; border-radius: var(--border-radius-lg); background: var(--bg-panel); border: 1px solid var(--border-color); text-align: center;">
+                                <div class="card-actions-top" onclick="event.stopPropagation();" style="position: absolute; top: 1.2rem; right: 1.2rem; display: flex; gap: 0.6rem; z-index: 10;">
+                                    <button class="card-action-btn edit-card-btn" title="Sửa thẻ"><i class="fas fa-pen"></i></button>
+                                    <button class="card-action-btn delete-card-btn" title="Xóa thẻ"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                                <span class="card-category" id="card-front-cat" style="position: absolute; top: 1.2rem; left: 1.2rem; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--primary-color); letter-spacing: 1px; background: var(--primary-glow); padding: 0.25rem 0.6rem; border-radius: 6px;">Danh mục</span>
+                                <div class="card-content">
+                                    <h2 id="card-question" style="font-family: var(--font-heading); color: var(--text-primary); font-weight: 700;">Câu hỏi sẽ hiển thị ở đây</h2>
+                                </div>
+                                <span class="card-hint" style="position: absolute; bottom: 1.2rem; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;"><i class="fas fa-sync-alt"></i> Nhấp để lật xem đáp án</span>
+                            </div>
+                            <div class="card-face card-back" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; border-radius: var(--border-radius-lg); background: var(--bg-panel); border: 1px solid var(--border-color); text-align: center; transform: rotateY(180deg);">
+                                <div class="card-actions-top" onclick="event.stopPropagation();" style="position: absolute; top: 1.2rem; right: 1.2rem; display: flex; gap: 0.6rem; z-index: 10;">
+                                    <button class="card-action-btn edit-card-btn" title="Sửa thẻ"><i class="fas fa-pen"></i></button>
+                                    <button class="card-action-btn delete-card-btn" title="Xóa thẻ"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                                <span class="card-category" id="card-back-cat" style="position: absolute; top: 1.2rem; left: 1.2rem; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--primary-color); letter-spacing: 1px; background: var(--primary-glow); padding: 0.25rem 0.6rem; border-radius: 6px;">Danh mục</span>
+                                <div class="card-content" style="width: 100%;">
+                                    <h2 id="card-answer" style="font-family: var(--font-heading); color: var(--text-primary); font-weight: 700; margin-bottom: 0.8rem;">Đáp án sẽ hiển thị ở đây</h2>
+                                    <p id="card-example" class="card-example" style="color: var(--text-secondary); line-height: 1.5; background: rgba(255,255,255,0.02); padding: 0.75rem 1rem; border-radius: var(--border-radius-md); border-left: 3px solid var(--primary-color); margin-top: 0.8rem; text-align: left; display: inline-block; max-width: 90%; white-space: pre-wrap; font-family: monospace; width: calc(100% - 2rem);">Ví dụ minh họa sẽ hiển thị ở đây.</p>
+                                </div>
+                                <div class="card-feedback" onclick="event.stopPropagation();" style="position: absolute; bottom: 4.5rem; display: flex; gap: 1rem; z-index: 10; width: 85%; justify-content: center;">
+                                    <button class="btn btn-danger-glow" id="btn-forget" style="flex: 1; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px;">
+                                        <i class="fas fa-times-circle"></i> Chưa thuộc
+                                    </button>
+                                    <button class="btn btn-success-glow" id="btn-remember" style="flex: 1; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px;">
+                                        <i class="fas fa-check-circle"></i> Đã thuộc
+                                    </button>
+                                </div>
+                                <span class="card-hint" style="position: absolute; bottom: 1.2rem; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;"><i class="fas fa-sync-alt"></i> Nhấp để lật lại câu hỏi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Controls -->
+                    <div class="nav-controls" style="display: flex; gap: 1.5rem; width: 100%; justify-content: center;">
+                        <button class="control-btn" id="prev-btn" aria-label="Thẻ trước" style="background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-primary); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="control-btn" id="next-btn" aria-label="Thẻ tiếp theo" style="background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-primary); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alarm Ring Overlay (Full screen overlay when alarm triggers) -->
+    <div class="alarm-overlay" id="alarm-ring-overlay" style="display: none;">
+        <div class="alarm-ring-content glass-panel text-center">
+            <div class="alarm-bell-icon">
+                <i class="fas fa-bell"></i>
+            </div>
+            <h2>ĐẾN GIỜ HỌC RỒI!</h2>
+            <div class="alarm-slot-details">
+                <p class="alarm-slot-time" id="alarm-time-text">00:00 - 00:00</p>
+                <h3 class="alarm-slot-title" id="alarm-title-text">Môn học</h3>
+                <p class="alarm-slot-note" id="alarm-note-text">Ghi chú học tập</p>
+            </div>
+            <button class="btn btn-primary btn-large" id="alarm-stop-btn">
+                <i class="fas fa-volume-mute"></i> Tắt chuông & Vào học ngay
             </button>
-            <span id="bulk-preview-count" style="font-size: 0.85rem; color: var(--accent-primary); font-weight: 600;"></span>
-          </div>
         </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="bulk-modal-cancel">Hủy</button>
-          <button type="submit" class="btn btn-primary">Nhập vào bộ thẻ</button>
-        </div>
-      </form>
     </div>
-  </div>
 
-  <!-- Modal 4: AI Flashcard Generator (Extra Feature) -->
-  <div class="modal-overlay" id="ai-modal">
-    <div class="modal-dialog modal-dialog-large">
-      <div class="modal-header">
-        <h3>✨ Trợ Lý AI Tạo Flashcards Thông Minh</h3>
-        <button class="modal-close-btn" id="ai-modal-close">&times;</button>
-      </div>
-      <form id="ai-form">
-        <div class="modal-body">
-          
-          <div class="form-group">
-            <label class="form-label" for="ai-topic">Chủ đề cần học tập</label>
-            <input type="text" class="form-input" id="ai-topic" placeholder="Ví dụ: FastAPI Async Architecture, Thuật toán sắp xếp, Cơ chế JWT...">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ai-notes">Văn bản ghi chú / Tóm tắt bài học (Tùy chọn)</label>
-            <textarea class="form-textarea" id="ai-notes" style="min-height: 110px;" placeholder="Dán nội dung tài liệu, bài giảng hoặc ghi chú markdown của bạn vào đây để AI trích xuất câu hỏi và đáp án tối ưu..."></textarea>
-          </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div class="form-group">
-              <label class="form-label" for="ai-count">Số lượng thẻ muốn tạo</label>
-              <select class="form-select" id="ai-count">
-                <option value="3">3 Flashcards (Nhanh)</option>
-                <option value="5" selected>5 Flashcards (Khuyến nghị)</option>
-                <option value="10">10 Flashcards (Chuyên sâu)</option>
-              </select>
-            </div>
-            <div style="display: flex; align-items: flex-end; margin-bottom: 1.25rem;">
-              <button type="submit" class="btn btn-ai-gradient" id="ai-generate-submit-btn" style="width: 100%;">
-                ✨ Tạo Flashcard bằng AI
-              </button>
-            </div>
-          </div>
-
-          <!-- Shimmer Loading Spinner for AI -->
-          <div class="ai-shimmer-box" id="ai-shimmer-box" style="display: none;">
-            🤖 AI đang phân tích tài liệu và cấu trúc hóa câu hỏi ôn tập...
-          </div>
-
-          <!-- Generated Cards Preview Container -->
-          <div id="ai-preview-container" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-              <label class="form-label" style="margin-bottom: 0;">Kết quả AI tạo ra (Chọn các thẻ muốn thêm):</label>
-            </div>
-            <div class="ai-cards-preview-list" id="ai-cards-preview-list">
-              <!-- Populated dynamically -->
-            </div>
-          </div>
-
+    <!-- Custom JS -->
+    <div class="modal-overlay" id="task-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+        <div class="modal-content glass-panel">
+            <div class="modal-header"><h2 id="task-modal-title">Tạo công việc</h2><button type="button" id="task-modal-close" aria-label="Đóng">&times;</button></div>
+            <form id="task-form">
+                <div class="modal-body">
+                    <div class="form-group"><label for="task-title">Tiêu đề</label><input id="task-title" type="text" required maxlength="200" placeholder="Ví dụ: Ôn tập chương 3"></div>
+                    <div class="form-group"><label for="task-desc">Mô tả</label><textarea id="task-desc" maxlength="5000" rows="3"></textarea></div>
+                    <div class="kanban-form-row">
+                        <div class="form-group"><label for="task-priority">Ưu tiên</label><select id="task-priority"><option value="Low">Thấp</option><option value="Medium" selected>Trung bình</option><option value="High">Cao</option></select></div>
+                        <div class="form-group"><label for="task-status">Trạng thái</label><select id="task-status"><option value="Todo">Chưa bắt đầu</option><option value="InProgress">Đang làm</option><option value="Completed">Hoàn thành</option></select></div>
+                    </div>
+                    <div class="form-group"><label for="task-due-date">Hạn hoàn thành</label><input id="task-due-date" type="date"></div>
+                    <p id="task-form-error" role="alert" hidden></p>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" id="task-modal-cancel">Hủy</button><button class="btn btn-primary" type="submit" id="task-modal-submit">Lưu công việc</button></div>
+            </form>
         </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="ai-modal-cancel">Đóng</button>
-          <button type="button" class="btn btn-primary" id="btn-add-ai-cards" style="display: none;">
-            + Thêm thẻ đã chọn vào bộ nhớ
-          </button>
-        </div>
-      </form>
     </div>
-  </div>
-
-  <!-- Modal 5: Add Single Flashcard -->
-  <div class="modal-overlay" id="card-modal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3>+ Thêm Thẻ Flashcard Mới</h3>
-        <button class="modal-close-btn" id="card-modal-close">&times;</button>
-      </div>
-      <form id="card-form">
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="card-input-front">Mặt trước (Câu hỏi / Thuật ngữ) <span style="color: var(--color-danger);">*</span></label>
-            <input type="text" class="form-input" id="card-input-front" required placeholder="Nhập câu hỏi hoặc khái niệm...">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="card-input-back">Mặt sau (Đáp án / Định nghĩa) <span style="color: var(--color-danger);">*</span></label>
-            <textarea class="form-textarea" id="card-input-back" required placeholder="Nhập câu trả lời hoặc lời giải thích chi tiết..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="card-input-hint">Gợi ý gợi nhớ (Hint — tùy chọn)</label>
-            <input type="text" class="form-input" id="card-input-hint" placeholder="Gợi ý ngắn gọn giúp hồi tưởng...">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="card-input-category">Chủ đề phân loại</label>
-            <input type="text" class="form-input" id="card-input-category" placeholder="Ví dụ: FastAPI, Database, Frontend...">
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="card-modal-cancel">Hủy</button>
-          <button type="submit" class="btn btn-primary">Lưu thẻ</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Global Toast Notification Container -->
-  <div class="toast-container" id="toast-container"></div>
-
-  <!-- Resilient ES6 App Bootstrapper -->
-  <script type="module">
-    (async () => {
-      try {
-        await import('/static/js/app.js');
-      } catch (e) {
-        await import('./js/app.js');
-      }
-    })();
-  </script>
-
+    <script src="vendor/katex/katex.min.js"></script>
+    <script src="vendor/katex/contrib/auto-render.min.js"></script>
+    <script src="text-renderer.js?v=31"></script>
+    <script src="vocab_data.js?v=24"></script>
+    <script src="api.js?v=33"></script>
+    <script src="auth.js?v=30"></script>
+    <script src="notebook.js?v=32"></script>
+    <script src="script.js?v=30"></script>
+    <script src="kanban.js?v=33"></script>
 </body>
 </html>

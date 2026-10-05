@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartflash-cache-v32';
+const CACHE_NAME = 'smartflash-cache-v33';
 const MATH_FONTS = [
   'AMS-Regular', 'Caligraphic-Bold', 'Caligraphic-Regular', 'Fraktur-Bold', 'Fraktur-Regular',
   'Main-Bold', 'Main-BoldItalic', 'Main-Italic', 'Main-Regular', 'Math-BoldItalic', 'Math-Italic',
@@ -11,7 +11,9 @@ const ASSETS = [
   './style.css?v=32',
   './script.js?v=30',
   './vocab_data.js?v=24',
-  './api.js?v=32',
+  './api.js?v=33',
+  './kanban.js?v=33',
+  './kanban.css?v=33',
   './auth.js?v=30',
   './notebook.js?v=32',
   './text-renderer.js?v=31',

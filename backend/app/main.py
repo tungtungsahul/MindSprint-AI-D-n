@@ -101,7 +101,7 @@ def health_check():
 @app.get("/", include_in_schema=False)
 def serve_index():
     """Serves the frontend SPA index.html or welcome banner."""
-    index_file = FRONTEND_DIR / "index.html"
+    index_file = FRONTEND_DIR / "standalone.html"
     if index_file.exists():
         return FileResponse(str(index_file))
     return JSONResponse({
