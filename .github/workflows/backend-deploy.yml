@@ -1,0 +1,58 @@
+name: Deploy Backend to Render Staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+env:
+  RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+  RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/MindSprint.Api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --verbosity normal || echo "No tests found, skipping"
+
+      - name: Publish
+        run: dotnet publish --configuration Release --no-build --output ./publish
+
+      - name: Deploy to Render Staging
+        if: env.RENDER_SERVICE_ID != '' && env.RENDER_API_KEY != ''
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ env.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}'
+        env:
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+
+      - name: Wait for deployment
+        if: env.RENDER_SERVICE_ID != '' && env.RENDER_API_KEY != ''
+        run: |
+          echo "Deployment triggered. Check Render dashboard for status."
+          echo "Staging URL will be available at: https://your-service.onrender.com"

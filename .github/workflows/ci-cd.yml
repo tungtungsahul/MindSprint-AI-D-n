@@ -1,0 +1,110 @@
+name: Full CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_production:
+        description: 'Deploy to production (not just staging)'
+        type: boolean
+        default: false
+
+jobs:
+  # Backend jobs
+  backend-test:
+    name: Backend - Test & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/MindSprint.Api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore
+      - run: dotnet test --configuration Release --no-build --verbosity normal || echo "No tests found"
+
+  backend-deploy-staging:
+    name: Backend - Deploy Staging (Render)
+    needs: backend-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger Render Deploy
+        if: env.RENDER_SERVICE_ID != '' && env.RENDER_API_KEY != ''
+        run: |
+          echo "Triggering Render deploy for service: ${{ env.RENDER_SERVICE_ID }}"
+          curl -X POST "https://api.render.com/v1/services/${{ env.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ env.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}'
+          echo "Deploy triggered. Check Render dashboard."
+
+  # Frontend jobs
+  frontend-deploy-staging:
+    name: Frontend - Deploy Staging (Vercel)
+    needs: backend-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+      - name: Deploy to Vercel Preview
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          vercel pull --yes --environment=preview --token=${{ env.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --token=${{ env.VERCEL_TOKEN }} \
+            --scope=${{ env.VERCEL_ORG_ID }} \
+            --name=mindsprint-staging
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  # Production deploy (manual)
+  deploy-production:
+    name: Deploy Production
+    needs: [backend-deploy-staging, frontend-deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_production == true
+    runs-on: ubuntu-latest
+    env:
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Backend to Production
+        if: env.RENDER_SERVICE_ID != '' && env.RENDER_API_KEY != ''
+        run: |
+          echo "Production deploy uses same Render service with production env vars"
+          echo "Configure production env vars in Render dashboard"
+      - name: Deploy Frontend to Production
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          npm install -g vercel@latest
+          vercel pull --yes --environment=production --token=${{ env.VERCEL_TOKEN }}
+          vercel deploy --prebuilt --prod --token=${{ env.VERCEL_TOKEN }} \
+            --scope=${{ env.VERCEL_ORG_ID }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

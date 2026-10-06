@@ -1,0 +1,59 @@
+name: Deploy Frontend to Vercel Staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch:
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ env.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: |
+          echo "Frontend is static HTML/CSS/JS - no build step needed"
+          echo "API_BASE will be set via Vercel environment variable"
+
+      - name: Deploy to Vercel Preview
+        run: |
+          vercel deploy --prebuilt --token=${{ env.VERCEL_TOKEN }} \
+            --scope=${{ env.VERCEL_ORG_ID }} \
+            --name=mindsprint-staging
+
+      - name: Deploy to Vercel Production (manual approval)
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_production == 'true'
+        run: |
+          vercel deploy --prebuilt --prod --token=${{ env.VERCEL_TOKEN }} \
+            --scope=${{ env.VERCEL_ORG_ID }}
+
+  # Job to output staging URL
+  notify:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output staging URL
+        run: |
+          echo "Staging deployment complete!"
+          echo "Preview URL: https://mindsprint-staging.vercel.app"
+          echo "Production URL (manual): https://mindsprint.vercel.app"
