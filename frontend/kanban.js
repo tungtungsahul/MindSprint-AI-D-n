@@ -243,7 +243,7 @@ class KanbanBoard {
     const priority = ['Low', 'Medium', 'High'].includes(task.priority) ? task.priority : 'Medium';
     const priorityLabel = {Low: 'Thấp', Medium: 'Trung bình', High: 'Cao'}[priority];
     const priorityClass = `badge-${priority.toLowerCase()}`;
-    const priorityIcon = priority.toLowerCase() === 'high' ? '🔥' : (priority.toLowerCase() === 'medium' ? '⚡' : '🍃');
+    const priorityIcon = '<i class="fas fa-flag" aria-hidden="true"></i>';
 
     // Determine move buttons based on current status
     const normStatus = this.normalizeStatus(task.status);
@@ -261,7 +261,7 @@ class KanbanBoard {
 
     const dueDateHtml = task.due_date ? `
       <span class="card-date" title="Hạn hoàn thành">
-        📅 ${escapeHtml(task.due_date)}
+        <i class="fas fa-calendar-alt" aria-hidden="true"></i> ${escapeHtml(task.due_date)}
       </span>
     ` : '<span></span>';
 
@@ -269,8 +269,8 @@ class KanbanBoard {
       <div class="card-top-bar">
         <span class="badge ${priorityClass}">${priorityIcon} ${priorityLabel}</span>
         <div class="card-header-actions">
-          <button class="btn-icon btn-card-edit" title="Sửa task">✏️</button>
-          <button class="btn-icon btn-card-delete" title="Xóa task">🗑️</button>
+          <button class="btn-icon btn-card-edit" title="Sửa công việc" aria-label="Sửa công việc"><i class="fas fa-pen" aria-hidden="true"></i></button>
+          <button class="btn-icon btn-card-delete" title="Xóa công việc" aria-label="Xóa công việc"><i class="fas fa-trash" aria-hidden="true"></i></button>
         </div>
       </div>
       <h4 class="card-title">${escapeHtml(task.title)}</h4>

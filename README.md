@@ -1,9 +1,9 @@
-# MindSprint AI (bản chuyển từ SmartFlash)
+# MindSprintAI
 
 Stack đúng theo dự án: **HTML/CSS/JS (Fetch API)** + **C# ASP.NET Core Web API** + **SQL Server (EF Core Code First)** + **JWT** + **Gemini API**.
 
 ## Cấu trúc
-- `frontend/` – SmartFlash cũ + `api.js` (client gọi API). Vẫn chạy offline bằng localStorage nếu chưa đăng nhập.
+- `frontend/` – giao diện MindSprintAI + `api.js` (client gọi API). Vẫn chạy offline bằng localStorage nếu chưa đăng nhập.
 - `backend/MindSprint.Api/` – Web API:
   - `Models/Entities.cs` – User, Flashcard, CardProgress (SRS), KanbanTask
   - `Data/` – `AppDbContext`, `DataSeeder` (bơm 1.814 từ Oxford từ `vocab_seed.json`)
@@ -28,6 +28,14 @@ dotnet run --project backend/MindSprint.Api
 python -m http.server 5500 --bind 127.0.0.1
 ```
 Mở `http://127.0.0.1:5500/frontend/`. Backend C# chạy cổng 5000/5100 và tự áp dụng migration hiện có; không cần tạo migration khi chỉ chạy dự án.
+
+## Đăng nhập Google
+
+Hộp đăng nhập/đăng ký hỗ trợ Google Identity Services, dùng chung JWT và refresh
+session với đăng nhập email. Đặt `Google__ClientId` và Authorized JavaScript origins
+để bật tính năng; xem [hướng dẫn cấu hình Google](backend/GOOGLE_SIGN_IN.md).
+Email đã có tài khoản cần mật khẩu MindSprintAI hiện tại trước khi liên kết để
+giữ nguyên dữ liệu học tập. Khi chưa cấu hình Google, email và Demo vẫn dùng được.
 
 ## Kanban tích hợp
 Tab **Công việc** dùng chung `MindSprintAuth` và `MindSprintApi` với Sổ tay AI, thư viện và lịch học. Có thêm/sửa/xóa, kéo thả hoặc nút chuyển cột, tìm kiếm, lọc ưu tiên và hạn hoàn thành. Công việc được lưu vào SQL Server theo tài khoản; khi lỗi kết nối, form giữ nguyên để thử lại.

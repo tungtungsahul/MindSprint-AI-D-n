@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (tabId === 'flashcards' || tabId === 'quiz') {
+        if (tabId === 'flashcards') {
             sidebarCategories.style.display = 'block';
         } else {
             sidebarCategories.style.display = 'none';
@@ -600,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 : `<span>${totalCount} thẻ học</span>`;
 
             cardDiv.innerHTML = `
+                <span class="deck-feature-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                 <span class="deck-badge ${badgeClass}">${badgeText}</span>
                 <h4 class="deck-title">${subName}</h4>
                 <div class="deck-meta">
@@ -650,18 +651,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const emptyMsgDiv = document.createElement('div');
             emptyMsgDiv.className = 'no-cards-message glass-panel text-center';
-            emptyMsgDiv.style.cssText = 'padding: 3rem; border-radius: var(--border-radius-lg); width: 100%;';
+            emptyMsgDiv.style.cssText = 'padding: var(--space-step-48); border-radius: var(--border-radius-lg); width: 100%;';
             
             if (srsToggle.checked) {
                 emptyMsgDiv.innerHTML = `
-                    <i class="fas fa-check-circle" style="font-size: 3.5rem; color: var(--success-color); margin-bottom: 1.2rem; display: block;"></i>
-                    <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-primary);">Hoàn thành mục tiêu SRS hôm nay!</h3>
+                    <i class="fas fa-check-circle" style="font-size: 3.5rem; color: var(--success-color); margin-bottom: var(--space-step-20); display: block;"></i>
+                    <h3 style="font-size: 1.3rem; margin-bottom: var(--space-step-8); color: var(--text-primary);">Hoàn thành mục tiêu SRS hôm nay!</h3>
                     <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto;">Chúc mừng bạn đã ôn tập hết các thẻ cần học. Hãy quay lại vào ngày mai hoặc tắt chế độ SRS để học tự do.</p>
                 `;
             } else {
                 emptyMsgDiv.innerHTML = `
-                    <i class="fas fa-folder-open" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 1.2rem; display: block;"></i>
-                    <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text-primary);">Không có thẻ học nào</h3>
+                    <i class="fas fa-folder-open" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: var(--space-step-20); display: block;"></i>
+                    <h3 style="font-size: 1.3rem; margin-bottom: var(--space-step-8); color: var(--text-primary);">Không có thẻ học nào</h3>
                     <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto;">Không tìm thấy bộ thẻ nào phù hợp với bộ lọc hiện tại.</p>
                 `;
             }
@@ -915,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tỷ lệ thuộc từ thực tế
             const totalKnown = flashcards.filter(c => c.status === 'known').length;
             const accuracyPct = flashcards.length > 0 ? Math.round((totalKnown / flashcards.length) * 100) : 88;
-            homeAccuracyVal.innerText = accuracyPct + '%';
+            homeAccuracyVal.innerText = flashcards.length > 0 ? accuracyPct + '%' : '—';
         }
         if (homeFavoriteVal) {
             // Số lượng bộ thẻ học thực tế trong thư viện
@@ -979,7 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (needsImprovement) {
                 improveSubEl.innerText = `${needsImprovement.name}`;
             } else {
-                improveSubEl.innerText = 'Không có (Đã thuộc 100%!)';
+                improveSubEl.innerText = total > 0 ? 'Không có (Đã thuộc 100%!)' : 'Thêm bộ thẻ để bắt đầu';
             }
         }
 
@@ -989,9 +990,9 @@ document.addEventListener('DOMContentLoaded', () => {
             masteryListEl.innerHTML = '';
             
             const catStats = {
-                'english': { total: 0, known: 0, name: '🇺🇸 Tiếng Anh Oxford' },
-                'programming': { total: 0, known: 0, name: '💻 Lập trình Frontend' },
-                'general': { total: 0, known: 0, name: '💡 Kiến thức chung' }
+                'english': { total: 0, known: 0, name: 'Tiếng Anh Oxford' },
+                'programming': { total: 0, known: 0, name: 'Lập trình Frontend' },
+                'general': { total: 0, known: 0, name: 'Kiến thức chung' }
             };
 
             flashcards.forEach(card => {
@@ -1007,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cat = catStats[catKey];
                 if (cat.total > 0) {
                     const pct = Math.round((cat.known / cat.total) * 100);
-                    const barColor = catKey === 'english' ? '#4b41e1' : (catKey === 'programming' ? '#7c3aed' : '#10b981');
+                    const barColor = catKey === 'english' ? 'var(--secondary-color)' : (catKey === 'programming' ? 'var(--primary-color)' : 'var(--success-color)');
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'mastery-item';
                     itemDiv.innerHTML = `
@@ -1041,33 +1042,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardDiv.className = 'suggestion-card glass-panel' + (sub.pct >= 80 ? ' ai-glow-border' : '');
                 
                 cardDiv.innerHTML = `
-                    <span class="suggestion-badge ${badgeClass}" style="background: var(--bg-secondary); padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 700; font-size: 0.75rem; align-self: flex-start; letter-spacing: 0.5px;">${badgeText}</span>
-                    <h4 class="suggestion-title" style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-top: 0.5rem;">${sub.name}</h4>
-                    <div class="suggestion-meta" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    <span class="deck-feature-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
+                    <span class="suggestion-badge ${badgeClass}" style="background: var(--bg-secondary); padding: var(--space-step-4) var(--space-step-8); border-radius: 6px; font-weight: 700; font-size: 0.75rem; align-self: flex-start; letter-spacing: 0.5px;">${badgeText}</span>
+                    <h4 class="suggestion-title" style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-top: var(--space-step-8);">${sub.name}</h4>
+                    <div class="suggestion-meta" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-top: var(--space-step-8);">
                         <span>${sub.total} thẻ học</span>
                         <span class="suggestion-mastery" style="font-weight: 600; color: var(--primary-color);">Thành thạo ${sub.pct}%</span>
                     </div>
-                    <div class="suggestion-progress-bar" style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-top: 0.5rem;">
+                    <div class="suggestion-progress-bar" style="width: 100%; height: 6px; background: var(--bg-secondary); border-radius: 10px; overflow: hidden; margin-top: var(--space-step-8);">
                         <div class="progress" style="width: ${sub.pct}%; height: 100%; background: var(--primary-color); border-radius: 10px;"></div>
                     </div>
                 `;
 
                 // Sự kiện click học nhanh
+                cardDiv.setAttribute('role', 'button');
+                cardDiv.tabIndex = 0;
+                cardDiv.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); cardDiv.click(); }
+                });
                 cardDiv.addEventListener('click', () => {
                     openStudyModal(sub.name);
                 });
 
                 homeSuggestionsGrid.appendChild(cardDiv);
             });
+            if (!homeSuggestionsGrid.children.length) {
+                homeSuggestionsGrid.innerHTML = '<p class="home-empty-hint">Thư viện đang trống. Tạo bộ thẻ mới hoặc lưu thẻ từ Sổ tay AI để bắt đầu học.</p>';
+            }
         }
     }
 
     function getCategoryName(catKey) {
         const mapping = {
-            'english': '🇺🇸 Tiếng Anh',
-            'programming': '💻 Lập trình',
-            'general': '💡 Kiến thức chung',
-            'mixed': '📚 Tổng hợp'
+            'english': 'Tiếng Anh',
+            'programming': 'Lập trình',
+            'general': 'Kiến thức chung',
+            'mixed': 'Tổng hợp'
         };
         return mapping[catKey] || 'Thẻ học';
     }
@@ -1075,11 +1085,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCardFeedbackUI(status) {
         btnRemember.style.boxShadow = 'none';
         btnForget.style.boxShadow = 'none';
+        btnRemember.dataset.selected = 'false';
+        btnForget.dataset.selected = 'false';
         
         if (status === 'known') {
-            btnRemember.style.boxShadow = '0 0 15px var(--success-color)';
+            btnRemember.dataset.selected = 'true';
         } else if (status === 'review') {
-            btnForget.style.boxShadow = '0 0 15px var(--danger-color)';
+            btnForget.dataset.selected = 'true';
         }
     }
 
@@ -1448,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         window.addEventListener('appinstalled', () => {
-            console.log('SmartFlash PWA installed successfully!');
+            console.log('MindSprintAI PWA installed successfully!');
             installBtn.style.display = 'none';
         });
 
@@ -1861,8 +1873,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 btn.classList.add('active');
                 btn.style.background = 'var(--primary-color)';
-                btn.style.color = 'white';
-                btn.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                btn.style.color = 'var(--on-accent)';
+                btn.style.boxShadow = 'none';
 
                 const targetMode = btn.getAttribute('data-practice-mode');
                 if (targetMode === 'quiz') {
@@ -2043,7 +2055,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quizCurrentOptions.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.className = 'quiz-option-btn';
-            btn.innerHTML = `<span class="option-prefix">${prefixes[idx]}</span> ${opt}`;
+            btn.innerHTML = `<span class="option-prefix">${prefixes[idx]}</span><span class="option-text">${opt}</span>`;
             btn.addEventListener('click', () => {
                 if (!isQuizAnswered) checkChoiceAnswer(idx, btn);
             });
@@ -2528,7 +2540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (permission === 'granted') {
                         notificationsEnabled = true;
                         localStorage.setItem('notifications-enabled', 'true');
-                        showNotification('SmartFlash', {
+                        showNotification('MindSprintAI', {
                             body: 'Đã kích hoạt thông báo nhắc nhở lịch học thành công!',
                             icon: 'icon-192.jpg'
                         });
@@ -2598,7 +2610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 1. Text Notification
                 if (alarmStyle === 'text' || alarmStyle === 'both') {
-                    showNotification('Đến giờ học SmartFlash rồi!', {
+                    showNotification('Đến giờ học MindSprintAI rồi!', {
                         body: `Lịch học: ${slot.start} - ${slot.end} (${catName}${noteText}). Nhấp vào để học ngay!`,
                         icon: 'icon-192.jpg',
                         requireInteraction: true,
@@ -2706,39 +2718,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) return;
         
         let title = `Mốc Chuỗi ${streak} Ngày!`;
-        let desc = `Bạn đã kiên trì học tập liên tiếp ${streak} ngày. Flashcard tự hào về sự bền bỉ của bạn!`;
-        let color = '#7c3aed'; // Màu mặc định: Tím
+        let desc = `Bạn đã kiên trì học tập liên tiếp ${streak} ngày. MindSprintAI tự hào về sự bền bỉ của bạn!`;
+        let color = 'var(--primary-color)'; // Màu mặc định: Tím
         let iconClass = 'fa-fire';
         
         if (streak >= 365) {
             title = `👑 HUYỀN THOẠI 365 NGÀY! 👑`;
-            desc = `Không thể tin được! Bạn đã duy trì thói quen học tập ròng rã suốt 1 năm (${streak} ngày) liên tục! Bạn đã trở thành BẬC THẦY VÔ SONG của Flashcard!`;
-            color = '#ff007f'; // Màu hồng bảy sắc
+            desc = `Không thể tin được! Bạn đã duy trì thói quen học tập ròng rã suốt 1 năm (${streak} ngày) liên tục! Bạn đã trở thành BẬC THẦY VÔ SONG của MindSprintAI!`;
+            color = 'var(--primary-color)'; // Màu hồng bảy sắc
             iconClass = 'fa-crown';
         } else if (streak >= 300) {
             title = `💎 KIM CƯƠNG BẤT HOẠI ${streak} NGÀY! 💎`;
             desc = `Ý chí bền bỉ tựa Kim Cương! Bạn đã học tập liên tục ${streak} ngày. Trí tuệ của bạn đã đạt đến độ sáng ngời tối thượng!`;
-            color = '#b9f2ff'; // Xanh kim cương
+            color = 'var(--secondary-color)'; // Xanh kim cương
             iconClass = 'fa-gem';
         } else if (streak >= 200) {
             title = `✨ CHIẾN BINH BẠCH KIM ${streak} NGÀY! ✨`;
-            desc = `Một thành tựu phi thường! ${streak} ngày bền bỉ cùng tri thức. Flashcard xin ngả mũ thán phục sự kiên định của bạn!`;
-            color = '#e5e4e2'; // Bạch kim
+            desc = `Một thành tựu phi thường! ${streak} ngày bền bỉ cùng tri thức. MindSprintAI xin ngả mũ thán phục sự kiên định của bạn!`;
+            color = 'var(--text-secondary)'; // Bạch kim
             iconClass = 'fa-medal';
         } else if (streak >= 100) {
             title = `🏆 ĐẠI KIỆN TƯỚNG VÀNG ${streak} NGÀY! 🏆`;
             desc = `Cột mốc 100 ngày thần kỳ! Con số 3 chữ số này là minh chứng đanh thép cho sự quyết tâm sắt đá của bạn. Tiếp tục tiến bước vinh quang!`;
-            color = '#ffd700'; // Vàng
+            color = 'var(--warning-color)'; // Vàng
             iconClass = 'fa-trophy';
         } else if (streak >= 50) {
             title = `🥈 CHIẾN BINH BẠC ${streak} NGÀY! 🥈`;
             desc = `Chúc mừng bạn đã cán mốc 50 ngày học tập liên tục! Thói quen học tập của bạn hiện tại đã vô cùng vững chắc.`;
-            color = '#c0c0c0'; // Bạc
+            color = 'var(--text-secondary)'; // Bạc
             iconClass = 'fa-award';
         } else if (streak >= 30) {
             title = `🥉 DẤU ẤN ĐỒNG ${streak} NGÀY! 🥉`;
             desc = `Chúc mừng bạn đã hoàn thành xuất sắc thử thách 30 ngày học tập liên tục đầu tiên! Một cột mốc khởi đầu vô cùng ý nghĩa.`;
-            color = '#cd7f32'; // Đồng
+            color = 'var(--text-secondary)'; // Đồng
             iconClass = 'fa-certificate';
         }
         
@@ -2747,7 +2759,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (iconEl) {
             iconEl.className = `fas ${iconClass} streak-celebration-icon`;
             iconEl.style.color = color;
-            iconEl.style.filter = `drop-shadow(0 0 20px ${color})`;
+            iconEl.style.filter = 'none';
         }
         
         modal.style.display = 'flex';
@@ -2757,10 +2769,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function triggerConfetti() {
-        const colors = ['#ffd700', '#ff007f', '#7f00ff', '#00f0ff', '#10b981', '#ff5722'];
+        const colors = ['var(--warning-color)', 'var(--primary-color)', 'var(--primary-color)', 'var(--secondary-color)', 'var(--success-color)', 'var(--primary-color)'];
         for (let i = 0; i < 100; i++) {
             const confetti = document.createElement('div');
             confetti.className = 'confetti-piece';
+            confetti.setAttribute('aria-hidden', 'true');
             
             confetti.style.left = Math.random() * 100 + 'vw';
             confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
@@ -2817,8 +2830,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     simControlsContainer.style.display = 'flex';
                     if (simLockBadge) {
                         simLockBadge.innerHTML = '<i class="fas fa-lock-open"></i> Đã mở khóa';
-                        simLockBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-                        simLockBadge.style.color = '#10b981';
+                        simLockBadge.style.background = 'var(--success-glow)';
+                        simLockBadge.style.color = 'var(--success-color)';
                     }
                 } else {
                     alert("Mật khẩu quản trị viên không chính xác!");
@@ -2916,22 +2929,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Tạo container cho modal học bù
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
-        overlay.style.cssText = 'display: flex; z-index: 3500; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);';
+        overlay.style.cssText = 'display: flex; z-index: 3500; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--overlay-color); justify-content: center; align-items: center;';
         
         const content = document.createElement('div');
         content.className = 'modal-content glass-panel text-center';
-        content.style.cssText = 'max-width: 420px; padding: 2.2rem; border-radius: var(--border-radius-lg); position: relative; margin: auto; border: 1px solid var(--border-color); animation: fadeIn 0.3s ease, slideUp 0.3s ease;';
+        content.style.cssText = 'max-width: 420px; padding: var(--space-step-36); border-radius: var(--border-radius-lg); position: relative; margin: auto; border: 1px solid var(--border-color); animation: fadeIn 0.3s ease, slideUp 0.3s ease;';
         
         content.innerHTML = `
             <button class="close-btn" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.4rem; color: var(--text-muted); cursor: pointer;" type="button"><i class="fas fa-times"></i></button>
-            <div style="margin-bottom: 1.2rem; display: inline-block;">
-                <i class="fas fa-clock-rotate-left" style="font-size: 3.5rem; color: #ffd700; filter: drop-shadow(0 0 10px rgba(255,215,0,0.4));"></i>
+            <div style="margin-bottom: var(--space-step-20); display: inline-block;">
+                <i class="fas fa-clock-rotate-left" style="font-size: 3.5rem; color: var(--warning-color); "></i>
             </div>
-            <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; margin-bottom: 0.8rem; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">🔔 Lịch Học Bù</h2>
-            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.8rem; font-size: 0.95rem;">
+            <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; margin-bottom: var(--space-step-12); color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">🔔 Lịch Học Bù</h2>
+            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: var(--space-step-28); font-size: 0.95rem;">
                 Hệ thống phát hiện bạn đã bỏ lỡ giờ học môn <strong>${categoryName}</strong> lúc <strong>${start} - ${end}</strong> hôm nay do thiết bị khóa màn hình. Hãy học bù ngay nhé!
             </p>
-            <button class="btn btn-primary btn-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" id="makeup-study-now-btn" type="button">
+            <button class="btn btn-primary btn-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--space-step-8);" id="makeup-study-now-btn" type="button">
                 <i class="fas fa-book-reader"></i> Học bù ngay bây giờ
             </button>
         `;
@@ -3358,7 +3371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Add "Tất cả chủ đề"
                 const allOpt = document.createElement('div');
                 allOpt.className = 'option-item active';
-                allOpt.style.cssText = 'padding: 0.6rem 1rem; cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
+                allOpt.style.cssText = 'padding: var(--space-step-8) var(--space-step-16); cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
                 allOpt.innerHTML = `<span>Tất cả chủ đề</span><i class="fas fa-check check-icon" style="color: var(--primary-color); font-size: 0.8rem;"></i>`;
                 
                 allOpt.addEventListener('click', () => {
@@ -3378,7 +3391,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 optionsList.forEach(optVal => {
                     const opt = document.createElement('div');
                     opt.className = 'option-item';
-                    opt.style.cssText = 'padding: 0.6rem 1rem; cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
+                    opt.style.cssText = 'padding: var(--space-step-8) var(--space-step-16); cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
                     opt.innerHTML = `<span>${optVal}</span><i class="fas fa-check check-icon" style="display: none; color: var(--primary-color); font-size: 0.8rem;"></i>`;
                     
                     opt.addEventListener('click', () => {

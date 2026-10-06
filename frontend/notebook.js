@@ -36,7 +36,29 @@
     }
     async function run(btn, fn) {
         busy(btn, true);
-        try { return await fn(); } catch (e) { alert(e.message || 'Có lỗi xảy ra'); } finally { busy(btn, false); }
+        if (btn?.dataset.act === 'add-url') showUrlFeedback('Đang tải và đọc nguồn từ URL...');
+        try { return await fn(); } catch (e) {
+            if (btn?.dataset.act === 'add-url') {
+                if (!btn.isConnected) return;
+                const blocked = /^Trang trả về lỗi 403\b/.test(e.message || '');
+                const redirected = /^Trang trả về lỗi 30[12378]\b/.test(e.message || '');
+                const message = blocked
+                    ? 'Trang nguồn từ chối cho Sổ tay AI tải nội dung (403). Trang có thể yêu cầu đăng nhập hoặc chặn truy cập tự động.'
+                    : redirected
+                        ? 'Đường dẫn này chuyển sang một trang khác. Mở đường dẫn trong trình duyệt rồi thử URL cuối cùng trên thanh địa chỉ.'
+                        : e.message || 'Không tải được nội dung từ URL. Vui lòng thử lại.';
+                showUrlFeedback(message, true, e.status !== 401);
+            } else alert(e.message || 'Có lỗi xảy ra');
+        } finally { busy(btn, false); }
+    }
+    function showUrlFeedback(message, error = false, alternatives = false) {
+        const feedback = $('#nb-url-feedback');
+        if (!feedback) return;
+        feedback.hidden = false;
+        feedback.classList.toggle('is-error', error);
+        $('#nb-url').setAttribute('aria-invalid', String(error));
+        feedback.innerHTML = `<p>${esc(message)}</p>${alternatives ? `<p class="nb-muted">Bạn vẫn có thể mở trang để sao chép nội dung rồi dán vào sổ tay, hoặc tải tài liệu và thêm bằng file.</p>
+            <div class="nb-url-alternatives"><button class="btn btn-secondary" type="button" data-ui-act="focus-paste">Dán văn bản</button><button class="btn btn-secondary" type="button" data-ui-act="focus-upload">Tải file</button></div>` : ''}`;
     }
     function ensureLoggedIn() {
         if (auth.isLoggedIn()) return true;
@@ -55,7 +77,8 @@
         <p id="nb-status" class="nb-err" role="status" hidden></p>
         <div class="nb-layout">
             <section class="nb-col nb-sources glass-panel">
-                <h3><i class="fas fa-folder-open"></i> Sổ tay & Nguồn</h3>
+                <h3><span><i class="fas fa-folder-open"></i> Sổ tay & Nguồn</span><button class="nb-source-toggle nb-icon-btn" type="button" data-ui-act="toggle-sources" aria-label="Mở hoặc thu gọn nguồn tài liệu" aria-expanded="false" aria-controls="nb-source-content"><i class="fas fa-chevron-down" aria-hidden="true"></i></button></h3>
+                <div class="nb-source-content" id="nb-source-content">
                 <div class="nb-row">
                     <select id="nb-select">${state.notebooks.map(n => `<option value="${n.id}" ${state.nb && n.id === state.nb.id ? 'selected' : ''}>${esc(n.title)}</option>`).join('')}</select>
                     <button class="nb-icon-btn" data-act="nb-new" title="Sổ tay mới"><i class="fas fa-plus"></i></button>
@@ -70,38 +93,61 @@
                     <input type="file" id="nb-file" accept=".pdf,.txt,.md,.csv">
                     <button class="btn btn-secondary" data-act="add-file">Tải lên</button></details>
                 <details><summary><i class="fas fa-link"></i> Thêm từ URL</summary>
-                    <input type="url" id="nb-url" placeholder="https://...">
-                    <button class="btn btn-secondary" data-act="add-url">Thêm</button></details>
+                    <input type="url" id="nb-url" placeholder="https://..." aria-label="Đường dẫn trang nguồn" aria-describedby="nb-url-hint nb-url-feedback">
+                    <p class="nb-muted nb-url-hint" id="nb-url-hint">Hỗ trợ web, PDF có chữ, DOCX/PPTX/XLSX, TXT/MD/CSV và JSON/XML/RSS. Dùng URL công khai; một số trang yêu cầu đăng nhập hoặc chặn tải tự động.</p>
+                    <button class="btn btn-secondary" data-act="add-url">Thêm</button>
+                    <div class="nb-url-feedback" id="nb-url-feedback" role="status" aria-live="polite" aria-atomic="true" hidden></div></details>
+                </div>
             </section>
 
             <section class="nb-col nb-chat glass-panel">
                 <h3><i class="fas fa-comments"></i> Hỏi đáp theo nguồn</h3>
-                <div class="nb-messages" id="nb-messages"><div class="nb-muted">Thêm nguồn ở bên trái, rồi đặt câu hỏi. Câu trả lời chỉ dựa trên tài liệu của bạn và có số trích dẫn <span class="nb-cite">1</span>.</div></div>
-                <div class="nb-suggest" id="nb-suggest"></div>
-                <div class="nb-row">
-                    <input class="nb-input" id="nb-q" type="text" placeholder="Hỏi về các nguồn..." maxlength="1000">
-                    <button class="btn btn-primary" data-act="send"><i class="fas fa-paper-plane"></i></button>
+                <div class="nb-welcome">
+                    <div class="welcome-orb" aria-hidden="true"></div>
+                    <h2>Bạn muốn khám phá điều gì từ tài liệu?</h2>
+                    <p>Cùng AI đọc hiểu, kết nối kiến thức và chuẩn bị cho lần ôn tập tiếp theo.</p>
                 </div>
-                <button class="btn btn-secondary" data-act="suggest" style="align-self:flex-start"><i class="fas fa-lightbulb"></i> Gợi ý câu hỏi</button>
+                <div class="nb-messages" id="nb-messages"><div class="nb-muted">Thêm nguồn ở bên trái, rồi đặt câu hỏi. Câu trả lời chỉ dựa trên tài liệu của bạn và có số trích dẫn <span class="nb-cite">1</span>.</div></div>
+                <div class="nb-quick-actions" aria-label="Thao tác AI nhanh">
+                    <button class="nb-chip" type="button" data-act="suggest"><i class="fas fa-lightbulb" aria-hidden="true"></i> Gợi ý câu hỏi</button>
+                    <button class="nb-chip" type="button" data-gen="summary"><i class="fas fa-file-alt" aria-hidden="true"></i> Tóm tắt</button>
+                    <button class="nb-chip" type="button" data-gen="flashcards"><i class="fas fa-layer-group" aria-hidden="true"></i> Flashcard</button>
+                    <button class="nb-chip" type="button" data-gen="quiz"><i class="fas fa-edit" aria-hidden="true"></i> Trắc nghiệm</button>
+                </div>
+                <div class="nb-suggest" id="nb-suggest"></div>
+                <div class="nb-composer">
+                    <textarea class="nb-input" id="nb-q" aria-label="Câu hỏi về tài liệu" rows="3" placeholder="Bạn muốn hỏi gì về tài liệu của mình?" maxlength="1000"></textarea>
+                    <div class="nb-composer-footer">
+                        <button class="nb-icon-btn" type="button" data-ui-act="focus-upload" aria-label="Mở phần tải tài liệu" title="Thêm tài liệu"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                        <span>Hỏi đáp dựa trên nguồn của bạn</span>
+                        <button class="btn btn-primary" data-act="send" aria-label="Gửi câu hỏi">Gửi câu hỏi <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                </div>
             </section>
 
             <section class="nb-col nb-studio glass-panel">
                 <h3><i class="fas fa-magic"></i> Studio</h3>
                 <div class="nb-studio-grid">
-                    <button data-gen="summary"><i class="fas fa-file-alt"></i> Tóm tắt</button>
-                    <button data-gen="studyguide"><i class="fas fa-graduation-cap"></i> Study guide</button>
-                    <button data-gen="faq"><i class="fas fa-question-circle"></i> FAQ</button>
-                    <button data-gen="timeline"><i class="fas fa-stream"></i> Timeline</button>
-                    <button data-gen="mindmap"><i class="fas fa-project-diagram"></i> Mind map</button>
-                    <button data-gen="flashcards"><i class="fas fa-layer-group"></i> Flashcard</button>
-                    <button data-gen="quiz"><i class="fas fa-edit"></i> Trắc nghiệm</button>
-                    <button data-gen="audio"><i class="fas fa-podcast"></i> Audio overview</button>
+                    <button data-gen="summary"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Tóm tắt</span><small>Nắm nhanh các ý chính</small></button>
+                    <button data-gen="studyguide"><i class="fas fa-graduation-cap" aria-hidden="true"></i><span>Study guide</span><small>Lập hướng dẫn ôn tập</small></button>
+                    <button data-gen="faq"><i class="fas fa-question-circle" aria-hidden="true"></i><span>FAQ</span><small>Giải đáp điều cần nhớ</small></button>
+                    <button data-gen="timeline"><i class="fas fa-stream" aria-hidden="true"></i><span>Timeline</span><small>Kết nối các mốc sự kiện</small></button>
+                    <button data-gen="mindmap"><i class="fas fa-project-diagram" aria-hidden="true"></i><span>Mind map</span><small>Hệ thống hóa kiến thức</small></button>
+                    <button data-gen="flashcards"><i class="fas fa-layer-group" aria-hidden="true"></i><span>Flashcard</span><small>Ghi nhớ qua bộ thẻ</small></button>
+                    <button data-gen="quiz"><i class="fas fa-edit" aria-hidden="true"></i><span>Trắc nghiệm</span><small>Kiểm tra điều đã hiểu</small></button>
+                    <button data-gen="audio"><i class="fas fa-podcast" aria-hidden="true"></i><span>Audio overview</span><small>Nghe lại nội dung học</small></button>
                 </div>
+                <div class="nb-studio-results">
+                <section class="nb-result-panel" aria-label="Kết quả Studio">
                 <input class="nb-input" id="nb-focus" type="text" placeholder="Trọng tâm (tuỳ chọn), vd: chương 3" maxlength="200" autocomplete="off">
                 <div id="nb-studio-status" role="status" hidden></div>
                 <div class="nb-out" id="nb-out"><div class="nb-muted">Kết quả sẽ hiển thị ở đây.</div></div>
+                </section>
+                <section class="nb-notes-panel" aria-label="Ghi chú đã lưu">
                 <h3><i class="fas fa-sticky-note"></i> Ghi chú</h3>
                 <div id="nb-notes"></div>
+                </section>
+                </div>
             </section>
         </div>`;
         renderSources(); renderNotes();
@@ -200,7 +246,7 @@
         chatPending = true;
         $('#nb-q').value = '';
         addMsg('user', esc(q));
-        const wait = addMsg('bot', '<span class="nb-muted"><i class="fas fa-spinner fa-spin"></i> Đang đọc nguồn...</span>');
+        const wait = addMsg('bot', '<span class="nb-muted" role="status"><span class="nb-loading-dots" aria-hidden="true"><i></i><i></i><i></i></span> Đang đọc nguồn...</span>');
         busy(btn, true);
         busy($('[data-act="send"]'), true);
         busy($('#nb-q'), true);
@@ -210,7 +256,7 @@
             state.history.push({ role: 'user', text: q }, { role: 'assistant', text: r.answer });
             const quotes = (r.citations || []).filter(c => c.quote).map(c => `<div><span class="nb-cite">${c.source}</span> <strong>${esc(srcTitle(c.source))}</strong>: “${esc(c.quote)}”</div>`).join('');
             wait.innerHTML = md(r.answer) + (quotes ? `<div class="nb-quotes">${quotes}</div>` : '') +
-                `<button class="nb-icon-btn" data-act="save-answer" style="margin-top:.5rem"><i class="fas fa-bookmark"></i> Lưu ghi chú</button>`;
+                `<button class="nb-icon-btn" data-act="save-answer" style="margin-top:var(--space-sm)"><i class="fas fa-bookmark"></i> Lưu ghi chú</button>`;
             wait.dataset.raw = r.answer; wait.dataset.q = q;
         } catch (e) {
             if (version !== workspaceVersion || state.nb?.id !== notebookId) return;
@@ -234,7 +280,7 @@
         const previous = { lastText: state.lastText, lastCards: state.lastCards, lastTitle: state.lastTitle, quiz: state.quiz, audio: state.audio };
         status.hidden = false;
         status.className = 'nb-muted';
-        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI đang tạo, tự thử lại nếu dịch vụ bận...';
+        status.innerHTML = '<span class="nb-loading-dots" aria-hidden="true"><i></i><i></i><i></i></span> AI đang tạo, tự thử lại nếu dịch vụ bận...';
         studioPending = true;
         pane.querySelectorAll('[data-gen], [data-act="retry-generate"]').forEach(button => busy(button, true));
         try {
@@ -259,7 +305,7 @@
                 out.innerHTML = quizHtml();
             } else if (type === 'audio') {
                 state.audio = r.content;
-                out.innerHTML = `<div class="nb-row" style="margin-bottom:.5rem"><button class="btn btn-primary" data-act="audio-play"><i class="fas fa-play"></i> Phát</button>
+                out.innerHTML = `<div class="nb-row" style="margin-bottom:var(--space-sm)"><button class="btn btn-primary" data-act="audio-play"><i class="fas fa-play"></i> Phát</button>
                     <button class="btn btn-secondary" data-act="audio-stop"><i class="fas fa-stop"></i> Dừng</button></div>` +
                     r.content.map((l, i) => `<div class="nb-audio-line" id="nb-al-${i}"><strong>${l.speaker === 'B' ? 'B' : 'A'}:</strong> ${esc(l.text)}</div>`).join('') +
                     `<p class="nb-muted">Dùng giọng đọc có sẵn của trình duyệt (Web Speech).</p>`;
@@ -348,8 +394,8 @@
         }
         if (act === 'add-url') {
             const u = $('#nb-url').value.trim();
-            if (!/^https?:\/\/\S+\.\S+/i.test(u)) return alert('URL phải bắt đầu bằng http:// hoặc https://');
-            return run(el, async () => { await api.nbAddUrl(state.nb.id, u); $('#nb-url').value = ''; await refreshSources(); });
+            if (!/^https?:\/\/\S+\.\S+/i.test(u)) return showUrlFeedback('URL phải bắt đầu bằng http:// hoặc https://', true);
+            return run(el, async () => { await api.nbAddUrl(state.nb.id, u); $('#nb-url').value = ''; await refreshSources(); showUrlFeedback('Đã thêm nguồn từ URL.'); });
         }
         if (act === 'src-del') return run(el, async () => { await api.nbDeleteSource(state.nb.id, el.dataset.id); await refreshSources(); });
         if (act === 'send') return sendQuestion($('#nb-q').value, el);
@@ -357,7 +403,7 @@
             if (!state.sources.length) return alert('Hãy thêm ít nhất một nguồn trước.');
             return run(el, async () => {
                 const qs = await api.nbSuggestions(state.nb.id);
-                $('#nb-suggest').innerHTML = qs.map(q => `<button class="nb-chip" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('');
+                $('#nb-suggest').innerHTML = qs.map(q => `<button class="nb-chip" title="${esc(q)}" data-act="ask" data-q="${esc(q)}">${esc(q)}</button>`).join('');
             });
         }
         if (act === 'ask') return sendQuestion(el.dataset.q, el);

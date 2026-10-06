@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartflash-cache-v33';
+const CACHE_NAME = 'mindsprintai-cache-v42';
 const MATH_FONTS = [
   'AMS-Regular', 'Caligraphic-Bold', 'Caligraphic-Regular', 'Fraktur-Bold', 'Fraktur-Regular',
   'Main-Bold', 'Main-BoldItalic', 'Main-Italic', 'Main-Regular', 'Math-BoldItalic', 'Math-Italic',
@@ -8,14 +8,16 @@ const MATH_FONTS = [
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=32',
-  './script.js?v=30',
+  './tokens.css?v=39',
+  './style.css?v=42',
+  './script.js?v=39',
+  './ui.js?v=40',
   './vocab_data.js?v=24',
-  './api.js?v=33',
-  './kanban.js?v=33',
-  './kanban.css?v=33',
-  './auth.js?v=30',
-  './notebook.js?v=32',
+  './api.js?v=42',
+  './kanban.js?v=36',
+  './kanban.css?v=39',
+  './auth.js?v=42',
+  './notebook.js?v=41',
   './text-renderer.js?v=31',
   './vendor/katex/katex.min.css',
   './vendor/katex/katex.min.js',
@@ -24,7 +26,7 @@ const ASSETS = [
   './manifest.json',
   './icon-192.jpg',
   './icon-512.jpg',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&display=swap',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
@@ -45,7 +47,7 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key.startsWith('smartflash-cache-') && key !== CACHE_NAME) {
+          if ((key.startsWith('mindsprint-cache-') || key.startsWith('mindsprintai-cache-')) && key !== CACHE_NAME) {
             console.log('[Service Worker] Removing old cache', key);
             return caches.delete(key);
           }
@@ -57,6 +59,7 @@ self.addEventListener('activate', (e) => {
 
 // Fetch Service Worker
 self.addEventListener('fetch', (e) => {
+  if (new URL(e.request.url).origin === 'https://accounts.google.com') return;
   if (e.request.url.includes('/api/')) return; // luôn gọi mạng cho API
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);

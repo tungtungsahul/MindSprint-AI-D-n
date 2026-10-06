@@ -5,6 +5,8 @@
     if (!api) return;
 
     let currentUser = null;
+    let authRevision = 0;
+    let googleScriptPromise = null;
     let authListeners = [];
     const AUTH_STORAGE_KEY = 'ms-user';
 
@@ -25,6 +27,7 @@
     }
 
     function saveUser(user) {
+        authRevision++;
         currentUser = normalizeUser(user);
         if (user) {
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentUser));
@@ -55,6 +58,38 @@
         const user = await api.demoLogin();
         await saveUser(user);
         return user;
+    }
+
+    async function googleLogin(credential, nonce, existingPassword) {
+        const user = await api.googleLogin(credential, nonce, existingPassword);
+        await saveUser(user);
+        return user;
+    }
+
+    function loadGoogleIdentity() {
+        if (window.google?.accounts?.id) return Promise.resolve(window.google.accounts.id);
+        if (googleScriptPromise) return googleScriptPromise;
+        googleScriptPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = true;
+            let timeout;
+            const fail = () => {
+                clearTimeout(timeout);
+                script.remove();
+                googleScriptPromise = null;
+                reject(new Error('Không tải được Google. Kiểm tra kết nối mạng rồi thử lại.'));
+            };
+            script.onload = () => {
+                clearTimeout(timeout);
+                if (window.google?.accounts?.id) resolve(window.google.accounts.id);
+                else fail();
+            };
+            script.onerror = fail;
+            timeout = setTimeout(fail, 12000);
+            document.head.appendChild(script);
+        });
+        return googleScriptPromise;
     }
 
     async function register(email, password, displayName) {
@@ -91,11 +126,15 @@
         let mode = 'login';
         let overlay = null;
         let submitting = false;
+        let googleGeneration = 0;
+        let pendingGoogle = null;
         const previousFocus = document.activeElement;
         const previousOverflow = document.body.style.overflow;
 
         function close() {
             if (submitting) return;
+            googleGeneration++;
+            pendingGoogle = null;
             overlay?.remove();
             overlay = null;
             document.body.style.overflow = previousOverflow;
@@ -112,9 +151,9 @@
                     <button class="auth-close-btn" data-act="close" title="Đóng">&#10005;</button>
                     <div class="auth-logo-row">
                         <div class="auth-logo-icon"><i class="fas fa-copy"></i></div>
-                        <span class="auth-logo-name">Flashcard</span>
+                        <span class="auth-logo-name">MindSprintAI</span>
                     </div>
-                    <h2 class="auth-header-title" id="auth-dialog-title">${isLogin ? 'Chào mừng trở lại! 👋' : 'Tạo tài khoản mới'}</h2>
+                    <h2 class="auth-header-title" id="auth-dialog-title">${isLogin ? 'Chào mừng trở lại!' : 'Tạo tài khoản mới'}</h2>
                     <p class="auth-header-sub">${isLogin ? 'Đăng nhập để tiếp tục hành trình học tập.' : 'Đăng ký miễn phí và bắt đầu học ngay hôm nay.'}</p>
                 </div>
 
@@ -135,21 +174,27 @@
                         ${!isLogin ? `
                         <div class="auth-field">
                             <i class="fas fa-user auth-field-icon"></i>
-                            <input class="auth-input" id="auth-name" type="text" placeholder="Tên hiển thị của bạn" maxlength="60" autocomplete="name">
+                            <input class="auth-input" id="auth-name" aria-label="Tên hiển thị" type="text" placeholder="Tên hiển thị của bạn" maxlength="60" autocomplete="name">
                         </div>` : ''}
 
                         <div class="auth-field">
                             <i class="fas fa-envelope auth-field-icon"></i>
-                            <input class="auth-input" id="auth-email" type="email" placeholder="Địa chỉ email" autocomplete="email">
+                            <input class="auth-input" id="auth-email" aria-label="Email" type="email" placeholder="Địa chỉ email" autocomplete="email">
                         </div>
 
                         <div class="auth-field">
                             <i class="fas fa-lock auth-field-icon"></i>
-                            <input class="auth-input" id="auth-pass" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="${isLogin ? 'current-password' : 'new-password'}" style="padding-right:3rem">
+                            <input class="auth-input" id="auth-pass" aria-label="Mật khẩu" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="${isLogin ? 'current-password' : 'new-password'}" style="padding-right:var(--space-2xl)">
                             <button class="auth-pw-toggle" data-act="toggle-pw" type="button" tabindex="-1" title="Hiện/ẩn mật khẩu">
                                 <i class="fas fa-eye" id="pw-eye-icon"></i>
                             </button>
                         </div>
+                    </div>
+
+                    <div class="auth-google-link-fields" id="auth-google-link-fields" hidden>
+                        <p>Nhập mật khẩu tài khoản hiện tại để liên kết Google. Dữ liệu học tập của bạn sẽ được giữ nguyên.</p>
+                        <label for="auth-google-password">Mật khẩu hiện tại</label>
+                        <input class="auth-input" id="auth-google-password" type="password" autocomplete="current-password" maxlength="1024">
                     </div>
 
                     <!-- Error -->
@@ -166,6 +211,12 @@
 
                     <!-- Divider -->
                     <div class="auth-divider">hoặc</div>
+
+                    <div class="auth-google-section">
+                        <div class="auth-google-button" id="auth-google-button"></div>
+                        <p class="auth-google-status" id="auth-google-status" role="status" aria-live="polite">Đang kiểm tra đăng nhập Google...</p>
+                        <button type="button" class="auth-google-retry" data-act="google-retry" hidden>Thử lại với Google</button>
+                    </div>
 
                     <!-- Demo login -->
                     <button class="auth-demo-btn" data-act="demo">
@@ -194,13 +245,81 @@
         function setLoading(btn, loading) {
             submitting = loading;
             overlay?.querySelectorAll('button, input').forEach(element => { element.disabled = loading; });
+            const googleButton = overlay?.querySelector('#auth-google-button');
+            if (googleButton) googleButton.inert = loading;
             if (loading) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="auth-spinner"></span> Đang xử lý...';
             } else {
                 btn.disabled = false;
                 const isLogin = mode === 'login';
-                btn.innerHTML = `<i class="fas ${isLogin ? 'fa-sign-in-alt' : 'fa-user-plus'}"></i> ${isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}`;
+                btn.innerHTML = pendingGoogle ? 'Liên kết và đăng nhập' : `<i class="fas ${isLogin ? 'fa-sign-in-alt' : 'fa-user-plus'}"></i> ${isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}`;
+            }
+        }
+
+        async function renderGoogle() {
+            const generation = ++googleGeneration;
+            const revision = authRevision;
+            const host = overlay?.querySelector('#auth-google-button');
+            const status = overlay?.querySelector('#auth-google-status');
+            const retry = overlay?.querySelector('[data-act="google-retry"]');
+            const isCurrent = () => !!overlay && generation === googleGeneration && revision === authRevision;
+            if (!host || !status) return;
+            host.replaceChildren();
+            status.textContent = 'Đang kiểm tra đăng nhập Google...';
+            retry.hidden = true;
+            try {
+                const config = await api.googleConfig();
+                if (!isCurrent()) return;
+                if (!config.enabled || !config.clientId) {
+                    status.textContent = 'Đăng nhập Google chưa được bật. Bạn có thể dùng email hoặc Demo.';
+                    return;
+                }
+                const [google, challenge] = await Promise.all([loadGoogleIdentity(), api.googleChallenge()]);
+                if (!isCurrent()) return;
+                google.initialize({
+                    client_id: config.clientId, nonce: challenge.nonce,
+                    auto_select: false, ux_mode: 'popup',
+                    callback: async response => {
+                        if (!isCurrent() || submitting || !response.credential) return;
+                        await handleGoogle(response.credential, challenge.nonce);
+                    }
+                });
+                google.renderButton(host, { type: 'standard', theme: 'outline', size: 'large',
+                    text: 'continue_with', shape: 'pill', locale: 'vi', width: Math.min(360, host.clientWidth || 300) });
+                status.textContent = 'Dùng tài khoản Google để đăng nhập hoặc đăng ký.';
+                retry.hidden = false;
+            } catch (error) {
+                if (!isCurrent()) return;
+                status.textContent = error.message || 'Chưa thể kết nối Google. Vui lòng thử lại.';
+                retry.hidden = false;
+            }
+        }
+
+        async function handleGoogle(credential, nonce, existingPassword) {
+            if (submitting || !overlay) return;
+            const btn = overlay.querySelector('#auth-submit-btn');
+            showError('');
+            setLoading(btn, true);
+            try {
+                await googleLogin(credential, nonce, existingPassword);
+                submitting = false;
+                close();
+                onSuccess?.();
+            } catch (error) {
+                if (error.code === 'google_link_required') {
+                    pendingGoogle = { credential, nonce };
+                    overlay.querySelector('#auth-field-group').hidden = true;
+                    overlay.querySelector('#auth-google-link-fields').hidden = false;
+                } else if (error.code === 'google_challenge_expired' || error.code === 'google_invalid_credential') {
+                    pendingGoogle = null;
+                    overlay.querySelector('#auth-field-group').hidden = false;
+                    overlay.querySelector('#auth-google-link-fields').hidden = true;
+                    void renderGoogle();
+                }
+                showError(error.message || 'Không thể đăng nhập Google. Vui lòng thử lại.');
+                setLoading(btn, false);
+                if (pendingGoogle) overlay.querySelector('#auth-google-password').focus();
             }
         }
 
@@ -221,10 +340,18 @@
             // Auto-focus first relevant input
             const firstInput = overlay.querySelector('#auth-name, #auth-email');
             if (firstInput) setTimeout(() => firstInput.focus(), 50);
+            pendingGoogle = null;
+            void renderGoogle();
         }
 
         async function handleSubmit() {
             if (submitting || !overlay) return;
+            if (pendingGoogle) {
+                const password = overlay.querySelector('#auth-google-password').value;
+                if (!password) { showError('Vui lòng nhập mật khẩu hiện tại.'); return; }
+                await handleGoogle(pendingGoogle.credential, pendingGoogle.nonce, password);
+                return;
+            }
             const email  = (overlay.querySelector('#auth-email')?.value || '').trim();
             const pass   = overlay.querySelector('#auth-pass')?.value || '';
             const name   = (overlay.querySelector('#auth-name')?.value || '').trim();
@@ -282,6 +409,14 @@
                 handleSubmit();
             } else if (act === 'demo') {
                 handleDemo();
+            } else if (act === 'google-retry') {
+                pendingGoogle = null;
+                overlay.querySelector('#auth-field-group').hidden = false;
+                overlay.querySelector('#auth-google-link-fields').hidden = true;
+                overlay.querySelector('#auth-google-password').value = '';
+                setLoading(overlay.querySelector('#auth-submit-btn'), false);
+                showError('');
+                void renderGoogle();
             } else if (act === 'toggle-pw') {
                 const pwInput = overlay.querySelector('#auth-pass');
                 const eyeIcon = overlay.querySelector('#pw-eye-icon');
@@ -357,6 +492,7 @@
 
     window.MindSprintAuth = {
         login,
+        googleLogin,
         demoLogin,
         register,
         logout,

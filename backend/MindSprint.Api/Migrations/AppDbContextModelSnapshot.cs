@@ -336,10 +336,18 @@ namespace MindSprint.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("GoogleSubject")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique()
+                        .HasFilter("[GoogleSubject] IS NOT NULL");
 
                     b.ToTable("Users");
                 });

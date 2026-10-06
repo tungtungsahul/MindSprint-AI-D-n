@@ -23,6 +23,8 @@ public class User
     public string Email { get; set; } = "";
     public string DisplayName { get; set; } = "";
     public string PasswordHash { get; set; } = "";
+    // Stable Google identity; never use the email alone to authenticate/link accounts.
+    public string? GoogleSubject { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

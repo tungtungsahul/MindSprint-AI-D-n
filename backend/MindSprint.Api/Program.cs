@@ -6,6 +6,7 @@ using MindSprint.Api.Data;
 using MindSprint.Api.Models;
 using MindSprint.Api.Services;
 using Microsoft.AspNetCore.Identity;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
@@ -16,14 +17,38 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<GoogleLoginChallenges>();
+builder.Services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
+builder.Services.AddScoped<GoogleAccountService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("google-auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = "Bạn đã thử đăng nhập nhiều lần. Hãy thử lại sau một phút.",
+            code = "google_rate_limited", retryAfterSeconds = 60
+        }, ct);
+    };
+});
 builder.Services.AddScoped<SpacedRepetitionService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<GeminiAvailability>();
 builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = Timeout.InfiniteTimeSpan);
 builder.Services.AddHttpClient("web", c => c.Timeout = TimeSpan.FromSeconds(15))
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+    .ConfigurePrimaryHttpMessageHandler(NotebookUrlReader.CreateHandler);
 builder.Services.AddScoped<NotebookAi>();
+builder.Services.AddSingleton<INotebookPageRenderer, NotebookPageRenderer>();
+builder.Services.AddScoped<NotebookUrlImporter>();
 
 builder.WebHost.UseUrls("http://localhost:5000", "http://localhost:5100");
 
@@ -76,5 +101,6 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.Run();
