@@ -48,17 +48,50 @@
                         ? 'Đường dẫn này chuyển sang một trang khác. Mở đường dẫn trong trình duyệt rồi thử URL cuối cùng trên thanh địa chỉ.'
                         : e.message || 'Không tải được nội dung từ URL. Vui lòng thử lại.';
                 showUrlFeedback(message, true, e.status !== 401);
+            } else if (btn?.dataset.act === 'add-file') {
+                if (!btn.isConnected) return;
+                showFileFeedback(e.message || 'Không tải được file. Vui lòng thử lại.');
             } else alert(e.message || 'Có lỗi xảy ra');
         } finally { busy(btn, false); }
     }
     function showUrlFeedback(message, error = false, alternatives = false) {
         const feedback = $('#nb-url-feedback');
         if (!feedback) return;
-        feedback.hidden = false;
+        feedback.hidden = !message;
         feedback.classList.toggle('is-error', error);
         $('#nb-url').setAttribute('aria-invalid', String(error));
         feedback.innerHTML = `<p>${esc(message)}</p>${alternatives ? `<p class="nb-muted">Bạn vẫn có thể mở trang để sao chép nội dung rồi dán vào sổ tay, hoặc tải tài liệu và thêm bằng file.</p>
             <div class="nb-url-alternatives"><button class="btn btn-secondary" type="button" data-ui-act="focus-paste">Dán văn bản</button><button class="btn btn-secondary" type="button" data-ui-act="focus-upload">Tải file</button></div>` : ''}`;
+    }
+    function validateUrl() {
+        const input = $('#nb-url');
+        const value = input.value.trim();
+        let message = '';
+        try {
+            const url = new URL(value);
+            if (!/^https?:\/\//i.test(value) || !['http:', 'https:'].includes(url.protocol) || !url.hostname) throw new Error();
+        } catch {
+            message = 'Nhập URL hợp lệ bắt đầu bằng http:// hoặc https://.';
+        }
+        showUrlFeedback(message, !!message);
+        return !message;
+    }
+    function showFileFeedback(message) {
+        const feedback = $('#nb-file-feedback');
+        if (!feedback) return;
+        feedback.textContent = message;
+        feedback.hidden = !message;
+        feedback.classList.toggle('is-error', !!message);
+        $('#nb-file').setAttribute('aria-invalid', String(!!message));
+    }
+    function validateFile() {
+        const file = $('#nb-file').files[0];
+        const message = !file ? 'Hãy chọn một file.'
+            : !/\.(pdf|txt|md|csv)$/i.test(file.name) ? 'Chỉ hỗ trợ PDF, TXT, MD, CSV.'
+            : file.size > MAX_FILE ? 'File tối đa 10 MB (10.485.760 byte).'
+            : '';
+        showFileFeedback(message);
+        return !message;
     }
     function ensureLoggedIn() {
         if (auth.isLoggedIn()) return true;
@@ -89,11 +122,13 @@
                     <input type="text" id="nb-txt-title" placeholder="Tiêu đề" maxlength="100">
                     <textarea id="nb-txt-body" rows="5" placeholder="Dán nội dung bài giảng, ghi chú..."></textarea>
                     <button class="btn btn-secondary" data-act="add-text">Thêm nguồn</button></details>
-                <details><summary><i class="fas fa-file-upload"></i> Tải file (PDF, TXT, MD)</summary>
-                    <input type="file" id="nb-file" accept=".pdf,.txt,.md,.csv">
-                    <button class="btn btn-secondary" data-act="add-file">Tải lên</button></details>
+                <details><summary><i class="fas fa-file-upload"></i> Tải file (PDF, TXT, MD, CSV)</summary>
+                    <input class="nb-validation-input" type="file" id="nb-file" accept=".pdf,.txt,.md,.csv" aria-label="File tài liệu" aria-describedby="nb-file-hint nb-file-feedback">
+                    <p class="nb-muted" id="nb-file-hint">PDF, TXT, MD, CSV; tối đa 10 MB.</p>
+                    <button class="btn btn-secondary" data-act="add-file">Tải lên</button>
+                    <div class="nb-url-feedback" id="nb-file-feedback" role="status" aria-live="polite" aria-atomic="true" hidden></div></details>
                 <details><summary><i class="fas fa-link"></i> Thêm từ URL</summary>
-                    <input type="url" id="nb-url" placeholder="https://..." aria-label="Đường dẫn trang nguồn" aria-describedby="nb-url-hint nb-url-feedback">
+                    <input class="nb-validation-input" type="url" id="nb-url" placeholder="https://..." aria-label="Đường dẫn trang nguồn" aria-describedby="nb-url-hint nb-url-feedback">
                     <p class="nb-muted nb-url-hint" id="nb-url-hint">Hỗ trợ web, PDF có chữ, DOCX/PPTX/XLSX, TXT/MD/CSV và JSON/XML/RSS. Dùng URL công khai; một số trang yêu cầu đăng nhập hoặc chặn tải tự động.</p>
                     <button class="btn btn-secondary" data-act="add-url">Thêm</button>
                     <div class="nb-url-feedback" id="nb-url-feedback" role="status" aria-live="polite" aria-atomic="true" hidden></div></details>
@@ -386,15 +421,13 @@
             return run(el, async () => { await api.nbAddText(state.nb.id, title, text); $('#nb-txt-body').value = ''; $('#nb-txt-title').value = ''; await refreshSources(); });
         }
         if (act === 'add-file') {
+            if (!validateFile()) { $('#nb-file').focus(); return; }
             const f = $('#nb-file').files[0];
-            if (!f) return alert('Hãy chọn một file.');
-            if (!/\.(pdf|txt|md|csv)$/i.test(f.name)) return alert('Chỉ hỗ trợ PDF, TXT, MD, CSV.');
-            if (f.size > MAX_FILE) return alert('File tối đa 10MB.');
-            return run(el, async () => { await api.nbAddFile(state.nb.id, f); $('#nb-file').value = ''; await refreshSources(); });
+            return run(el, async () => { await api.nbAddFile(state.nb.id, f); $('#nb-file').value = ''; showFileFeedback(''); await refreshSources(); });
         }
         if (act === 'add-url') {
+            if (!validateUrl()) { $('#nb-url').focus(); return; }
             const u = $('#nb-url').value.trim();
-            if (!/^https?:\/\/\S+\.\S+/i.test(u)) return showUrlFeedback('URL phải bắt đầu bằng http:// hoặc https://', true);
             return run(el, async () => { await api.nbAddUrl(state.nb.id, u); $('#nb-url').value = ''; await refreshSources(); showUrlFeedback('Đã thêm nguồn từ URL.'); });
         }
         if (act === 'src-del') return run(el, async () => { await api.nbDeleteSource(state.nb.id, el.dataset.id); await refreshSources(); });
@@ -425,7 +458,11 @@
     });
 
     pane.addEventListener('change', (e) => {
+        if (e.target.id === 'nb-file') validateFile();
         if (e.target.id === 'nb-select' && e.target.value && ensureLoggedIn()) run(null, async () => { stopAudio(); await loadNotebook(e.target.value); renderMain(); });
+    });
+    pane.addEventListener('input', (e) => {
+        if (e.target.id === 'nb-url') validateUrl();
     });
 pane.addEventListener('keydown', (e) => {
         if (e.target.id === 'nb-q' && e.key === 'Enter') { e.preventDefault(); sendQuestion(e.target.value, pane.querySelector('[data-act="send"]')); }
