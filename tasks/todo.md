@@ -10,6 +10,8 @@
 - [x] Checkpoint: 26/26 test validation và hồi quy đạt, frontend build và diff check đạt.
 - [x] Task 3 (sau checkpoint): kiểm tra trình duyệt desktop và viewport 390 × 844, aria-invalid/aria-describedby/live status, review diff, viết báo cáo với bằng chứng và giới hạn.
 - [x] Commit local dưới tên James: `cdd6dd4`.
-- [ ] Chốt push nhánh, tạo PR và bình luận GitHub bằng kết quả cụ thể.
+- [x] Người dùng xác nhận push nhánh, tạo PR và bình luận GitHub sau khi xem kết quả.
+- [x] Push nhánh thành công dưới tài khoản James-Lloyd20; tạo PR #38 vào main: https://github.com/tungtungsahul/MindSprint-AI-D-n/pull/38
+- [x] Đăng báo cáo vào Issue #11: https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/11#issuecomment-6023489491
 
-Đã hoàn thành phần local. Chưa push, tạo PR, đăng bình luận hoặc đóng issue trên GitHub. Không có thay đổi database/API/schema.
+Đã hoàn thành phần local và gửi GitHub để nhóm review. PR còn mở, chưa merge; Issue #11 chưa đóng. Không có thay đổi database/API/schema.

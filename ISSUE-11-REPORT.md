@@ -5,6 +5,8 @@ Nhánh: `hung/issue-11-validation`, bắt đầu từ main `05f3a0b`.
 Commit code: `cdd6dd4` — `feat(validation): validate auth and notebook inputs as users type`.
 Ngày kiểm tra: 07/10/2026.
 Issue: https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/11
+Pull Request: https://github.com/tungtungsahul/MindSprint-AI-D-n/pull/38
+Cập nhật issue: https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/11#issuecomment-6023489491
 
 ## Những gì mình đã thực hiện
 
@@ -45,4 +47,4 @@ Phần validation phía client của Issue #11 đã đáp ứng các tiêu chí 
 - Server hiện chưa áp dụng giới hạn mật khẩu tối đa 30; đây là giới hạn phía client trong phạm vi issue đã duyệt. Ô mật khẩu email đăng nhập cũng kiểm tra 6–30 như đặc tả, nên tài khoản cũ có mật khẩu dài hơn 30 cần nhóm quyết định cách xử lý nếu tồn tại.
 - Backend có RequestSizeLimit bằng đúng 10 MiB cho tổng request; multipart có overhead. Vì vậy client cho phép file đúng 10 MiB không chứng minh server sẽ nhận file đó. Cần xử lý giới hạn request backend ở phần việc riêng nếu nhóm muốn bảo đảm upload sát ngưỡng.
 - Định dạng file phía client dựa vào phần mở rộng, không chứng minh nội dung file an toàn hoặc đọc được; backend vẫn kiểm tra/xử lý nội dung. Độ dài Unicode tính theo code point, emoji ghép có thể gồm nhiều ký tự theo cách đếm này.
-- Code đang được bàn giao trên nhánh local; việc push nhánh, tạo Pull Request và đăng cập nhật issue sẽ được chốt với Đình Hùng sau khi xem kết quả.
+- Người dùng đã xác nhận gửi GitHub sau khi xem kết quả. Code đã được push lên nhánh hung/issue-11-validation, PR #38 và báo cáo trên issue được tạo dưới tài khoản James-Lloyd20. Chưa merge vào main hoặc đóng issue.
