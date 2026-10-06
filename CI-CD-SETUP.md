@@ -1,118 +1,45 @@
-# CI/CD Setup Guide for MindSprint
+# Triển khai MindSprint AI
 
-## Overview
-This project uses GitHub Actions for CI/CD with:
-- **Backend (ASP.NET Core)** → Render (staging & production)
-- **Frontend (Static HTML/CSS/JS)** → Vercel (staging & production)
+Nhánh hiện tại dùng **ASP.NET Core 8 + PostgreSQL** cho API và HTML/CSS/JavaScript tĩnh cho giao diện. Cấu hình này triển khai API bằng Docker trên Render và giao diện bằng Git integration của Vercel. Backend tự chạy EF Core migrations khi khởi động; health check là `/healthz`.
 
-## Required Secrets
+## 1. Tạo API và PostgreSQL trên Render
 
-Go to **GitHub Repository → Settings → Secrets and variables → Actions** and add:
+1. Mở Render Dashboard, tạo Blueprint từ repository này và xác nhận dùng `render.yaml` ở thư mục gốc. Blueprint tạo `mindsprint-api` và `mindsprint-db` cùng region Singapore.
+2. Nhập các giá trị Render yêu cầu:
+   - `Cors__AllowedOrigins`: URL giao diện Vercel, ví dụ `https://mindsprint.vercel.app`. Có thể nhập nhiều origin, ngăn cách bằng dấu phẩy, không thêm dấu `/` cuối.
+   - `Gemini__ApiKey`: API key để bật các tính năng AI.
+   - `Google__ClientId`: OAuth client ID nếu cần đăng nhập Google.
+3. Đợi lần deploy đầu hoàn tất. Ghi lại URL HTTPS và Service ID của `mindsprint-api` trong Render Dashboard.
 
-### Render (Backend)
-| Secret | Description | How to get |
-|--------|-------------|------------|
-| `RENDER_SERVICE_ID` | Your Render Web Service ID | Render Dashboard → Service → Settings → Service ID |
-| `RENDER_API_KEY` | Render API Key | Render Dashboard → Account Settings → API Keys |
+Render tạo `Jwt__Key` ngẫu nhiên và cấp URL PostgreSQL nội bộ qua `ConnectionStrings__Default`. API tự chuyển URL `postgresql://...` thành định dạng Npgsql, tự bind vào `PORT`, chỉ mở CORS cho origin đã cấu hình, và tắt Swagger ngoài môi trường Development. Tài khoản demo mật khẩu cố định chỉ được tạo ở Development.
 
-### Vercel (Frontend)
-| Secret | Description | How to get |
-|--------|-------------|------------|
-| `VERCEL_TOKEN` | Vercel Access Token | Vercel Dashboard → Settings → Tokens → Create |
-| `VERCEL_ORG_ID` | Vercel Organization ID | `vercel inspect <deployment-url>` or Vercel CLI |
-| `VERCEL_PROJECT_ID` | Vercel Project ID | Vercel Dashboard → Project → Settings → General |
+## 2. Đưa giao diện lên Vercel
 
-## Setup Steps
+1. Import repository vào Vercel và đặt **Root Directory** là `frontend`.
+2. Chọn framework **Other**. `vercel.json` đã đặt build command `npm run build` và output directory `dist`.
+3. Trong Environment Variables, đặt `API_BASE` thành URL HTTPS của API Render, ví dụ `https://mindsprint-api.onrender.com`. Đặt biến cho cả **Production** và **Preview** để mọi lần build đều có cấu hình backend. Nếu muốn gọi API từ preview, thêm chính xác origin Vercel preview vào `Cors__AllowedOrigins` ở Render.
+4. Deploy. Vercel Git integration tự build lại khi có push; `build.mjs` đưa `API_BASE` vào `runtime-config.js` của bản tĩnh. Nếu bật Google Sign-In, thêm cùng origin Vercel vào Authorized JavaScript origins ở Google Cloud Console.
 
-### 1. Render (Backend)
-1. Create a **Web Service** on Render
-2. Connect to this GitHub repo
-3. Build Command: `dotnet publish backend/MindSprint.Api -c Release -o ./publish`
-4. Start Command: `dotnet ./publish/MindSprint.Api.dll`
-5. Add Environment Variables in Render Dashboard:
-   - `ConnectionStrings__Default` - Production SQL Server connection string
-   - `Jwt__Key` - Strong secret key (32+ chars)
-   - `Jwt__Issuer` - `MindSprint`
-   - `Jwt__Audience` - `MindSprintClient`
-   - `Jwt__AccessMinutes` - `15`
-   - `Gemini__ApiKey` - Your Gemini API key
-   - `ASPNETCORE_ENVIRONMENT` - `Production`
-   - `Cors__Origins` - `https://your-frontend.vercel.app`
+## 3. Bật deploy backend tự động
 
-### 2. Vercel (Frontend)
-1. Import project from GitHub on Vercel
-2. Framework Preset: **Other** (static site)
-3. Build Command: `echo "Static site - no build"`
-4. Output Directory: `frontend`
-4. Add Environment Variable:
-   - `API_BASE` - `https://your-backend.onrender.com` (Render URL)
+Thêm hai repository secrets tại **GitHub → Settings → Secrets and variables → Actions**:
 
-### 3. Get Vercel IDs
-```bash
-# Install Vercel CLI
-npm i -g vercel
+| Secret | Giá trị |
+| --- | --- |
+| `RENDER_SERVICE_ID` | Service ID của `mindsprint-api` |
+| `RENDER_API_KEY` | API key của Render |
 
-# Login
-vercel login
+Workflow `.github/workflows/ci-cd.yml` build API và frontend cho pull request/push. Khi push lên `main`, nếu build thành công, workflow gọi Render deploy API. Vercel deploy độc lập qua Git integration. Blueprint tắt auto-deploy ở Render để tránh chạy deploy hai lần.
 
-# Link project (run from frontend folder)
-cd frontend
-vercel link
+## 4. Kiểm tra sau deploy
 
-# Get IDs
-vercel inspect <deployment-url> --token=<your-token>
-# Look for "orgId" and "projectId"
-```
+- Mở `https://<api-host>/healthz`; kết quả mong đợi: `{"status":"ok"}`.
+- Mở Vercel URL, đăng ký tài khoản mới rồi kiểm tra đăng nhập, thư viện thẻ, AI (nếu có Gemini key), ghi chú và công việc.
+- Trong trình duyệt, kiểm tra Network: API request dùng HTTPS của Render và không có lỗi CORS.
+- Render Logs không được có lỗi PostgreSQL/migration. Lần khởi động đầu tạo schema và bộ thẻ dùng chung.
 
-## Workflow Triggers
+## Cấu hình lưu trữ
 
-| Event | Action |
-|-------|--------|
-| Push to `main` | Auto-deploy to **staging** (Render preview + Vercel preview) |
-| Manual workflow dispatch with `deploy_production=true` | Deploy to **production** |
+Blueprint mặc định chọn free plans để phù hợp bản demo. Theo giới hạn hiện hành của Render, PostgreSQL free có giới hạn 1 GB và hết hạn sau 30 ngày; nâng cấp database trước khi dùng để lưu dữ liệu cần giữ lâu dài. Xem [giới hạn free trên Render](https://render.com/docs/free) và [Blueprint spec](https://render.com/docs/blueprint-spec).
 
-## Environment URLs
-
-After setup:
-- **Staging Backend**: `https://<your-service>.onrender.com`
-- **Staging Frontend**: `https://mindsprint-staging.vercel.app`
-- **Production Backend**: Same Render service with production env vars
-- **Production Frontend**: `https://mindsprint.vercel.app`
-
-## Database Migrations
-
-Render will run migrations automatically on startup if you add to `Program.cs`:
-```csharp
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
-```
-
-## Local Testing
-
-```bash
-# Backend
-cd backend/MindSprint.Api
-dotnet run
-
-# Frontend (serve static files)
-cd frontend
-npx serve -l 5500
-```
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Render deploy fails | Check logs in Render Dashboard → Events |
-| Vercel deploy fails | Check `vercel logs` or Vercel Dashboard |
-| CORS errors | Ensure `Cors__Origins` includes frontend URL exactly |
-| DB connection fails | Verify connection string format for SQL Server on Render |
-| JWT errors | Ensure `Jwt__Key` is same on all environments |
-
-## Rollback
-
-- **Render**: Dashboard → Deploys → Rollback to previous
-- **Vercel**: Dashboard → Deployments → Promote previous to production
+Vercel cấp HTTPS cho domain triển khai. Render yêu cầu web service bind `0.0.0.0`; API đã đọc cổng `PORT` do Render cấp. Tham khảo [Render Web Services](https://render.com/docs/web-services) và [Vercel GitHub deployments](https://vercel.com/docs/git/vercel-for-github).

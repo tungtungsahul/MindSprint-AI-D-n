@@ -24,7 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         b.Entity<User>().HasIndex(u => u.Email).IsUnique();
         b.Entity<User>().Property(u => u.GoogleSubject).HasMaxLength(255);
-        b.Entity<User>().HasIndex(u => u.GoogleSubject).IsUnique().HasFilter("[GoogleSubject] IS NOT NULL");
+        b.Entity<User>().HasIndex(u => u.GoogleSubject).IsUnique().HasFilter("\"GoogleSubject\" IS NOT NULL");
         b.Entity<Flashcard>().HasIndex(f => f.ExternalId).IsUnique();
         b.Entity<Flashcard>().HasOne(f => f.Owner).WithMany().HasForeignKey(f => f.OwnerId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<CardProgress>().HasIndex(p => new { p.UserId, p.FlashcardId }).IsUnique();

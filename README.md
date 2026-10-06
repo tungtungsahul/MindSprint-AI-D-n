@@ -1,6 +1,6 @@
 # MindSprintAI
 
-Stack đúng theo dự án: **HTML/CSS/JS (Fetch API)** + **C# ASP.NET Core Web API** + **SQL Server (EF Core Code First)** + **JWT** + **Gemini API**.
+Stack đang dùng: **HTML/CSS/JS (Fetch API)** + **C# ASP.NET Core Web API** + **PostgreSQL (EF Core Code First)** + **JWT** + **Gemini API**.
 
 ## Cấu trúc
 - `frontend/` – giao diện MindSprintAI + `api.js` (client gọi API). Vẫn chạy offline bằng localStorage nếu chưa đăng nhập.
@@ -15,8 +15,8 @@ Stack đúng theo dự án: **HTML/CSS/JS (Fetch API)** + **C# ASP.NET Core Web 
 cd backend/MindSprint.Api
 dotnet run          # tự Migrate + Seed, Swagger tại /swagger
 ```
-Sửa cấu hình cục bộ: chuỗi kết nối SQL Server, `Jwt:Key` (>= 32 ký tự), `Gemini:ApiKey`, `Cors:Origins`. Giữ khóa API ngoài commit; có thể dùng biến môi trường `Gemini__ApiKey`.
-Cổng https mặc định xem ở `Properties/launchSettings.json` (sau khi chạy lần đầu) rồi cập nhật `API_BASE` trong `frontend/api.js`.
+Sửa cấu hình cục bộ: chuỗi kết nối PostgreSQL, `Jwt:Key` (>= 32 ký tự), `Gemini:ApiKey`, `Cors:Origins`. Giữ khóa API ngoài commit; có thể dùng biến môi trường `Gemini__ApiKey`.
+Khi chạy local, `frontend/api.js` tự dùng `http://localhost:5000`; khi triển khai Vercel, biến `API_BASE` được nhúng lúc build. Xem [hướng dẫn triển khai](CI-CD-SETUP.md).
 
 ## Chạy frontend
 Mở `frontend/` bằng Live Server (cổng 5500) – đã có sẵn trong CORS.
@@ -38,7 +38,7 @@ Email đã có tài khoản cần mật khẩu MindSprintAI hiện tại trướ
 giữ nguyên dữ liệu học tập. Khi chưa cấu hình Google, email và Demo vẫn dùng được.
 
 ## Kanban tích hợp
-Tab **Công việc** dùng chung `MindSprintAuth` và `MindSprintApi` với Sổ tay AI, thư viện và lịch học. Có thêm/sửa/xóa, kéo thả hoặc nút chuyển cột, tìm kiếm, lọc ưu tiên và hạn hoàn thành. Công việc được lưu vào SQL Server theo tài khoản; khi lỗi kết nối, form giữ nguyên để thử lại.
+Tab **Công việc** dùng chung `MindSprintAuth` và `MindSprintApi` với Sổ tay AI, thư viện và lịch học. Có thêm/sửa/xóa, kéo thả hoặc nút chuyển cột, tìm kiếm, lọc ưu tiên và hạn hoàn thành. Công việc được lưu vào PostgreSQL theo tài khoản; khi lỗi kết nối, form giữ nguyên để thử lại.
 
 `frontend/kanban.js` ghép logic bảng mới từ `frontend/js/kanban.js` vào giao diện chính. Trạng thái Todo/InProgress/Completed được ánh xạ sang Todo/Doing/Done (0/1/2) của API C#. Migration `AddTaskPriority` bổ sung mức ưu tiên cho công việc cũ với giá trị mặc định Medium.
 

@@ -347,7 +347,7 @@ namespace MindSprint.Api.Migrations
 
                     b.HasIndex("GoogleSubject")
                         .IsUnique()
-                        .HasFilter("[GoogleSubject] IS NOT NULL");
+                        .HasFilter("\"GoogleSubject\" IS NOT NULL");
 
                     b.ToTable("Users");
                 });

@@ -290,7 +290,7 @@ namespace MindSprint.Api.Migrations
                 table: "Users",
                 column: "GoogleSubject",
                 unique: true,
-                filter: "[GoogleSubject] IS NOT NULL");
+                filter: "\"GoogleSubject\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserStudyDays_UserId_StudyDate",

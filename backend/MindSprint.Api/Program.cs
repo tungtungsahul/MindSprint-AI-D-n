@@ -11,8 +11,29 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
+var isProduction = builder.Environment.IsProduction();
 
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(cfg.GetConnectionString("Default")));
+var connectionString = cfg.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("ConnectionStrings:Default must be configured.");
+if (isProduction && connectionString.Contains("localhost", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("Set ConnectionStrings__Default to the production PostgreSQL URL or connection string.");
+
+var jwtKey = cfg["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32 ||
+    (isProduction && jwtKey.Contains("DOI_KHOA_NAY", StringComparison.OrdinalIgnoreCase)))
+    throw new InvalidOperationException("Set Jwt__Key to a secret value with at least 32 characters.");
+
+var defaultCorsOrigins = isProduction ? Array.Empty<string>() : cfg.GetSection("Cors:Origins").Get<string[]>() ?? [];
+var corsOrigins = defaultCorsOrigins
+    .Concat((cfg["Cors:AllowedOrigins"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    .Where(origin => Uri.TryCreate(origin, UriKind.Absolute, out var uri) && (uri.Scheme is "http" or "https"))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+if (isProduction && corsOrigins.Length == 0)
+    throw new InvalidOperationException("Set Cors__AllowedOrigins to the public frontend origin(s), separated by commas.");
+
+builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(PostgresConnectionString.Normalize(connectionString)));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -51,7 +72,9 @@ builder.Services.AddScoped<NotebookAi>();
 builder.Services.AddSingleton<INotebookPageRenderer, NotebookPageRenderer>();
 builder.Services.AddScoped<NotebookUrlImporter>();
 
-builder.WebHost.UseUrls("http://localhost:5000", "http://localhost:5100");
+// Render sets PORT dynamically. Bind to all interfaces so the platform's proxy can reach Kestrel.
+if (int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var port) && port is > 0 and <= 65535)
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
 {
@@ -60,7 +83,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateIssuer = true, ValidIssuer = cfg["Jwt:Issuer"],
         ValidateAudience = true, ValidAudience = cfg["Jwt:Audience"],
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(cfg["Jwt:Key"]!)),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ValidateLifetime = true
     };
     o.Events = new JwtBearerEvents
@@ -85,7 +108,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+{
+    if (corsOrigins.Length > 0) p.WithOrigins(corsOrigins);
+    p.AllowAnyHeader().AllowAnyMethod();
+}));
 
 var app = builder.Build();
 
@@ -94,14 +120,18 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
     await db.Database.MigrateAsync();      // tạo/cập nhật DB theo Migrations (Code First)
-    await DataSeeder.SeedAsync(db, hasher); // bơm từ vựng và tạo tài khoản demo
+    await DataSeeder.SeedAsync(db, hasher, includeDemoUser: !isProduction); // Không tạo tài khoản demo có mật khẩu mặc định ở Production.
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.Run();

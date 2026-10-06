@@ -14,17 +14,24 @@ public record GoogleLoginDto(
     [StringLength(1024)] string? ExistingPassword);
 
 [Route("api/auth/google")]
-public class GoogleAuthController(IConfiguration configuration, AppDbContext db, TokenService tokens,
+public class GoogleAuthController(IConfiguration configuration, IHostEnvironment environment, AppDbContext db, TokenService tokens,
     IGoogleTokenValidator validator, GoogleLoginChallenges challenges, GoogleAccountService accounts) : ApiBase, IActionFilter
 {
     [NonAction]
     public void OnActionExecuting(ActionExecutingContext context)
     {
         if (context.ActionDescriptor.RouteValues["action"] == nameof(Config)) return;
-        // Reject cross-site browser requests for the Google flow, even though the legacy
-        // API has permissive CORS. Configure exact frontend origins for deployment.
+        // Apply an origin check to the Google flow as defense in depth alongside CORS.
         var configured = configuration.GetSection("Google:AllowedOrigins").Get<string[]>();
-        var origins = configured ?? ["http://localhost:5500", "http://127.0.0.1:5500"];
+        var defaultOrigins = environment.IsProduction()
+            ? Array.Empty<string>()
+            : configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+        var origins = configured is { Length: > 0 }
+            ? configured
+            : defaultOrigins
+                .Concat((configuration["Cors:AllowedOrigins"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Concat(environment.IsProduction() ? Array.Empty<string>() : ["http://localhost:5500"])
+                .ToArray();
         var origin = Request.Headers.Origin.ToString();
         if (string.IsNullOrEmpty(origin) || !origins.Contains(origin, StringComparer.OrdinalIgnoreCase))
             context.Result = StatusCode(403, new { message = "Địa chỉ trang web chưa được cho phép đăng nhập Google.", code = "google_origin_not_allowed" });
