@@ -10,7 +10,7 @@ function element(tag = 'div', attrs = {}) {
     let children = [], html = '';
     const node = {
         tag, id: attrs.id, value: '', files: [], style: {}, hidden: 'hidden' in attrs,
-        dataset: Object.fromEntries(Object.entries(attrs).filter(([k]) => k.startsWith('data-')).map(([k, v]) => [k.slice(5), v])),
+        dataset: Object.fromEntries(Object.entries(attrs).filter(([k]) => k.startsWith('data-')).map(([k, v]) => [k.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v])),
         disabled: false, isConnected: true, textContent: '',
         classList: { toggle(k, on) { on ? classes.add(k) : classes.delete(k); }, add(k) { classes.add(k); }, remove(k) { classes.delete(k); } },
         setAttribute(k, v) { attrs[k] = String(v); }, getAttribute(k) { return attrs[k] ?? null; },
@@ -24,9 +24,10 @@ function element(tag = 'div', attrs = {}) {
             });
         },
         closest(selector) { return node.matches(selector) ? node : null; },
-        querySelector(selector) { return children.find(c => c.matches(selector)) || null; },
+        querySelector(selector) { if (selector.startsWith('.nb-welcome ')) return children.find(c => c.tag === selector.split(' ')[1]) || null; return children.find(c => c.matches(selector)) || null; },
         querySelectorAll(selector) { return children.filter(c => c.matches(selector)); },
         addEventListener(type, callback) { (listeners[type] ||= []).push(callback); },
+        dispatchEvent(event) { return node.dispatch(event.type, node); },
         async dispatch(type, target, extra = {}) {
             for (const callback of listeners[type] || []) await callback({target, preventDefault() {}, ...extra});
             await new Promise(resolve => setImmediate(resolve));
@@ -38,7 +39,7 @@ function element(tag = 'div', attrs = {}) {
             for (const [, t, attributes] of value.matchAll(/<(\w+)\b([^>]*)>/g)) {
                 const parsed = Object.fromEntries(Array.from(attributes.matchAll(/([\w-]+)="([^"]*)"/g), m => [m[1], m[2]]));
                 if (/\bhidden(?:\s|$)/.test(attributes)) parsed.hidden = '';
-                if (parsed.id || parsed['data-act']) children.push(element(t, parsed));
+                children.push(element(t, parsed));
             }
         }
     };
@@ -46,7 +47,7 @@ function element(tag = 'div', attrs = {}) {
 }
 
 function load(filename, window, document) {
-    const context = vm.createContext({window, document, URL, console, setTimeout() {},
+    const context = vm.createContext({window, document, URL, Event, console, setTimeout() {},
         localStorage: {getItem() { return null; }, setItem() {}, removeItem() {}},
         alert(message) { throw new Error('Unexpected alert: ' + message); }});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../frontend', filename), 'utf8'), context);

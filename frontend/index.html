@@ -23,7 +23,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="vendor/katex/katex.min.css">
     <link rel="stylesheet" href="tokens.css?v=39">
-    <link rel="stylesheet" href="style.css?v=43">
+    <link rel="stylesheet" href="style.css?v=52">
     <link rel="stylesheet" href="kanban.css?v=39">
 </head>
 <body>
@@ -35,14 +35,21 @@
                 <span>MindSprintAI</span>
             </div>
 
-            <div class="user-profile">
-                <h4 class="profile-name" id="sidebar-user-name">Khách</h4>
-            </div>
-
             <nav class="menu-section" aria-label="Điều hướng chính">
                 <div class="nav-group"><h3>Học tập</h3><ul class="nav-tabs">
                     <li><button type="button" class="nav-tab active" data-tab="home"><i class="fas fa-home" aria-hidden="true"></i>Trang chủ</button></li>
-                    <li><button type="button" class="nav-tab" data-tab="flashcards"><i class="fas fa-layer-group" aria-hidden="true"></i>Thư viện</button></li>
+                    <li>
+                        <button type="button" class="nav-tab" data-tab="flashcards" aria-expanded="false" aria-controls="sidebar-categories"><i class="fas fa-layer-group" aria-hidden="true"></i>Thư viện</button>
+                        <div class="category-section" id="sidebar-categories" hidden>
+                            <h3>Danh mục</h3>
+                            <ul class="category-list" id="category-list">
+                                <li><button type="button" class="category-item active" data-category="all" aria-pressed="true"><i class="fas fa-tags" aria-hidden="true"></i>Tất cả</button></li>
+                                <li><button type="button" class="category-item" data-category="english" aria-pressed="false"><i class="fas fa-language" aria-hidden="true"></i>Tiếng Anh</button></li>
+                                <li><button type="button" class="category-item" data-category="programming" aria-pressed="false"><i class="fas fa-code" aria-hidden="true"></i>Lập trình</button></li>
+                                <li><button type="button" class="category-item" data-category="general" aria-pressed="false"><i class="fas fa-globe" aria-hidden="true"></i>Kiến thức chung</button></li>
+                            </ul>
+                        </div>
+                    </li>
                     <li><button type="button" class="nav-tab" data-tab="quiz"><i class="fas fa-edit" aria-hidden="true"></i>Luyện tập</button></li>
                     <li><button type="button" class="nav-tab" data-tab="notebook"><i class="fas fa-book-reader" aria-hidden="true"></i>Sổ tay AI</button></li>
                 </ul></div>
@@ -56,32 +63,12 @@
                 </ul></div>
             </nav>
 
-            <!-- Category Filter Section (Conditional visibility inside script) -->
-            <div class="category-section" id="sidebar-categories" style="display: none;">
-                <h3>Danh mục</h3>
-                <ul class="category-list" id="category-list">
-                    <li class="category-item active" data-category="all">
-                        <i class="fas fa-tags"></i> Tất cả
-                    </li>
-                    <li class="category-item" data-category="english">
-                        <i class="fas fa-language"></i> Tiếng Anh
-                    </li>
-                    <li class="category-item" data-category="programming">
-                        <i class="fas fa-code"></i> Lập trình
-                    </li>
-                    <li class="category-item" data-category="general">
-                        <i class="fas fa-globe"></i> Kiến thức chung
-                    </li>
-                </ul>
-            </div>
-
             <div class="sidebar-footer">
                 <button class="btn btn-primary btn-icon" id="sidebar-add-card-btn" style="margin-bottom: var(--space-step-24); width: 100%;">
                     <i class="fas fa-plus"></i> Bộ thẻ mới
                 </button>
                 <div class="footer-links">
                     <div class="footer-link"><i class="far fa-question-circle"></i> Trợ giúp</div>
-                    <div id="sidebar-auth" class="sidebar-auth"></div>
                 </div>
             </div>
         </aside>
@@ -98,10 +85,21 @@
                 <div class="workspace-header-actions">
                     <button type="button" class="header-icon-btn" id="header-mail" aria-label="Mở ghi chú và tài liệu trong Sổ tay AI" title="Ghi chú và tài liệu"><i class="far fa-envelope" aria-hidden="true"></i></button>
                     <button type="button" class="header-icon-btn" id="header-notifications" aria-label="Mở lịch học và nhắc nhở" title="Lịch học và nhắc nhở"><i class="far fa-bell" aria-hidden="true"></i></button>
-                    <button type="button" class="header-account" id="header-account" aria-label="Tài khoản">
-                        <span class="header-avatar" id="header-avatar" aria-hidden="true">K</span>
-                        <span class="header-user-details"><strong id="header-user-name">Khách</strong><span id="header-user-email">Đăng nhập để lưu tiến độ</span></span>
-                    </button>
+                    <div class="header-account-wrapper" id="header-account-wrapper">
+                        <button type="button" class="header-account" id="header-account" aria-label="Tài khoản" aria-expanded="false" aria-controls="header-account-menu">
+                            <span class="header-avatar" id="header-avatar" aria-hidden="true">K</span>
+                            <span class="header-user-details"><strong id="header-user-name">Khách</strong><span id="header-user-email">Đăng nhập để lưu tiến độ</span></span>
+                        </button>
+                        <div class="header-account-menu" id="header-account-menu" aria-label="Tùy chọn tài khoản" hidden>
+                            <button type="button" id="header-change-avatar"><i class="fas fa-camera" aria-hidden="true"></i> Đổi ảnh đại diện</button>
+                            <button type="button" id="header-reset-avatar" hidden><i class="fas fa-user-circle" aria-hidden="true"></i> Dùng ảnh mặc định</button>
+                            <p class="header-avatar-hint">Chọn ảnh JPG, PNG hoặc WebP, tối đa 5 MB. Ảnh được lưu cho tài khoản này trên trình duyệt.</p>
+                            <p id="header-avatar-status" role="status" aria-live="polite" hidden></p>
+                            <div class="header-account-divider"></div>
+                            <button type="button" id="header-logout"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Đăng xuất</button>
+                        </div>
+                        <input type="file" id="header-avatar-file" accept="image/jpeg,image/png,image/webp" aria-label="Chọn ảnh đại diện" hidden>
+                    </div>
                 </div>
             </header>
 
@@ -1090,16 +1088,35 @@
             </form>
         </div>
     </div>
+    <dialog id="app-dialog" class="app-dialog" aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message">
+        <form novalidate>
+            <div class="app-dialog-header">
+                <h2 id="app-dialog-title">Thông báo</h2>
+                <button type="button" id="app-dialog-close" aria-label="Đóng hộp thoại">&times;</button>
+            </div>
+            <p id="app-dialog-message" class="app-dialog-message"></p>
+            <div id="app-dialog-field" hidden>
+                <label id="app-dialog-label" for="app-dialog-input">Tên sổ tay</label>
+                <input id="app-dialog-input" type="text" maxlength="200" autocomplete="off" aria-describedby="app-dialog-error">
+            </div>
+            <p id="app-dialog-error" class="app-dialog-error" role="alert" hidden></p>
+            <div class="app-dialog-actions">
+                <button type="button" class="btn btn-secondary" id="app-dialog-cancel">Hủy</button>
+                <button type="submit" class="btn btn-primary" id="app-dialog-submit">Xác nhận</button>
+            </div>
+        </form>
+    </dialog>
     <script src="vendor/katex/katex.min.js"></script>
     <script src="vendor/katex/contrib/auto-render.min.js"></script>
     <script src="text-renderer.js?v=31"></script>
     <script src="vocab_data.js?v=24"></script>
     <script src="runtime-config.js"></script>
-    <script src="api.js?v=42"></script>
+    <script src="api.js?v=48"></script>
     <script src="auth.js?v=43"></script>
-    <script src="notebook.js?v=43"></script>
-    <script src="script.js?v=39"></script>
-    <script src="ui.js?v=40"></script>
-    <script src="kanban.js?v=36"></script>
+    <script src="dialogs.js?v=45"></script>
+    <script src="notebook.js?v=52"></script>
+    <script src="script.js?v=50"></script>
+    <script src="ui.js?v=52"></script>
+    <script src="kanban.js?v=45"></script>
 </body>
 </html>
