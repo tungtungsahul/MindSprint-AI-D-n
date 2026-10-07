@@ -33,7 +33,7 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
         await context.route('**/*', async route => {
             const req=route.request(), url=new URL(req.url());
             if (url.hostname==='localhost' && ['5000','5100'].includes(url.port)) {
-                const p=url.pathname, data=req.postData() ? req.postDataJSON() : undefined;
+                const p=url.pathname, data=req.headers()['content-type']?.includes('application/json') ? req.postDataJSON() : undefined;
                 calls.push({path:p, method:req.method(), data});
                 let status=200, body=[];
                 if(req.method()!=='OPTIONS') {
@@ -41,6 +41,7 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
                     else if(p.endsWith('/auth/login')) {user=data.email.startsWith('other')?43:42; body={token:'qa-access-'+user, refreshToken:'qa-refresh-'+user, user:{id:user, displayName:'Duy', email:data.email}};}
                     else if(p.endsWith('/auth/me')) body={id:user, displayName:'Duy', email:'duy@example.test'};
                     else if(p==='/api/notebooks') body=[{id:77,title:'Sổ tay kiểm tra'}, {id:78,title:'Sổ tay khác'}];
+                    else if(req.method()==='POST' && /\/sources\/(file|url)$/.test(p)) {status=400; body={message:'Validation mock rejected source'};}
                     else if(p.endsWith('/sources/text')) {sources=[{id:1, type:'text', title:data.title, content:data.text}]; body=sources[0];}
                     else if(p.endsWith('/sources')) body=sources;
                     else if(p.endsWith('/notes') && req.method()==='POST') {body={id:notes.length+1, ...data}; notes.push(body);}
@@ -63,6 +64,42 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
         await page.evaluate(() => window.MindSprintAuth.login('duy@example.test','qa-password'));
         await page.locator('.sidebar [data-tab=notebook]').click();
         await page.locator('#nb-select').selectOption('77');
+        // Issue #11 must survive the new source dialog and its drag/drop input path.
+        await page.locator('.nb-add-source-btn').click();
+        const fileInput=page.locator('#nb-file'), fileError=page.locator('#nb-file-feedback');
+        const sourceCalls=()=>calls.filter(c=>c.method==='POST' && /\/sources\/(file|url)$/.test(c.path));
+        await page.locator('[data-act=add-file]').click();
+        assert.match(await fileError.innerText(), /chọn một file/);
+        assert.equal(await page.locator('[data-ui-act=pick-source-file]').evaluate(el=>el===document.activeElement),true);
+        await fileInput.setInputFiles({name:'bad.exe',mimeType:'application/octet-stream',buffer:Buffer.from('bad')});
+        assert.match(await fileError.innerText(), /Chỉ hỗ trợ/);
+        await page.locator('[data-act=add-file]').click();
+        assert.equal(sourceCalls().length,0);
+        await page.locator('#nb-file-dropzone').evaluate(zone=>{
+            const transfer=new DataTransfer();
+            transfer.items.add(new File([new Uint8Array(10*1024*1024+1)],'too-large.pdf',{type:'application/pdf'}));
+            zone.dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));
+        });
+        assert.match(await fileError.innerText(), /tối đa 10 MB/);
+        assert.equal(await fileInput.getAttribute('aria-invalid'),'true');
+        await page.locator('[data-act=add-file]').click(); assert.equal(sourceCalls().length,0);
+        await fileInput.setInputFiles({name:'lesson.PDF',mimeType:'application/pdf',buffer:Buffer.alloc(10*1024*1024)});
+        assert.equal(await fileError.isVisible(),false);
+        await page.locator('[data-act=add-file]').click();
+        await page.waitForFunction(()=>document.querySelector('#nb-file-feedback').textContent.includes('Validation mock'));
+        assert.equal(sourceCalls().length,1);
+        assert.equal(await fileInput.evaluate(el=>el.files[0].name),'lesson.PDF');
+        await page.locator('[data-source-kind=url]').click();
+        await page.locator('#nb-url').fill('https://example.com:bad');
+        assert.equal(await page.locator('#nb-url').getAttribute('aria-invalid'),'true');
+        await page.locator('[data-act=add-url]').click(); assert.equal(sourceCalls().length,1);
+        await page.locator('#nb-url').fill('https://example.com/lesson');
+        await page.locator('[data-act=add-url]').click();
+        await page.waitForFunction(()=>document.querySelector('#nb-url-feedback').textContent.includes('Validation mock'));
+        assert.equal(sourceCalls().length,2);
+        assert.equal(await page.locator('#nb-url').inputValue(),'https://example.com/lesson');
+        await page.keyboard.press('Escape');
+        console.log('PASS source dialog validation, file selection/drop, exact size boundary, blocked requests and retained failed inputs');
         const q=page.locator('#nb-q'), tutor=page.locator('[data-chat-mode=tutor]'), source=page.locator('[data-chat-mode=source]');
         const submit=async text => {await q.fill(text); await page.locator('[data-act=send]').click(); await page.locator('[data-act=send]').waitFor({state:'visible'}); await page.waitForFunction(() => !document.querySelector('[data-act=send]').disabled);};
         const tutorCalls=() => calls.filter(c=>c.path.endsWith('/tutor')&&c.method==='POST');
@@ -182,5 +219,5 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
             assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'preview overflow '+width);
         }
         console.log('PASS 320/375/414/768/1440, light/dark/reduced-motion, text contrast, eight-state preview, stale notebook/account responses');
-    } finally {if(browser) await browser.close(); await new Promise(resolve=>server.close(resolve));}
+    } finally {if(browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve=>server.close(resolve));}
 });
