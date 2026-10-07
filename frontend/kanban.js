@@ -387,7 +387,10 @@ class KanbanBoard {
 
   async handleDeleteTask(taskId) {
     if (this.pending || !this.requireAccount()) return;
-    if (!confirm('Xóa công việc này?')) return;
+    const version = this.version;
+    const task = this.tasks.find(task => String(task.id) === String(taskId));
+    if (!await window.MindSprintDialogs.confirm(`Xóa công việc "${task?.title || 'Công việc'}"?`, {title: 'Xóa công việc', confirmText: 'Xóa công việc'})) return;
+    if (version !== this.version || !auth.isLoggedIn()) return;
     return this.mutate(() => api.deleteTask(taskId), 'Đã xóa công việc.');
   }
 

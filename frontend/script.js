@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             notificationsEnabled = false;
             localStorage.setItem('notifications-enabled', 'false');
             updateNotificationButtonState();
-            alert('Đã tắt toàn bộ thông báo nhắc nhở học tập thành công!');
+            window.MindSprintDialogs.alert('Đã tắt toàn bộ thông báo nhắc nhở học tập thành công!');
             window.history.replaceState({}, document.title, window.location.pathname);
         }
 
@@ -476,11 +476,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (tabId === 'flashcards') {
-            sidebarCategories.style.display = 'block';
-        } else {
-            sidebarCategories.style.display = 'none';
-        }
+        sidebarCategories.hidden = tabId !== 'flashcards';
+        document.querySelector('.sidebar [data-tab="flashcards"]').setAttribute('aria-expanded', String(tabId === 'flashcards'));
 
         if (tabId === 'timetable') {
             updateTodayWidget();
@@ -1243,8 +1240,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         categoryItems.forEach(item => {
             item.addEventListener('click', () => {
-                categoryItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
+                categoryItems.forEach(i => i.classList.toggle('active', i.getAttribute('data-category') === item.getAttribute('data-category')));
+                sidebarCategories.querySelectorAll('.category-item').forEach(i => i.setAttribute('aria-pressed', String(i.classList.contains('active'))));
                 currentCategory = item.getAttribute('data-category');
                 currentSubCategory = 'all';
                 filterDeck();
@@ -1418,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentIndex = filteredCards.length - 1;
                     renderCard();
                 } else {
-                    alert("Đã thêm thẻ mới thành công! Bạn có thể xem trong mục danh mục tương ứng.");
+                    window.MindSprintDialogs.alert("Đã thêm thẻ mới thành công! Bạn có thể xem trong mục danh mục tương ứng.");
                 }
                 
                 // Sync to server if logged in
@@ -1433,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             saveOfflineQueue();
                             console.log('Offline: queued card creation');
                         } else {
-                            alert('Lỗi đồng bộ: ' + err.message);
+                            window.MindSprintDialogs.alert('Lỗi đồng bộ: ' + err.message);
                         }
                     }
                 }
@@ -1661,11 +1658,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (err.isConflict) {
                         // Conflict detected - show server version and let user choose
                         const serverCard = err.serverData.serverCard;
-                        const userChoice = confirm(
+                        const userChoice = await window.MindSprintDialogs.confirm(
                             `Thẻ này đã được sửa trên thiết bị khác!\n\n` +
                             `Phiên bản server:\n${serverCard.question}\n${serverCard.answer}\n\n` +
-                            `Chọn "OK" để giữ bản server, "Cancel" để giữ bản cục bộ và ghi đè.`
+                            `Chọn bản trên server hoặc ghi đè bằng bản cục bộ.`,
+                            {title: 'Thẻ có phiên bản mới', confirmText: 'Giữ bản server', cancelText: 'Ghi đè bản cục bộ', dismissValue: null}
                         );
+                        if (version !== accountVersion || userChoice === null) return;
                         
                         if (userChoice) {
                             // Use server version
@@ -1688,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             } catch (e) {
                                 if (version !== accountVersion) return;
                                 console.error('Force update failed:', e);
-                                alert('Không thể ghi đè. Vui lòng thử lại.');
+                                window.MindSprintDialogs.alert('Không thể ghi đè. Vui lòng thử lại.');
                                 // Rollback
                                 Object.assign(card, oldValues);
                             }
@@ -1702,7 +1701,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         saveOfflineQueue();
                         console.log('Offline: queued card update');
                     } else {
-                        alert('Lỗi đồng bộ: ' + err.message);
+                        window.MindSprintDialogs.alert('Lỗi đồng bộ: ' + err.message);
                         // Rollback on other errors
                         Object.assign(card, oldValues);
                         filterDeck();
@@ -1717,13 +1716,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 
-    function deleteCurrentCard() {
+    async function deleteCurrentCard() {
         if (filteredCards.length === 0) return;
         const currentCard = filteredCards[currentIndex];
         const cardVersion = currentCard.version;
         const version = accountVersion;
 
-        if (confirm(`Bạn có chắc chắn muốn xóa thẻ học này (${currentCard.question}) không?`)) {
+        if (await window.MindSprintDialogs.confirm(`Bạn có chắc chắn muốn xóa thẻ học này (${currentCard.question}) không?`, {title: 'Xóa thẻ học', confirmText: 'Xóa thẻ'})) {
+            if (version !== accountVersion) return;
             // Store for rollback
             const deletedCard = { ...currentCard };
             const deletedIndex = flashcards.findIndex(c => c.id == currentCard.id);
@@ -1750,10 +1750,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (version !== accountVersion) return;
                         if (err.isConflict) {
                             // Card was modified, ask user
-                            const userChoice = confirm(
+                            const userChoice = await window.MindSprintDialogs.confirm(
                                 `Thẻ này đã thay đổi trên thiết bị khác!\n\n` +
-                                `Chọn "OK" để xóa theo phiên bản server, "Cancel" để khôi phục thẻ.`
+                                `Bạn muốn xóa theo phiên bản server hay khôi phục thẻ?`,
+                                {title: 'Thẻ có phiên bản mới', confirmText: 'Xóa thẻ', cancelText: 'Khôi phục thẻ'}
                             );
+                            if (version !== accountVersion) return;
                             if (userChoice) {
                                 // Force delete with server version
                                 try {
@@ -1776,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             saveOfflineQueue();
                             console.log('Offline: queued card deletion');
                         } else {
-                            alert('Lỗi đồng bộ xóa: ' + err.message);
+                            window.MindSprintDialogs.alert('Lỗi đồng bộ xóa: ' + err.message);
                             // Restore on error
                             flashcards.splice(deletedIndex, 0, deletedCard);
                             updateStats();
@@ -1848,8 +1850,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Exit ongoing quiz button
-        quizExitOngoingBtn.addEventListener('click', () => {
-            if (confirm("Bạn có chắc chắn muốn dừng bài luyện tập hiện tại? Mọi tiến trình sẽ bị hủy.")) {
+        quizExitOngoingBtn.addEventListener('click', async () => {
+            const version = accountVersion;
+            if (await window.MindSprintDialogs.confirm("Bạn có chắc chắn muốn dừng bài luyện tập hiện tại? Mọi tiến trình sẽ bị hủy.", {title: 'Dừng luyện tập', confirmText: 'Dừng luyện tập'})) {
+                if (version !== accountVersion) return;
                 quizOngoingContainer.style.display = 'none';
                 quizSetupContainer.style.display = 'block';
             }
@@ -1931,8 +1935,10 @@ document.addEventListener('DOMContentLoaded', () => {
             gameStartBtn.addEventListener('click', () => startGame());
         }
         if (gameQuitBtn) {
-            gameQuitBtn.addEventListener('click', () => {
-                if (confirm("Bạn có chắc chắn muốn thoát trò chơi ghép thẻ? Mọi tiến trình sẽ bị hủy.")) {
+            gameQuitBtn.addEventListener('click', async () => {
+                const version = accountVersion;
+                if (await window.MindSprintDialogs.confirm("Bạn có chắc chắn muốn thoát trò chơi ghép thẻ? Mọi tiến trình sẽ bị hủy.", {title: 'Thoát trò chơi', confirmText: 'Thoát trò chơi'})) {
+                    if (version !== accountVersion) return;
                     quitGame();
                 }
             });
@@ -1963,7 +1969,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (cards.length === 0) {
-            alert("Không tìm thấy từ vựng nào phù hợp trong danh mục học này để ôn tập!");
+            window.MindSprintDialogs.alert("Không tìm thấy từ vựng nào phù hợp trong danh mục học này để ôn tập!");
             return;
         }
 
@@ -2227,7 +2233,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const noteVal = document.getElementById('slot-note').value;
 
             if (startVal >= endVal) {
-                alert("Lỗi: Giờ kết thúc phải muộn hơn giờ bắt đầu học!");
+                window.MindSprintDialogs.alert("Lỗi: Giờ kết thúc phải muộn hơn giờ bắt đầu học!");
                 return;
             }
 
@@ -2374,7 +2380,8 @@ document.addEventListener('DOMContentLoaded', () => {
             delBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const version = accountVersion;
-                if (confirm(`Bạn có muốn xóa giờ học (${slot.start} - ${slot.end}) khỏi lịch trình không?`)) {
+                if (await window.MindSprintDialogs.confirm(`Bạn có muốn xóa giờ học (${slot.start} - ${slot.end}) khỏi lịch trình không?`, {title: 'Xóa giờ học', confirmText: 'Xóa giờ học'})) {
+                    if (version !== accountVersion) return;
                     // #14 – Delete from server if logged in
                     if (MindSprintApi.isLoggedIn() && slot.serverId) {
                         try {
@@ -2520,7 +2527,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function toggleNotifications() {
         if (!('Notification' in window)) {
-            alert('Trình duyệt của bạn không hỗ trợ tính năng thông báo!');
+            window.MindSprintDialogs.alert('Trình duyệt của bạn không hỗ trợ tính năng thông báo!');
             return;
         }
         
@@ -2534,7 +2541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('notifications-enabled', 'true');
                 updateNotificationButtonState();
             } else if (Notification.permission === 'denied') {
-                alert('Bạn đã chặn quyền thông báo của trang web này. Vui lòng nhấp vào biểu tượng ổ khóa ở đầu thanh địa chỉ trình duyệt, chọn Cho phép (Allow) thông báo rồi thử lại!');
+                window.MindSprintDialogs.alert('Bạn đã chặn quyền thông báo của trang web này. Vui lòng nhấp vào biểu tượng ổ khóa ở đầu thanh địa chỉ trình duyệt, chọn Cho phép (Allow) thông báo rồi thử lại!');
             } else {
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
@@ -2834,7 +2841,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         simLockBadge.style.color = 'var(--success-color)';
                     }
                 } else {
-                    alert("Mật khẩu quản trị viên không chính xác!");
+                    window.MindSprintDialogs.alert("Mật khẩu quản trị viên không chính xác!");
                     simPwInput.value = '';
                     simPwInput.focus();
                 }
@@ -2854,7 +2861,7 @@ document.addEventListener('DOMContentLoaded', () => {
             testStreakBtn.addEventListener('click', () => {
                 const targetDays = parseInt(testStreakInput.value, 10);
                 if (isNaN(targetDays) || targetDays < 1) {
-                    alert("Vui lòng nhập số ngày hợp lệ!");
+                    window.MindSprintDialogs.alert("Vui lòng nhập số ngày hợp lệ!");
                     return;
                 }
                 
@@ -3065,7 +3072,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
             
         if (filtered.length < 3) {
-            alert("Số từ vựng trong chủ đề này quá ít (yêu cầu tối thiểu 3 từ). Vui lòng chọn danh mục/chủ đề khác hoặc thêm thẻ học!");
+            window.MindSprintDialogs.alert("Số từ vựng trong chủ đề này quá ít (yêu cầu tối thiểu 3 từ). Vui lòng chọn danh mục/chủ đề khác hoặc thêm thẻ học!");
             return;
         }
 

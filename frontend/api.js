@@ -2,7 +2,7 @@
 // Tự động thử luân chuyển cổng 5000 và 5100 nếu một trong hai đang lắng nghe.
 (function () {
     const configuredApiBase = window.MINDSPRINT_CONFIG?.apiBase?.trim();
-    const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+    const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location?.hostname ?? 'localhost');
     const DEFAULT_API_BASE = configuredApiBase || (isLocal ? 'http://localhost:5000' : '');
     let API_BASE = localStorage.getItem('api-base') || DEFAULT_API_BASE;
     const TOKEN_KEY = 'ms-token';
@@ -197,6 +197,7 @@
         nbAddFile: (id, file) => { const f = new FormData(); f.append('file', file); return upload(`/api/notebooks/${id}/sources/file`, f); },
         nbDeleteSource: (id, sid) => request(`/api/notebooks/${id}/sources/${sid}`, { method: 'DELETE' }),
         nbChat: (id, question, history) => request(`/api/notebooks/${id}/chat`, { method: 'POST', body: { question, history } }),
+        nbTutor: (id, question, style, history) => request(`/api/notebooks/${id}/tutor`, { method: 'POST', body: { question, style, history } }),
         nbSuggestions: (id) => request(`/api/notebooks/${id}/suggestions`),
         nbGenerate: (id, type, focus, count) => request(`/api/notebooks/${id}/generate`, { method: 'POST', body: { type, focus, count } }),
         nbSaveCards: (id, cards) => request(`/api/notebooks/${id}/save-cards`, { method: 'POST', body: { cards } }),
