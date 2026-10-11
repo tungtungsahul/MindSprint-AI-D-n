@@ -3284,6 +3284,10 @@ dialog.app-dialog { position: fixed; inset: 0; margin: auto; width: min(480px, c
 .nb-tutor-style { display: flex; align-items: center; gap: var(--space-step-4); flex-wrap: wrap; }
 .nb-tutor-style > span { color: var(--text-secondary); font-size: .8rem; margin-right: var(--space-sm); }
 .nb-tutor-help { font-size: .8rem; color: var(--text-secondary); line-height: 1.65; text-align: center; }
+.nb-tutor-work { display: grid; gap: var(--space-sm); min-width: 0; }
+.nb-tutor-work label { display: block; font-size: .85rem; font-weight: 600; margin-block: var(--space-sm); }
+.nb-tutor-work textarea { width: 100%; resize: vertical; }
+.nb-tutor-work > .btn { justify-self: start; }
 .nb-studio-results:has(.nb-result-panel[hidden]) .nb-notes-panel { grid-column: 1 / -1; }
 @media (max-width: 480px) { .nb-tutor-style > span { flex-basis: 100%; } .nb-tutor-controls { align-items: flex-end; } .nb-mode-btn, .nb-tutor-style button { font-size: .8rem; padding-inline: var(--space-step-12); } }
 @media (prefers-reduced-motion: reduce) { .nb-mode-btn, .nb-tutor-style button { transition: none; } .nb-mode-btn:active, .nb-tutor-style button:active { transform: none; } }

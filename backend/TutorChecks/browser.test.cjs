@@ -50,6 +50,7 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
                         if(gate) await new Promise(resolve => {release=resolve;});
                         status=failure || 200;
                         body=failure ? {message:'AI đang bận', code:failure===429?'ai_rate_limited':'ai_unavailable', retryAfterSeconds:65} : {answer:data.question.includes('hình chữ nhật')?'Bạn cho biết chiều dài và chiều rộng nhé.':answer, needsClarification:data.question.includes('hình chữ nhật')};
+                        if (!failure && data.action === 'check') body = {answer: 'Đối chiếu bài làm của bạn.', needsClarification: false, feedback: {status: data.submission.includes('2x = 8') ? 'correct' : 'incorrect', errorType: data.submission.includes('2x = 8') ? 'none' : 'calculation', firstErrorStep: data.submission.includes('2x = 8') ? null : 'Bước 1: 2x = 9', reason: '11 - 3 = 8', suggestion: 'Tính lại phép trừ ở bước 1'}};
                     }
                     else if(p.endsWith('/chat')) body={answer:'Theo tài liệu: kết quả $x = 4$ [1].', citations:[{source:1,quote:'SOURCE_QUOTE_NOT_SHOWN'}]};
                     else if(p==='/api/flashcards') body=Array.from({length:8},(_,i)=>({id:100+i,question:'Question '+i,answer:'Answer '+i,category:'english',subCategory:'Kiểm tra',version:1}));
@@ -169,6 +170,33 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
         await page.keyboard.press('ArrowRight'); assert.equal(await tutor.getAttribute('aria-checked'),'true');
         await q.fill('Dòng đầu'); await q.press('Shift+Enter'); assert.equal(await q.inputValue(),'Dòng đầu\n');
         console.log('PASS source route unchanged, tutor source feedback, modes do not share messages, missing-data response, new problem, HTML escaping, keyboard');
+
+        await page.locator('[data-tutor-task=check]').click();
+        assert.equal(await page.locator('.nb-composer').isVisible(), false);
+        await page.locator('#nb-problem').fill('Giải 2x + 3 = 11');
+        await page.locator('#nb-submission').fill('Bước 1: 2x = 9');
+        const checkWork = async () => { await page.locator('[data-act=tutor-check]').click(); await page.waitForFunction(()=>!document.querySelector('[data-act=tutor-check]').disabled); };
+        await checkWork();
+        assert.deepEqual(tutorCalls().at(-1).data, {question: 'Giải 2x + 3 = 11', action: 'check', submission: 'Bước 1: 2x = 9'});
+        assert.match(await page.locator('#nb-work-messages').innerText(), /Bước 1: 2x = 9/);
+        assert.match(await page.locator('#nb-work-messages').innerText(), /Tính toán/);
+        await page.locator('#nb-work-messages [data-act=save-answer]').click();
+        await page.waitForFunction(()=>document.querySelectorAll('#nb-notes [data-act=note-open]').length===2);
+        assert.match(notes.at(-1).content, /Bài làm: Bước 1/);
+        await page.locator('#nb-submission').fill('Bước 1: 2x = 8; bước 2: x = 4'); await checkWork();
+        assert.match(await page.locator('#nb-work-messages').innerText(), /Bài làm đúng/);
+        failure=429; await checkWork();
+        assert.equal(await page.locator('#nb-submission').inputValue(), 'Bước 1: 2x = 8; bước 2: x = 4');
+        assert.match(await page.locator('#nb-work-messages').innerText(), /2 phút/);
+        failure=0; gate=true; const workCount=tutorCalls().length;
+        await page.locator('[data-act=tutor-check]').click();
+        await page.waitForFunction(()=>document.querySelector('[data-act=tutor-check]').disabled);
+        await page.locator('#nb-submission').fill('Bài đã sửa khi yêu cầu đang chạy');
+        release(); gate=null; await page.waitForFunction(()=>!document.querySelector('[data-act=tutor-check]').disabled);
+        assert.equal(tutorCalls().length, workCount+1);
+        assert.equal(await page.locator('#nb-work-messages .nb-msg').count(),0);
+        await page.locator('[data-tutor-task=solve]').click();
+        console.log('PASS separate submission, first error/type, correct revision, saved feedback, quota preserves work, stale edited submission discarded');
 
         for(const width of [320,375,414,768,1440]) {
             await page.setViewportSize({width,height:1000}); await page.waitForTimeout(180);

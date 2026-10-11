@@ -112,13 +112,42 @@ handler.StatusCode = 200;
 handler.Answer = "{\"answer\":\"x = 4\",\"needsClarification\":false}";
 Console.WriteLine($"{passed} checks passed (mock provider, SQLite in memory; no production data changed).");
 
-if (args.Contains("--live") || args.Contains("--live-source")) {
+// Sprint 2: checking a submission must preserve the student's work and enforce ownership.
+handler.Answer = """
+{"answer":"Bước 1: 11 - 3 phải bằng 8. Hãy tính lại rồi chia hai vế cho 2.","needsClarification":false,"feedback":{"status":"incorrect","errorType":"calculation","firstErrorStep":"Bước 1: 2x = 9","reason":"11 - 3 = 8, không phải 9","suggestion":"Tính lại phép trừ ở bước 1"}}
+""";
+var checkRequest = new TutorRequest("Giải 2x + 3 = 11", Action: "check", Submission: "Bước 1: 2x = 9; bước 2: x = 4.5");
+var checkedWork = await Controller().Solve(10, checkRequest);
+Check(Status(checkedWork) == 200 && Body(checkedWork).GetProperty("feedback").GetProperty("errorType").GetString() == "calculation", "submission returns the first error with its classification");
+Check(handler.Prompts.Last().Contains(checkRequest.Submission!) && handler.Prompts.Last().Contains("Không cho điểm"), "student submission and no-score rule reach the provider");
+count = handler.Prompts.Count;
+Check(Status(await Controller().Solve(20, checkRequest)) == 404 && handler.Prompts.Count == count, "checking cannot read another account's notebook");
+Check(Status(await Controller().Solve(10, checkRequest with { Submission = " " })) == 400, "checking requires a separate submission");
+Check(Status(await Controller().Solve(10, checkRequest with { Submission = new string('a', 10001) })) == 400, "oversized submission is rejected");
+Check(Status(await Controller().Solve(10, request with { Action = "grade" })) == 400, "unsupported tutor action is rejected");
+foreach (var status in new[] { "correct", "incomplete", "needs_clarification" }) {
+    handler.Answer = JsonSerializer.Serialize(new { answer = "Nhận xét", needsClarification = status == "needs_clarification", feedback = new { status, errorType = status == "incomplete" ? "missing_step" : "none", firstErrorStep = (string?)null, reason = "Lý do", suggestion = "Hướng tiếp theo" } });
+    Check(Status(await Controller().Solve(10, checkRequest)) == 200, "feedback supports " + status);
+}
+handler.Answer = "{\"answer\":\"Lời giải mẫu không kiểm tra bài làm\",\"needsClarification\":false}";
+Check(Status(await Controller().Solve(10, checkRequest)) == 502, "checking rejects missing structured feedback");
+handler.Answer = "{\"answer\":\"Nhận xét\",\"feedback\":{\"status\":\"correct\",\"errorType\":\"calculation\",\"reason\":\"Lý do\",\"suggestion\":\"Sửa bài\"}}";
+Check(Status(await Controller().Solve(10, checkRequest)) == 502, "correct submissions cannot carry an invented error");
+Console.WriteLine($"{passed} total checks passed.");
+
+if (args.Contains("--live") || args.Contains("--live-source") || args.Contains("--live-work")) {
     var apiDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../MindSprint.Api"));
     var liveCfg = new ConfigurationBuilder().AddJsonFile(Path.Combine(apiDir, "appsettings.json"), optional: false)
         .AddJsonFile(Path.Combine(apiDir, "appsettings.Development.json"), optional: true).AddEnvironmentVariables()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["Gemini:MaxRetries"] = "0", ["Gemini:AttemptTimeoutSeconds"] = "15", ["Gemini:TotalTimeoutSeconds"] = "60" }).Build();
     var live = new TutorService(new GeminiService(new HttpClient { Timeout = Timeout.InfiniteTimeSpan }, liveCfg, new GeminiAvailability(liveCfg), NullLogger<GeminiService>.Instance, new HttpContextAccessor()));
-    var liveProblems = args.Contains("--live-source") ? new (string, TutorRequest)[] {
+    var liveProblems = args.Contains("--live-work") ? new (string, TutorRequest)[] {
+        ("Correct submission", new("Giải 2x + 3 = 11", Action: "check", Submission: "Trừ 3 ở hai vế: 2x = 8. Chia 2: x = 4. Thay lại: 2*4+3=11.")),
+        ("Calculation error", new("Giải 2x + 3 = 11", Action: "check", Submission: "Bước 1: Trừ 3, được 2x = 9. Bước 2: x = 4.5.")),
+        ("Reasoning error", new("Giải x^2 = 9 trên tập số thực", Action: "check", Submission: "Lấy căn, chỉ có x = 3 vì căn bậc hai luôn không âm.")),
+        ("Incomplete submission", new("Giải 2x + 3 = 11", Action: "check", Submission: "Trừ 3 ở hai vế: 2x = 8. Chưa biết làm tiếp.")),
+        ("Ambiguous problem", new("Tính diện tích tam giác", Action: "check", Submission: "S = 12 cm2."))
+    } : args.Contains("--live-source") ? new (string, TutorRequest)[] {
         ("Uploaded PDF question 1", new("Hướng dẫn tôi làm câu 1 trong tài liệu đã tải lên.")),
         ("Uploaded PDF missing facts", new("Giải câu 2 trong tài liệu."))
     } : new (string, TutorRequest)[] {
@@ -132,6 +161,7 @@ if (args.Contains("--live") || args.Contains("--live-source")) {
             var reply = await live.SolveAsync(problem, args.Contains("--live-source") ? pdfSources : null);
             Console.WriteLine("LIVE " + label + " clarification=" + reply.NeedsClarification);
             Console.WriteLine(reply.Answer);
+            if (reply.Feedback is not null) Console.WriteLine(JsonSerializer.Serialize(reply.Feedback));
         } catch (GeminiUnavailableException ex) { Console.WriteLine("LIVE unavailable " + label + ": " + ex.Code); Environment.ExitCode = 2; break; }
     }
 }
