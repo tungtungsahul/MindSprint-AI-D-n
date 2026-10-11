@@ -30,7 +30,7 @@ Mỗi gợi ý qua hai lượt Gemini: sinh gợi ý và kiểm định bằng p
 ## Kiểm thử
 
 ```powershell
-node --test tests/frontend-session.test.cjs tests/frontend-text.test.cjs backend/GoogleAuthChecks/frontend-google.test.cjs backend/TutorChecks/frontend-tutor.test.cjs
+node --test tests/frontend-session.test.cjs tests/frontend-text.test.cjs tests/frontend-validation.test.cjs backend/GoogleAuthChecks/frontend-google.test.cjs backend/TutorChecks/frontend-tutor.test.cjs
 dotnet run --project backend/TutorChecks/TutorChecks.csproj -c Release
 node --test backend/TutorChecks/browser.test.cjs
 dotnet run --project tests/GeminiReliability/GeminiReliability.csproj
@@ -47,6 +47,6 @@ dotnet run --project backend/TutorChecks/TutorChecks.csproj -c Release -- --live
 dotnet run --project backend/TutorChecks/TutorChecks.csproj -c Release -- --live-hints '--case=Programming'
 ```
 
-Ngày 11/10/2026: 58/58 kiểm tra backend, 28/28 kiểm tra JS và 12/12 kiểm tra Gemini reliability pass trên checkout triển khai ban đầu; bộ trình duyệt pass. Kiểm thử mutation đảo điều kiện kiểm định làm test thất bại như dự kiến. Review độc lập không còn phát hiện bắt buộc sửa sau khi bổ sung kiểm định gợi ý.
+Ngày 11/10/2026: 58/58 kiểm tra backend, 32/32 kiểm tra JS và bộ trình duyệt pass sau khi tích hợp `main` (gồm các kiểm tra biểu mẫu #11). Build backend/frontend pass, backend 0 warnings/0 errors. 12/12 kiểm tra Gemini reliability pass trên checkout triển khai ban đầu. Kiểm thử mutation đảo điều kiện kiểm định làm test thất bại như dự kiến. Review độc lập không còn phát hiện bắt buộc sửa sau khi bổ sung kiểm định gợi ý. Giữ cấu hình PostgreSQL/deployment, runtime config và các kiểm tra nhập liệu của `main`; cache PWA/asset cập nhật v53.
 
-Gemini thực đã được đối chiếu: `2x+3=11` với bài đúng, sai phép trừ, bài chưa hoàn chỉnh; `x²=9` với lỗi bỏ nghiệm âm; diện tích tam giác thiếu dữ kiện. Cả năm cho nhận xét/trạng thái phù hợp, không cho điểm. Ba mức đại số không hiển thị `x=4`; hành động mở lời giải trả đúng nghiệm. Các lượt kiến thức đã có gợi ý được chấp nhận và phản hồi bị kiểm định chặn; lỗi giữ nguyên đề/mức để thử lại. Không suy diễn mọi lượt Gemini thực đều pass từ kiểm thử giả lập.
+Gemini thực đã được đối chiếu: `2x+3=11` với bài đúng, sai phép trừ, bài chưa hoàn chỉnh; `x²=9` với lỗi bỏ nghiệm âm; diện tích tam giác thiếu dữ kiện. Cả năm cho nhận xét/trạng thái phù hợp, không cho điểm. Ba mức đại số không hiển thị `x=4`; hành động mở lời giải trả đúng nghiệm. Gợi ý mẫu so sánh nguyên phân/giảm phân chỉ nêu tiêu chí cần đối chiếu, và gợi ý lập trình tổng số chẵn chỉ nhắc vòng lặp/điều kiện/phép chia dư, không đưa code hoàn chỉnh. Một số lượt thực trả phản hồi không hợp lệ hoặc bị kiểm định chặn; lỗi giữ nguyên đề/mức để thử lại. Không suy diễn mọi lượt Gemini thực đều pass từ kiểm thử giả lập.

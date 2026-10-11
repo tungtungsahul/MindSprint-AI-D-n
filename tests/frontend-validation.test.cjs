@@ -19,6 +19,10 @@ function element(tag = 'div', attrs = {}) {
             return selector.split(',').some(s => {
                 s = s.trim();
                 if (s.startsWith('#')) return s.slice(1) === node.id;
+                if (s.startsWith('.')) {
+                    const [, cls, key, value] = s.match(/^\.([\w-]+)(?:\[([^=\]]+)="([^"]*)"\])?$/) || [];
+                    return (attrs.class || '').split(/\s+/).includes(cls) && (!key || attrs[key] === value);
+                }
                 if (s.startsWith('[')) { const [, k, v] = s.match(/^\[([^=\]]+)(?:="([^"]*)")?\]$/) || []; return k in attrs && (v === undefined || attrs[k] === v); }
                 return s === tag;
             });

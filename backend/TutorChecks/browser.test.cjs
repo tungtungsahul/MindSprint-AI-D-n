@@ -8,7 +8,11 @@ const test = require('node:test');
 const root = path.resolve(__dirname, '../..');
 let chromium;
 try { ({chromium} = require('playwright')); }
-catch { ({chromium} = require(path.join(root, 'backend/MindSprint.Api/bin/Debug/net8.0/.playwright/package'))); }
+catch {
+    const packaged = ['Debug', 'Release'].map(config => path.join(root, `backend/MindSprint.Api/bin/${config}/net8.0/.playwright/package`)).find(dir => fs.existsSync(dir));
+    if (!packaged) throw new Error('Build MindSprint.Api or install Playwright before running browser checks.');
+    ({chromium} = require(packaged));
+}
 
 test('tutor and source UI: isolated context, notes, retries, keyboard, responsive and account changes', {timeout: 90000}, async () => {
     const server = http.createServer((req, res) => {
@@ -263,6 +267,7 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
         await page.emulateMedia({reducedMotion:'reduce'});
         assert.equal(await tutor.evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
         await page.locator('#nb-select').selectOption('78'); await finishWork();
+        await page.waitForFunction(()=>document.querySelector('#nb-problem').value==='' && document.querySelector('#nb-hint-progress').textContent.includes('0/3'));
         assert.match(await page.locator('#nb-hint-progress').innerText(),/0\/3/);
         assert.equal(await page.locator('#nb-problem').inputValue(),'');
         await page.locator('[data-tutor-task=solve]').click();
