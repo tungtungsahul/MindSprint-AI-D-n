@@ -135,13 +135,42 @@ handler.Answer = "{\"answer\":\"Nhận xét\",\"feedback\":{\"status\":\"correct
 Check(Status(await Controller().Solve(10, checkRequest)) == 502, "correct submissions cannot carry an invented error");
 Console.WriteLine($"{passed} total checks passed.");
 
-if (args.Contains("--live") || args.Contains("--live-source") || args.Contains("--live-work")) {
+for (var level = 1; level <= 3; level++) {
+    handler.Answer = "{\"answer\":\"Gợi ý kiến thức cần dùng\",\"needsClarification\":false,\"revealsAnswer\":false}";
+    var hint = await Controller().Solve(10, new("Giải 2x + 3 = 11", Action: "hint", HintLevel: level));
+    Check(Status(hint) == 200, "hint level " + level + " works without a submission");
+    Check(handler.Prompts[^2].Contains("CHỈ GỢI Ý MỨC " + level), "hint prompt selects only level " + level);
+}
+foreach (var level in new[] { 0, 4 }) Check(Status(await Controller().Solve(10, request with { Action = "hint", HintLevel = level })) == 400, "invalid hint level " + level + " rejected");
+Check(Status(await Controller().Solve(10, request with { Action = "hint" })) == 400, "hint requires its level");
+handler.Answer = "{\"answer\":\"x = 4\",\"needsClarification\":false,\"revealsAnswer\":true}";
+Check(Status(await Controller().Solve(10, request with { Action = "hint", HintLevel = 1 })) == 502, "provider-declared full answer is rejected in hint mode");
+handler.Answer = "{\"answer\":\"x = 4\",\"needsClarification\":false}";
+Check(Status(await Controller().Solve(10, request with { Action = "hint", HintLevel = 1 })) == 502, "unclassified hint output is rejected");
+handler.Answer = "{\"answer\":\"x = 4\",\"needsClarification\":false,\"revealsAnswer\":false}";
+handler.VerifierAnswer = "{\"isSafe\":false}";
+Check(Status(await Controller().Solve(10, request with { Action = "hint", HintLevel = 1 })) == 502, "independent review blocks an answer even when the generator labels it safe");
+handler.VerifierAnswer = "{}";
+Check(Status(await Controller().Solve(10, request with { Action = "hint", HintLevel = 1 })) == 502, "missing safety verdict cannot publish a hint");
+handler.VerifierAnswer = "{\"isSafe\":true}";
+Check(Status(await Controller().Solve(10, request with { Action = "solution" })) == 200, "explicit solution action returns a full answer");
+count = handler.Prompts.Count;
+Check(Status(await Controller().Solve(20, request with { Action = "hint", HintLevel = 1 })) == 404 && handler.Prompts.Count == count, "hints enforce notebook ownership");
+Console.WriteLine($"{passed} total checks passed.");
+
+if (args.Contains("--live") || args.Contains("--live-source") || args.Contains("--live-work") || args.Contains("--live-hints")) {
     var apiDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../MindSprint.Api"));
     var liveCfg = new ConfigurationBuilder().AddJsonFile(Path.Combine(apiDir, "appsettings.json"), optional: false)
         .AddJsonFile(Path.Combine(apiDir, "appsettings.Development.json"), optional: true).AddEnvironmentVariables()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["Gemini:MaxRetries"] = "0", ["Gemini:AttemptTimeoutSeconds"] = "15", ["Gemini:TotalTimeoutSeconds"] = "60" }).Build();
     var live = new TutorService(new GeminiService(new HttpClient { Timeout = Timeout.InfiniteTimeSpan }, liveCfg, new GeminiAvailability(liveCfg), NullLogger<GeminiService>.Instance, new HttpContextAccessor()));
-    var liveProblems = args.Contains("--live-work") ? new (string, TutorRequest)[] {
+    var liveProblems = args.Contains("--live-hints") ? new[] {
+        ("Algebra", "Giải 2x + 3 = 11"),
+        ("Knowledge", "So sánh nguyên phân và giảm phân"),
+        ("Programming", "Viết hàm Python trả về tổng các số chẵn trong một danh sách số nguyên")
+    }.SelectMany(sample => Enumerable.Range(1, 3).Select(level => ($"{sample.Item1} hint {level}", new TutorRequest(sample.Item2, Action: "hint", HintLevel: level)))
+        .Append(($"{sample.Item1} solution", new TutorRequest(sample.Item2, Action: "solution")))).ToArray()
+    : args.Contains("--live-work") ? new (string, TutorRequest)[] {
         ("Correct submission", new("Giải 2x + 3 = 11", Action: "check", Submission: "Trừ 3 ở hai vế: 2x = 8. Chia 2: x = 4. Thay lại: 2*4+3=11.")),
         ("Calculation error", new("Giải 2x + 3 = 11", Action: "check", Submission: "Bước 1: Trừ 3, được 2x = 9. Bước 2: x = 4.5.")),
         ("Reasoning error", new("Giải x^2 = 9 trên tập số thực", Action: "check", Submission: "Lấy căn, chỉ có x = 3 vì căn bậc hai luôn không âm.")),
@@ -157,11 +186,13 @@ if (args.Contains("--live") || args.Contains("--live-source") || args.Contains("
         ("Missing facts", new("Tính diện tích hình chữ nhật."))
     };
     foreach (var (label, problem) in liveProblems) {
+        var selectedCase = args.FirstOrDefault(a => a.StartsWith("--case="))?[7..];
+        if (selectedCase is not null && !label.Contains(selectedCase, StringComparison.OrdinalIgnoreCase)) continue;
         try {
             var reply = await live.SolveAsync(problem, args.Contains("--live-source") ? pdfSources : null);
             Console.WriteLine("LIVE " + label + " clarification=" + reply.NeedsClarification);
             Console.WriteLine(reply.Answer);
-            if (reply.Feedback is not null) Console.WriteLine(JsonSerializer.Serialize(reply.Feedback));
+            if (reply.Feedback is not null) Console.WriteLine(JsonSerializer.Serialize(reply.Feedback, new JsonSerializerOptions {Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping}));
         } catch (GeminiUnavailableException ex) { Console.WriteLine("LIVE unavailable " + label + ": " + ex.Code); Environment.ExitCode = 2; break; }
     }
 }
@@ -171,12 +202,14 @@ sealed class Provider : HttpMessageHandler
     public readonly List<string> Prompts = [];
     public string Answer = "{\"answer\":\"Trừ 3 rồi chia 2: x = 4.\",\"needsClarification\":false}";
     public int StatusCode = 200;
+    public string VerifierAnswer = "{\"isSafe\":true}";
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var payload = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
-        Prompts.Add(payload.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString()!);
+        var prompt = payload.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString()!;
+        Prompts.Add(prompt);
         var response = new HttpResponseMessage((HttpStatusCode)StatusCode) {
-            Content = new StringContent(JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = Answer } } } } } }), Encoding.UTF8, "application/json")
+            Content = new StringContent(JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = prompt.StartsWith("KIỂM ĐỊNH GỢI Ý") ? VerifierAnswer : Answer } } } } } }), Encoding.UTF8, "application/json")
         };
         if (StatusCode == 429) response.Headers.TryAddWithoutValidation("Retry-After", "7");
         return response;

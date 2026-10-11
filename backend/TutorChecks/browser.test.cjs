@@ -51,6 +51,7 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
                         status=failure || 200;
                         body=failure ? {message:'AI đang bận', code:failure===429?'ai_rate_limited':'ai_unavailable', retryAfterSeconds:65} : {answer:data.question.includes('hình chữ nhật')?'Bạn cho biết chiều dài và chiều rộng nhé.':answer, needsClarification:data.question.includes('hình chữ nhật')};
                         if (!failure && data.action === 'check') body = {answer: 'Đối chiếu bài làm của bạn.', needsClarification: false, feedback: {status: data.submission.includes('2x = 8') ? 'correct' : 'incorrect', errorType: data.submission.includes('2x = 8') ? 'none' : 'calculation', firstErrorStep: data.submission.includes('2x = 8') ? null : 'Bước 1: 2x = 9', reason: '11 - 3 = 8', suggestion: 'Tính lại phép trừ ở bước 1'}};
+                        if (!failure && data.action === 'hint') body = {answer: data.question.includes('mơ hồ') ? 'Bạn cho biết dữ kiện còn thiếu nhé.' : ['Dùng phép biến đổi tương đương.', 'Cô lập số hạng chứa ẩn.', 'Trừ 3 ở hai vế; hãy tự tính kết quả.'][data.hintLevel-1], needsClarification: data.question.includes('mơ hồ'), revealsAnswer: false};
                     }
                     else if(p.endsWith('/chat')) body={answer:'Theo tài liệu: kết quả $x = 4$ [1].', citations:[{source:1,quote:'SOURCE_QUOTE_NOT_SHOWN'}]};
                     else if(p==='/api/flashcards') body=Array.from({length:8},(_,i)=>({id:100+i,question:'Question '+i,answer:'Answer '+i,category:'english',subCategory:'Kiểm tra',version:1}));
@@ -195,16 +196,54 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
         release(); gate=null; await page.waitForFunction(()=>!document.querySelector('[data-act=tutor-check]').disabled);
         assert.equal(tutorCalls().length, workCount+1);
         assert.equal(await page.locator('#nb-work-messages .nb-msg').count(),0);
-        await page.locator('[data-tutor-task=solve]').click();
         console.log('PASS separate submission, first error/type, correct revision, saved feedback, quota preserves work, stale edited submission discarded');
+
+        await page.locator('[data-tutor-task=practice]').click();
+        const hint=page.locator('[data-act=tutor-hint]'), solution=page.locator('[data-act=tutor-solution]');
+        const finishWork = () => page.waitForFunction(()=>!document.querySelector('[data-tutor-task=solve]').disabled);
+        assert.equal(await page.locator('#nb-submission').isVisible(),false);
+        failure=429; await hint.click(); await finishWork();
+        assert.match(await page.locator('#nb-hint-progress').innerText(),/0\/3/);
+        assert.equal(await page.locator('#nb-problem').inputValue(),'Giải 2x + 3 = 11');
+        failure=0; gate=true; const hintCount=tutorCalls().length;
+        await hint.click(); await page.waitForFunction(()=>document.querySelector('[data-act=tutor-hint]').disabled);
+        await page.keyboard.press('Enter');
+        assert.equal(tutorCalls().length,hintCount+1);
+        release(); gate=null; await finishWork();
+        assert.equal(tutorCalls().at(-1).data.hintLevel,1);
+        assert.deepEqual(tutorCalls().at(-1).data.history,[]);
+        for (const level of [2,3]) {await hint.click(); await finishWork(); assert.equal(tutorCalls().at(-1).data.hintLevel,level);}
+        assert.equal(await hint.isDisabled(),true);
+        assert.equal(tutorCalls().at(-1).data.history.length,2);
+        assert.ok(tutorCalls().at(-1).data.history.every(t=>!t.text.includes('x = 4')&&!t.text.includes('Bài đã sửa')));
+        assert.equal((await page.locator('#nb-practice-messages').innerText()).includes('x = 4'),false);
+        assert.equal(tutorCalls().filter(c=>c.data.action==='solution').length,0);
+        await page.screenshot({path:path.join(os.tmpdir(),'mindsprint-sprint2-practice-desktop.png'),fullPage:true});
+        await solution.click(); await finishWork();
+        assert.equal(tutorCalls().at(-1).data.action,'solution');
+        assert.match(await page.locator('#nb-practice-messages .nb-msg').last().getAttribute('data-raw'), /x = 4/);
+        assert.equal(await solution.isDisabled(),true);
+        await page.locator('[data-tutor-task=solve]').click(); await page.locator('[data-tutor-task=practice]').click();
+        assert.equal(await solution.isDisabled(),true,'progress survives activity switch');
+        await page.locator('#nb-problem').fill('Đề mơ hồ'); await hint.click(); await finishWork();
+        assert.match(await page.locator('#nb-hint-progress').innerText(),/0\/3/);
+        await page.locator('#nb-problem').fill('Giải 3x - 6 = 9');
+        gate=true; await hint.click(); await page.waitForFunction(()=>document.querySelector('[data-act=tutor-hint]').disabled);
+        await page.locator('#nb-problem').fill('Giải 5x + 2 = 17');
+        release(); gate=null; await finishWork();
+        assert.equal(await page.locator('#nb-practice-messages .nb-msg').count(),0);
+        assert.match(await page.locator('#nb-hint-progress').innerText(),/0\/3/);
+        await hint.click(); await finishWork(); assert.equal(tutorCalls().at(-1).data.hintLevel,1);
+        console.log('PASS sequential hints, no early answer/full-solution request, no double submit, explicit solution, quota/clarification retain level, changed problem discards late hint');
 
         for(const width of [320,375,414,768,1440]) {
             await page.setViewportSize({width,height:1000}); await page.waitForTimeout(180);
             assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'overflow at '+width);
-            for(const selector of ['.nb-mode-switch','#nb-tutor-controls','.nb-composer']) {
+            for(const selector of ['.nb-mode-switch','#nb-tutor-controls','#nb-tutor-work']) {
                 const b=await page.locator(selector).boundingBox(); assert.ok(b.x>=0&&b.x+b.width<=width+1,selector+' at '+width);
             }
             if(width===375||width===1440) await page.screenshot({path:path.join(os.tmpdir(),`mindsprint-tutor-${width}.png`),fullPage:true});
+            if(width===375) await page.screenshot({path:path.join(os.tmpdir(),'mindsprint-sprint2-practice-mobile.png'),fullPage:true});
         }
         await page.evaluate(()=>document.documentElement.dataset.theme='dark'); await page.waitForTimeout(300);
         await page.screenshot({path:path.join(os.tmpdir(),'mindsprint-tutor-dark.png'),fullPage:true});
@@ -223,6 +262,10 @@ test('tutor and source UI: isolated context, notes, retries, keyboard, responsiv
         }
         await page.emulateMedia({reducedMotion:'reduce'});
         assert.equal(await tutor.evaluate(el=>getComputedStyle(el).transitionDuration),'0s');
+        await page.locator('#nb-select').selectOption('78'); await finishWork();
+        assert.match(await page.locator('#nb-hint-progress').innerText(),/0\/3/);
+        assert.equal(await page.locator('#nb-problem').inputValue(),'');
+        await page.locator('[data-tutor-task=solve]').click();
         gate=true; await q.fill('OLD_NOTEBOOK_ANSWER'); await page.locator('[data-act=send]').click();
         await page.waitForFunction(()=>document.querySelector('[data-act=send]').disabled);
         await page.locator('#nb-select').selectOption('78');
