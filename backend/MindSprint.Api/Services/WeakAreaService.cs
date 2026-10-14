@@ -53,14 +53,17 @@ public class WeakAreaService(AppDbContext db)
             var fc = cp.Flashcard;
             if (fc == null) continue;
 
-            var key = $"{fc.Category}|{fc.SubCategory ?? ""}|{ExtractTopic(fc.Question, fc.Answer)}";
+            // Khóa phải khớp unique index (UserId, Category, Topic) của bảng WeakAreas,
+            // nếu không hai nhóm khác SubCategory nhưng cùng Topic sẽ chèn trùng khóa.
+            var topic = ExtractTopic(fc.Question, fc.Answer);
+            var key = $"{fc.Category}|{topic}";
             if (!weakAreasDict.TryGetValue(key, out var analysis))
             {
                 analysis = new WeakAreaAnalysis
                 {
                     Category = fc.Category,
                     SubCategory = fc.SubCategory,
-                    Topic = ExtractTopic(fc.Question, fc.Answer)
+                    Topic = topic
                 };
                 weakAreasDict[key] = analysis;
             }
@@ -184,22 +187,27 @@ public class WeakAreaService(AppDbContext db)
     }
 }
 
-public record WeakAreaDto(
-    int Id = 0,
-    string Category = "",
-    string? SubCategory = null,
-    string Topic = "",
-    string Reason = "",
-    int WrongCount = 0,
-    int TotalAttempts = 0,
-    double AccuracyRate = 0,
-    string SuggestedAction = "",
-    DateTime AnalyzedAt = default,
-    DateTime? LastUpdatedAt = null
-);
+// Không dùng positional record với tham số mặc định: `new WeakAreaDto { ... }` trong
+// .Select() của EF là expression tree, và expression tree không cho gọi constructor
+// bỏ qua tham số tùy chọn (CS0854).
+public record WeakAreaDto
+{
+    public int Id { get; init; }
+    public string Category { get; init; } = "";
+    public string? SubCategory { get; init; }
+    public string Topic { get; init; } = "";
+    public string Reason { get; init; } = "";
+    public int WrongCount { get; init; }
+    public int TotalAttempts { get; init; }
+    public double AccuracyRate { get; init; }
+    public string SuggestedAction { get; init; } = "";
+    public DateTime AnalyzedAt { get; init; }
+    public DateTime? LastUpdatedAt { get; init; }
+}
 
-public record AnalyzeResultDto(
-    bool HasEnoughData = false,
-    string Message = "",
-    List<WeakAreaDto> WeakAreas = null!
-);
+public record AnalyzeResultDto
+{
+    public bool HasEnoughData { get; init; }
+    public string Message { get; init; } = "";
+    public List<WeakAreaDto> WeakAreas { get; init; } = [];
+}
