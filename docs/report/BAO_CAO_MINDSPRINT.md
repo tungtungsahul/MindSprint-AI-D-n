@@ -1,354 +1,196 @@
-# BÁO CÁO DỰ ÁN MINDSprintAI
+# MindSprintAI
 
-## TẦM NHÌN MVP (Minimum Viable Product)
+## Báo cáo sản phẩm, tầm nhìn MVP và phân tích rủi ro
 
-MindSprintAI là nền tảng học tập thông minh giúp người học tối ưu hóa quá trình học tập thông qua:
-- Hệ thống flashcard với lặp lại về khoảng cách (Spaced Repetition)
-- Sổ tay AI kiểu NotebookLM để tổng hợp tài liệu và hỏi đáp
-- Bảng Kanban quản lý công việc
-- Lịch học và thống kê streak
-- Ôn tập cá nhân hóa theo điểm yếu
-- Tích hợp AI đa dạng (tạo flashcard, quiz, tóm tắt, mind map)
+- **Người phụ trách:** Minh Chiến
+- **Ngày rà soát:** 14/10/2026
+- **Mốc mã nguồn:** nhánh `main`, commit `b890dcc`
+- **Mục đích:** tài liệu tổng kết cho issue [#21](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/21), có thể xuất bản thành PDF.
 
-### Mục tiêu chính
-1. Tăng hiệu quả học tập bằng cách áp dụng kỹ thuật lặp lại về khoảng cách
-2. Giảm thời gian tìm kiếm và tổng hợp tài liệu bằng AI
-3. Cung cấp trải nghiệm học tập có cấu trúc và cá nhân hóa
-4. Hỗ trợ học tập離線 và đồng bộ đa thiết bị
+> Báo cáo phân biệt chức năng có trong mã nguồn với mục tiêu tương lai. Cấu hình trong repository không tự chứng minh dịch vụ đang chạy trên production; các số liệu hiệu quả chỉ được nêu khi có bằng chứng đo được.
 
-### Phạm vi MVP
-- **Người dùng**: Học sinh, sinh viên, người học tự tin
-- **Nền tảng**: Web app (responsive design)
-- **Chức năng cốt lõi**: Flashcard SRS, Notebook AI, Kanban, Lịch học
-- **AI integration**: Gemini API để tạo nội dung và trả lời câu hỏi
+## 1. Tóm tắt
 
-## KIẾN TRÚC HỆ THỐNG
+MindSprintAI là ứng dụng web hỗ trợ người học tổ chức tài liệu, tạo và ôn flashcard, hỏi đáp với AI, quản lý công việc và theo dõi hoạt động học. Bản web chính dùng giao diện HTML/CSS/JavaScript, API ASP.NET Core 8, PostgreSQL, EF Core và Google Gemini.
 
-### 1. Mô hình dữ liệu (ERD)
+Mục tiêu của MVP là gom các hoạt động học thường ngày vào một nơi, hỗ trợ ôn tập theo lịch và giảm thao tác tổng hợp tài liệu. Sản phẩm đã có các luồng chính cho flashcard/SRS, sổ tay AI, gia sư AI, Kanban, lịch học/thống kê và tài khoản. Chế độ offline hiện chỉ hỗ trợ một phần trải nghiệm phía trình duyệt; không nên hiểu là mọi dữ liệu và chức năng đều đồng bộ offline đa thiết bị.
 
-Xem file: `docs/architecture/erd.md`
+Tài liệu thiết kế liên quan gồm [ERD](../architecture/erd.md), [kiến trúc phần mềm](../architecture/software-architecture.md), [Use Case](../architecture/usecase.mmd), [Activity](../architecture/activity-notebook.mmd) và [Sequence](../architecture/sequence-notebook.mmd). Hai sơ đồ hoạt động và hai sơ đồ tuần tự hiện có thể được mở từ thư mục [docs/architecture](../architecture/README.md).
 
-**Điểm nổi bật:**
-- 10 bảng chính: Users, Flashcards, CardProgresses, RefreshTokens, Notebooks, NotebookSources, NotebookNotes, Tasks, UserStudyDays, StudySchedules
-- 5 khóa ngoại thực (FK)
-- 5 tham chiếu nghiệp vụ chưa có FK (logical references)
-- Unique indexes để bảo toàn toàn vẹn dữ liệu
-- OwnerId trong Flashcards cho phép NULL (thẻ hệ thống dùng chung)
+## 2. Vấn đề, người dùng và tầm nhìn MVP
 
-### 2. Use Case Diagram
+### 2.1 Vấn đề cần giải quyết
 
-Xem file: `docs/architecture/usecase.mmd`
+- Tài liệu, ghi chú, câu hỏi ôn tập và lịch học thường nằm ở nhiều nơi.
+- Người học phải tự chuyển tài liệu thành nội dung ôn tập và tự nhớ lịch ôn.
+- Khi học bằng AI, việc gửi toàn bộ tài liệu lặp lại có thể làm tăng thời gian chờ, lượng token và chi phí.
+- Người học cần nhìn thấy tiến độ và việc cần làm tiếp theo thay vì chỉ lưu nội dung.
 
-**17 use cases được phân loại thành 5 gói:**
-1. Học tập & Flashcard (5 UC)
-2. Sổ tay AI (Notebook) (5 UC)
-3. Lịch học & Kanban (3 UC)
-4. Tài khoản & Đồng bộ (4 UC)
-5. Tích hợp với AI và nguồn ngoại (3 actor)
+### 2.2 Người dùng mục tiêu
 
-### 3. Kiến trúc phần mềm
+Học sinh, sinh viên và người tự học cần một công cụ học cá nhân trên trình duyệt. MVP ưu tiên sử dụng cá nhân; không giả định có lớp học, nhóm chia sẻ hay quản trị viên trường học.
 
-Xem file: `docs/architecture/software-architecture.md`
+### 2.3 Mục tiêu MVP
 
-**Kiến trúc layered monolith:**
-```
-Trình duyệt → API layer (CORS/JWT/rate limiting) → Controllers → Services → DB/External services
-```
+1. Tạo và ôn flashcard theo lịch lặp lại cách quãng.
+2. Lưu nguồn học tập, hỏi đáp theo nguồn và tạo tài liệu ôn tập bằng AI.
+3. Hỗ trợ quản lý việc học bằng Kanban và lịch học.
+4. Lưu tài khoản và dữ liệu trên server để dùng lại khi đăng nhập.
+5. Duy trì một số thao tác học cục bộ khi trình duyệt mất mạng.
 
-**Nhóm thành phần:**
-- Giao diện chính: index.html, script.js, notebook.js
-- API/phiên phía client: api.js, auth.js
-- API HTTP: Controllers (Auth, Cards, Review, Tasks, Study, Notebook, Tutor, AI)
-- Học và AI: Services (Token, Google, SRS, Tutor, NotebookAI, Gemini, URL import)
-- Dữ liệu: AppDbContext + EF Core migrations
-- Vận hành: Program.cs (DI, startup, health check)
+Các mục tiêu trên mô tả định hướng sản phẩm, không phải cam kết về KPI. Repository chưa có kết quả khảo sát người dùng hoặc benchmark chứng minh mức tăng hiệu quả học tập.
 
-### 4. Sequence Diagrams (Luồng quan trọng)
+## 3. Phạm vi chức năng hiện có
 
-- `sequence-auth-flashcard.mmd`: Auth (login/register/refresh/revoke), Flashcard CRUD, SRS review
-- `sequence-notebook.mmd`: Notebook AI flow (add source text/URL/file, chat, Studio generation, tutor)
+| Khu vực | Có trong mã nguồn | Giới hạn cần hiểu đúng |
+| --- | --- | --- |
+| Tài khoản | Email/mật khẩu, Google Sign-In, access JWT và refresh token | Token phía trình duyệt được lưu bằng `localStorage`; xem mục bảo mật |
+| Flashcard và SRS | Thẻ hệ thống và thẻ cá nhân, tiến độ ôn theo người dùng | Học cục bộ không đồng nghĩa đồng bộ ngoại tuyến cho mọi thao tác |
+| Sổ tay AI | Notebook, nguồn văn bản/URL/tệp, hỏi đáp có trích dẫn và tài liệu ôn tập | Nội dung gửi cho Gemini; nguồn dài có thể bị giới hạn ngữ cảnh |
+| Gia sư AI | Hỗ trợ giải thích, gợi ý và kiểm tra nội dung học | Kết quả do mô hình sinh cần được người học kiểm tra |
+| Kanban | Tạo và di chuyển công việc giữa các trạng thái | Cần mạng để dùng API và đồng bộ dữ liệu server |
+| Lịch và thống kê | Lịch học định kỳ, ngày học và streak | Báo cáo không đưa ra số liệu người dùng vì chưa có dữ liệu đo được |
+| Ôn tập điểm yếu | Phân tích lịch sử ôn tập và gợi ý nội dung cần củng cố | Chất lượng phụ thuộc dữ liệu ôn tập đã ghi nhận |
 
-### 5. Activity Diagrams (Luồng nghiệp vụ)
+### 3.1 Ngoài phạm vi MVP
 
-- `activity-notebook.mmd`: Notebook AI - thêm nguồn, hỏi đáp, tạo tài liệu
-- `activity-kanban.mmd`: Kanban - tạo task, kéo thả, sửa, xóa, xem chi tiết
+Các nội dung sau chưa được coi là năng lực đã hoàn thành trong báo cáo này:
 
-## CÁC TÍNH NĂNG CỐT LÕI
+- Ứng dụng native cho iOS/Android.
+- Chia sẻ notebook, học nhóm và cộng tác nhiều người.
+- Đồng bộ ngoại tuyến có xử lý xung đột đầy đủ cho mọi loại dữ liệu.
+- Bảng phân tích học tập nâng cao, báo cáo cho giáo viên và dự báo tiến độ.
+- Định mức ngân sách AI theo người dùng hoặc dashboard chi phí theo thời gian thực.
+- Chứng nhận hiệu quả học tập, hiệu năng hoặc an toàn dựa trên benchmark độc lập.
 
-### 1. Xác thực & Phân quyền (Issue #5)
+## 4. Kiến trúc và luồng dữ liệu
 
-**JWT Implementation:**
-- Access token: 15 phút (bảo mật)
-- Refresh token: 7 ngày (UX)
-- Token rotation trên mỗi refresh
-- Endpoints:
-  - `POST /api/auth/register` → accessToken + refreshToken
-  - `POST /api/auth/login` → accessToken + refreshToken
-  - `POST /api/auth/refresh` → xoay token
-  - `POST /api/auth/revoke` → thu hồi 1 session
-  - `POST /api/auth/revoke-all` → thu hồi tất cả sessions
-
-**Frontend integration:**
-- Tự động refresh token khi 401 (api.js)
-- localStorage lưu accessToken + refreshToken
-- Logout gọi `revokeAllSessions()` để thu hồi ở server
-- Route guard trong UI
-
-### 2. Flashcard SRS & Đồng bộ (Issue #9)
-
-**Spaced Repetition (SM-2 algorithm):**
-- Fields: repetition, interval, EFactor, nextReviewDate
-- Công thức cập nhật dựa trên điểm số (0-5)
-- NextReviewDate tính bằng Date.now() + interval * 24h
-
-**Optimistic Locking (Phiên bản 1.0+):**
-- Flashcard entity: Version (int), UpdatedAt (DateTime)
-- PUT/DELETE yêu cầu version khớp → trả 409 Conflict nếu lệch
-- Frontend: Hiển thị xung đột → chọn Giữ server hoặc Ghi đè
-- Offline queue: Lưu thao tác khi offline → flush khi online
-
-**API Endpoints:**
-- `GET /api/flashcards` → danh sách kèm trạng thái SRS
-- `POST /api/flashcards` → tạo thẻ (ownerId = UserId)
-- `PUT /api/flashcards/{id}` → cập nhật (kiểm tra version)
-- `DELETE /api/flashcards/{id}` → xóa (kiểm tra version)
-- `POST /api/review` → cập nhật SRS trạng thái
-- `GET /api/review/due` → danh sách thẻ cần học hôm nay
-
-### 3. Sổ tay AI (NotebookLM-like) (Issues #4, #13)
-
-**Chức năng chính:**
-- Tạo nhiều sổ tay, mỗi sổ tay có nhiều nguồn và ghi chú
-- Thêm nguồn: dán văn bản, nhập URL, upload file (PDF/TXT/MD/CSV)
-- Hỏi đáp dựa trên nội dung nguồn (RAG - Retrieval Augmented Generation)
-- Tạo tài liệu ôn tập (tóm tắt, mind map, flashcard, quiz)
-- Gia sư AI: hint, check, solution, explain
-- Lưu note cá nhân trong sổ tay
-
-**Technical Implementation:**
-- Chunking: Chỉ gửi đoạn liên quan đến câu thay vì toàn bộ nguồn
-- Caching: Lưu kết quả AI theo hash nội dung để giảm token/gọi lại
-- Streaming: Server-Sent Events để hiển thị real-time
-- Context management: Giới hạn tổng kích thước nguồn (~300KB)
-
-### 4. Kanban Task Board (Issues #6, #10)
-
-**Chức năng:**
-- 3 cột: Todo → Doing → Done
-- Tạo, sửa, xóa task
-- Kéo thả giữa cột (cập nhật Status + Position)
-- Xem chi tiết task trong modal
-- Đồng bộ với server (API endpoints)
-- Offline queue cho thao tác khi mất mạng
-
-**API Endpoints:**
-- `GET /api/tasks` → danh sách task
-- `POST /api/tasks` → tạo task
-- `PUT /api/tasks/{id}/move` → cập nhật status/position
-- `DELETE /api/tasks/{id}` → xóa task
-
-### 5. Lịch học & Streak (Issue #14)
-
-**Lịch học định kỳ:**
-- StudySchedule entity: dayOfWeek (0-6), startTime, durationMinutes, label, isActive
-- API: GET/POST/PUT/PATCH/DELETE /api/study/schedule
-
-**Streak học tập:**
-- Tính streak dựa trên UserStudyDay (studyDate, cardsReviewed, minutesStudied)
-- Streak = số ngày liên tiếp có cardsReviewed > 0
-- Xác định ngày học theo múi giờ VN (UTC+7) để tránh lỗi зміна giờ
-- API: GET /api/study/streak → {currentStreak, longestStreak, lastStudyDate}
-- API: POST /api/study/days → upsert study day (mỗi lần review thẻ thành công)
-
-### 6. Ôn tập cá nhân hóa theo điểm yếu (Issue #35)
-
-**Weak Area Detection:**
-- Phân tích CardProgress để tìm chủ đề có accuracy < 70%
-- WeakArea entity: userId, category, topic, accuracyRate, suggestedAction
-- API: 
-  - `GET /api/weak-areas` → danh sách điểm yếu
-  - `POST /api/weak-areas/analyze` → phân tích và tạo weak areas
-- Frontend: Tab "Điểm yếu" với danh sách và liên kết tới Quiz để luyện tập
-
-## TỐI ƯU CHI PHÍ AI (Issue #12)
-
-### Chi tiết triển khai:
-1. **Document Chunking**: 
-   - Khi hỏi đáp, chỉ trích xuất đoạn liên quan đến câu hỏi (kèm context przed/po)
-   - Thay vì gửi toàn bộ nguồn (có thể 10k+ token), chỉ gửi 500-1500 token
-   - Giảm 80-95% token đầu vào
-
-2. **Result Caching**:
-   - Lưu kết quả AI theo hash (SHA256) của: 
-     `{prompt} + {model} + {temperature} + {maxTokens}`
-   - Key trong DB: `ai_cache:{hash}`
-   - Trước khi gọi AI → kiểm tra cache tồn tại
-   - Hỏi lại câu tương tự → hit cache → không tốn token Gemini
-
-3. **Fallback Models**:
-   - Thứ tự thử: gemini-3.8-flash → gemini-flash-latest → gemini-3.5-flash
-   - Tự động chuyển sang model nhanh hơn/рен rẻ hơn khi cần
-
-### Hiệu quả (từ test):
-- Giảm trung bình 70% token đầu vào cho câu hỏi dài
-- 40-60% câu hỏi lặp lại được trả về từ cache
-- Trung bình 2-3 lần gọi Gemini giảm xuống 1-1.5 lần
-
-## BẢO MẬT & AN TOÀN DỮ LIỆU
-
-### 1. JWT Security:
-- Access token thời gian ngắn (15p) giảm nguy cơ nếu bị lộ
-- Refresh token lưu HttpOnly cookie (theoretically) hoặc localStorage với rotation
-- Token revocation: немедленное thu hồi khi đổi mật khẩu hoặc perda thiết bị
-- Rate limiting trên auth endpoints (20 requests/phút/IP)
-
-### 2. Data Protection:
-- Mật khẩu lưu dưới dạng hash (bcrypt)
-- TLS 1.3 trên tất cả kết nối (Render & Vercel cung cấp tự động)
-- CORS policy chặn nguồn không xác thực
-- SQL injection prevention nhờ EF Core parameterized queries
-
-### 3. Secret Management:
-- Không lưu API keys trong code/client
-- Secrets lưu trong environment variables (Render/Vercel)
-- GitHub Actions secrets cho CI/CD pipeline
-- `.gitignore` bảo vệ file cấu hình local
-
-## TRIỂN KHAI & CI/CD
-
-### Môi trường triển khai:
-- **Frontend**: Vercel Hobby (miễn phí)
-  - URL: `https://mindsprint-ai-d-n-frontend.vercel.app`
-  - Build: Static HTML/CSS/JS
-  - Env var: `API_BASE = https://mindsprint-api-zyur.onrender.com`
-  
-- **Backend**: Render Free 
-  - URL: `https://mindsprint-api-zyur.onrender.com`
-  - Build: `dotnet publish -c Release -o ./publish`
-  - Start: `dotnet ./publish/MindSprint.Api.dll`
-  - Env vars: Connection string, JWT keys, Gemini key, CORS origin
-
-- **Database**: PostgreSQL trên Render (miễn phí 90 ngày, rồi $7/tháng)
-  - Tự động migrate khi khởi động (`db.Database.MigrateAsync()`)
-
-### CI/CD Pipeline (GitHub Actions):
-```
-Push to main
-    ↓
-Backend: dotnet test + build + publish
-Frontend: No build step (static)
-    ↓
-Trigger Render deploy (webhook)
-Trigger Vercel redeploy
-    ↓
-Staging URLs updated automatically
+```text
+Trình duyệt (HTML/CSS/JavaScript, PWA)
+       | HTTPS, REST/JSON, Bearer JWT
+       v
+ASP.NET Core 8 API ---- EF Core/Npgsql ---- PostgreSQL
+       |                                      |
+       +---- Gemini API                       +---- dữ liệu tài khoản, học tập,
+       +---- Google Identity                        nguồn và cache AI
+       +---- URL công khai
 ```
 
-### Environment Variables Setup:
+API gom các chức năng trong một ứng dụng backend theo tầng; các controller xử lý HTTP và quyền truy cập, services xử lý nghiệp vụ/AI, EF Core thao tác với PostgreSQL. Gemini API key chỉ được dùng phía server. Google Identity xác minh thông tin đăng nhập Google; nó không thay thế việc API kiểm tra quyền sở hữu dữ liệu.
 
-**Render (Backend):**
-```
-ConnectionStrings__Default = postgresql://user:pass@host:5432/db
-Jwt__Key = your-super-secret-key-at-least-32-chars
-Jwt__Issuer = MindSprint
-Jwt__Audience = MindSprintClient
-Jwt__AccessMinutes = 15
-Gemini__ApiKey = your-gemini-api-key
-ASPNETCORE_ENVIRONMENT = Production
-Cors__Origins__0 = https://mindsprint-ai-d-n-frontend.vercel.app
-```
+Mã nguồn có các sơ đồ ERD, Use Case, Activity và Sequence trong [thư mục kiến trúc](../architecture/README.md). Sơ đồ ERD hiện là tài liệu thiết kế riêng; khi schema thay đổi cần đối chiếu lại với EF Core migrations trước khi phát hành bản báo cáo mới.
 
-**Vercel (Frontend):**
-```
-API_BASE = https://mindsprint-api-zyur.onrender.com
-```
+### 4.1 Triển khai và CI
 
-## KIỂM THỬ
+Repository cấu hình API chạy bằng Docker trên Render cùng PostgreSQL; frontend được cấu hình để build/triển khai riêng. Workflow GitHub Actions chạy restore/build backend và build frontend. Job deploy backend chỉ chạy khi có push lên `main` và đủ secrets của Render; vì vậy job deploy bị bỏ qua trên pull request là hành vi theo cấu hình.
 
-### Loại kiểm thử:
-- **Unit testing**: Services và controllers (xem tests/ folder)
-- **Integration testing**: API endpoints với test database
-- **End-to-end testing**: Luồng người dùng hoàn chỉnh (đăng nhập → học → ôn tập)
-- **Performance testing**: Tải trang, thời gian phản hồi API
-- **Security testing**: OWASP top 10 (đặc biệt injection, broken auth)
+Tài liệu này không xác minh trạng thái dịch vụ Render/Vercel, secrets, database backup hay URL production đang hoạt động. Xem [render.yaml](../../render.yaml), [workflow CI/CD](../../.github/workflows/ci-cd.yml) và [CI-CD-SETUP.md](../../CI-CD-SETUP.md).
 
-### Test Plan (xem docs/sprint-4-test-plan.md):
-1. **Functional testing**: Tất cả features hoạt động đúng
-2. **Performance testing**: TTLB < 2s, API response < 500ms
-3. **Security testing**: Không có lỗ hổng cơ bản
-4. **Usability testing**: Dễ sử dụng, hướng dẫn rõ ràng
-5. **Compatibility testing**: Truy cập từ nhiều thiết bị/browser
+## 5. Rủi ro chi phí AI và biện pháp hiện có
 
-## PHÂN TÍCH RỦI RO
+### 5.1 Nguồn phát sinh chi phí
 
-### 1. Rủi ro chi phí AI (Giải quyết bởi Issue #12)
-- **Nguyên nhân**: Mỗi gọi Gemini tốn token → chi phí tăng tuyến tính với sử dụng
-- **Giải pháp**: 
-  - Chunking tài liệu → giảm 80-95% token đầu vào
-  - Caching kết quả → 40-60% câu hỏi lặp lại free
-  - Fallback models → chọn model tiết kiệm khi phù hợp
-- **Kết quả**: Giảm trung bình 60-75% chi phí AI so với bản không tối ưu
+- Tổng lượng văn bản và tệp đính kèm được gửi tới Gemini.
+- Số lần gọi, số lượt chat và lượng nội dung đầu ra.
+- Gọi lại do timeout, lỗi tạm thời hoặc fallback sang model khác.
+- Nội dung nguồn thay đổi làm cache cũ không còn phù hợp.
 
-### 2. Rủi ro bảo mật (Giải quyết bởi Issue #5)
-- **Nguyên nhân**: Token bị lộ → kẻ tấn công gets دسترسی tài khoản
-- **Giải pháp**:
-  - Access token ngắn hạn (15p) → hạn chế thời gian gây hại
-  - Refresh token rotation → không thể sử dụng lại token cũ
-  - Thu hồi tất cả phiên → khi đổi mật khẩu hoặc pérdida thiết bị
-  - Rate limiting → ngăn ausgesttack brute force
-- **Kết quả**: Rủi ro tài khoản bị xâm nhập giảm từ "cao" xuống "thấp"
+Chi phí thực tế phụ thuộc model, bảng giá và quota đang áp dụng cho API key; báo cáo này không ước lượng tiền khi chưa có dữ liệu usage và mức giá tương ứng.
 
-### 3. Rủi ro kỹ thuật khác
-- **Cold start trên Render Free**: 
-  - Giải racist: Acceptable trade-off cho free tier
-  - Mitigation: Uptime monitoring, nếu cần upgrade servizio
-  
-- **PostgreSQL connections limit**:
-  - Giải racist: Free tier có đủ kết nối cho dự án quy mô này
-  - Mitigation: Connection pooling trong Npgsql
-  
-- **LocalStorage size limit**:
-  - Giải racist: Dùng cho token và cài đặt nhỏ, dữ liệu chính trên server
-  - Mitigation: Offline queue cho thao tác khi mất mạng
+### 5.2 Cơ chế trong mã nguồn liên quan issue #12
 
-## HƯỚNG PHÁT TRIỂN TIẾP THEO
+- **Chọn đoạn cho chat:** nguồn văn bản được chia thành các đoạn xấp xỉ 1.800 ký tự, có phần chồng lấn 240 ký tự. Hệ thống xếp hạng đoạn theo từ khóa câu hỏi, chọn tối đa 12 đoạn và giới hạn context chat ở khoảng 26.000 ký tự.
+- **Giới hạn đầu vào:** luồng Notebook xây dựng context có giới hạn theo tổng ký tự; tệp ảnh/PDF gửi trong một yêu cầu Gemini bị giới hạn tổng cộng 10 MiB.
+- **Cache bền vững:** kết quả chat, summary, study guide và mind map được lưu theo notebook, loại yêu cầu, hash câu hỏi/yêu cầu và hash nguồn. Nguồn thay đổi sẽ tạo hash khác, tránh dùng lại kết quả của nguồn cũ.
+- **Xử lý tải/lỗi:** GeminiService giới hạn số yêu cầu đồng thời, đặt timeout, retry lỗi tạm thời và thử các model fallback được cấu hình.
 
-### Từ các issues open:
+Cache hiện không áp dụng cho mọi thao tác sinh nội dung: FAQ, timeline, flashcards, quiz, audio và một số luồng tutor vẫn có thể gọi Gemini lại. Việc hỏi lại chỉ tiết kiệm lượt gọi khi nội dung notebook và yêu cầu khớp với khóa cache.
 
-#### Short-term (Sprint 4)
-- **#11 Validation form/file client**: Thêm validation côté client để giảm request không hợp lệ
-- **#16 Responsive UI**: Tối ưu giao diện cho mobile/tablet
-- **#17 Test Case**: Viết test cases chi tiết cho các components
-- **#19 Manual Testing**: Hoàn thiện kiểm thử thủ công trước release
-- **#20 Docs ERD/UseCase/Activity/Sequence** (đang làm): Hoàn thiện tài liệu UML
-- **#21 Docs Báo cáo, tầm nhìn MVP, phân tích rủi ro** (đang làm): Này
+### 5.3 Mức hiệu quả đã biết và việc cần đo
 
-#### Long-term (Sprint 5+)
-- **#15 Replace sample data with Kaggle**: Hoàn thiện thay thế dữ liệu mẫu bằng dữ liệu thực
-- **#34-37 Weak Areas và Tutor features**: Mở rộng tính năng gia sư và phân tích điểm yếu
-- **Internationalization**: Hỗ trợ nhiều ngôn ngữ
-- **Advanced analytics**: Báo cáo học tập sâu sắc
-- **Mobile app**: Phát triển ứng dụng native iOS/Android
-- **Team features**: Nhóm học, chia sẻ tài liệu, competição thiện volontà
+Mã nguồn ghi log ước tính token từ số ký tự chia cho bốn. Đây chỉ là chỉ báo tương đối, không phải bộ đếm tokenizer của Gemini hay hóa đơn chi phí. Repository chưa chứng minh các tỷ lệ tiết kiệm 60%, 70% hoặc 80-95%; các con số như vậy không được dùng làm kết quả báo cáo.
 
-## KẾT LUẬN
+Để đánh giá hiệu quả, cần thu thập usage thực theo model (input/output tokens, số lần gọi, retry, cache hit/miss, thời gian, lỗi), so sánh cùng một tập câu hỏi/tài liệu trước và sau tối ưu, đồng thời loại trừ dữ liệu nhạy cảm khỏi log. Nên bổ sung quota hoặc ngân sách theo người dùng trước khi mở rộng lượng người dùng.
 
-MindSprintAI đã phát triển thành một nền tảng học tập thông minh có đủ tính năng cốt lõi để đáp ứng nhu cầu học tập hiện đại. Dự án đã triển khai thành công:
+## 6. Bảo mật và quyền riêng tư
 
-✅ **Kiến trúc vững chắc**: Layered monolith với tách biệt rõ ràng các mối quan tâm
-✅ **Bảo mật tốt**: JWT best practices, token rotation, refresh token revocation
-✅ **Hiệu suất cao**: Caching, chunking, và tối ưu truy vấn database
-✅ **UX hiện đại**: Giao dụng sạch, dễ sử dụng, phản hồi nhanh
-✅ **Mở rộng tốt**: Cấu trúc mô-đun dễ dàng thêm tính năng mới
-✅ **Triển khai tự động**: CI/CD pipeline giảm thiểu lỗi khi triển khai
+### 6.1 Kiểm soát đang có
 
-### Các khuyến nghị cho giai đoạn tiếp theo:
-1. Hoàn thiện Issue #11, #16, #17 để nâng cao chất lượng sản phẩm
-2. Nâng cấp lên Render/Vercel paid tier khi vượt quá free tier limits
-3. Thêm monitoring và logging để phát hiện vấn đề sớm
-4. Xây dựng community và thu thập phản hồi từ người dùng thực tế
-5. Chuẩn bị cho bản phát hành v1.0 với tài liệu hướng dẫn đầy đủ
+- Mật khẩu được băm bằng `PasswordHasher<User>` của ASP.NET Identity.
+- Access JWT có thời hạn mặc định 15 phút; refresh token có thời hạn 7 ngày.
+- Refresh token được sinh bằng bộ tạo số ngẫu nhiên mật mã, xoay vòng khi refresh và có thể thu hồi một phiên hoặc tất cả phiên.
+- API kiểm tra người dùng đăng nhập và lọc các tài nguyên cá nhân theo UserId ở các luồng liên quan.
+- Production yêu cầu cấu hình khóa JWT đủ độ dài và danh sách origin CORS; khóa Gemini được đọc từ cấu hình phía server.
+- Các endpoint Google challenge/sign-in được áp dụng rate limit 20 yêu cầu/phút/IP.
 
---- 
+### 6.2 Rủi ro còn lại
 
-*Báo cáo này được tạo tự động từ nguồn code và tài liệu dự án. Ngày tạo: 14/10/2026.*
+| Rủi ro | Ảnh hưởng | Trạng thái và hướng xử lý |
+| --- | --- | --- |
+| Token ở `localStorage` | XSS có thể đọc access/refresh token | Cân nhắc chuyển refresh token sang cookie `HttpOnly`, `Secure`, `SameSite` và thiết kế chống CSRF; giảm bề mặt XSS |
+| Refresh token lưu nguyên giá trị trong DB | Lộ DB có thể làm lộ token còn hiệu lực | Lưu hash token thay vì token gốc; giới hạn truy cập DB và chuẩn bị quy trình xoay/revoke |
+| Thu hồi phiên | Access JWT đã phát hành không bị thu hồi tức thời | Token vẫn dùng được tới khi hết hạn; cân nhắc denylist/phiên bản tài khoản nếu cần thu hồi ngay |
+| Đăng nhập email/mật khẩu | Policy `google-auth` không áp dụng cho endpoint login thông thường | Bổ sung rate limit và theo dõi thử sai cho register/login |
+| Endpoint demo | API còn route demo với thông tin đăng nhập cố định trong mã | Tắt hoặc bảo vệ route demo ở production; seeder không tạo demo user không tự vô hiệu hóa endpoint |
+| Dữ liệu gửi tới AI | Nội dung tài liệu/câu hỏi được gửi tới Gemini để xử lý | Thông báo rõ cho người dùng, không gửi token/secret, xem xét thời hạn lưu và điều khoản nhà cung cấp |
+| Sai lệch nội dung AI | Có thể tạo câu trả lời sai hoặc dẫn nguồn không đủ | Giữ trích dẫn, báo rõ nguồn thiếu và yêu cầu người học kiểm chứng; cần bộ đánh giá chất lượng |
+| URL bên ngoài | Có thể dẫn tới nội dung độc hại hoặc tài nguyên nội bộ nếu kiểm tra sai | Tiếp tục kiểm thử redirect/DNS/IP/giới hạn dung lượng; không tin nội dung nguồn như chỉ thị |
+| Khôi phục dữ liệu | Mất dữ liệu nếu chưa có backup/restore được kiểm chứng | Xác lập lịch backup, retention và diễn tập khôi phục PostgreSQL |
+
+Các biện pháp trên mô tả mã nguồn/configuration đã rà soát; chúng không phải chứng nhận bảo mật hay xác nhận production đã cấu hình đầy đủ.
+
+## 7. Rủi ro sản phẩm và vận hành
+
+| Rủi ro | Tác động | Giảm thiểu tiếp theo |
+| --- | --- | --- |
+| Quota hoặc gián đoạn Gemini | Chat/tạo tài liệu bị chậm hoặc không dùng được | Theo dõi lỗi, cache có phạm vi rõ ràng, quota và thông báo retry phù hợp |
+| Cold start hoặc giới hạn gói hosting | API phản hồi chậm hoặc dịch vụ bị giới hạn | Đo thời gian thực tế, đặt health/uptime monitor và rà soát gói theo nhu cầu |
+| Migration lỗi khi khởi động | API có thể không sẵn sàng nếu schema không cập nhật được | Chạy migration trên môi trường staging và có kế hoạch backup/rollback |
+| Offline không đầy đủ | Dữ liệu cục bộ và server có thể khác nhau | Nêu rõ tính năng nào offline; thiết kế đồng bộ/xung đột theo từng loại dữ liệu |
+| Thiếu đo kiểm định lượng | Không biết rõ hiệu năng, chi phí hay chất lượng học | Thực hiện test plan, lưu số liệu và liên kết kết quả với phiên bản phát hành |
+
+## 8. Kiểm thử và bằng chứng
+
+Workflow hiện cấu hình build backend và frontend; workflow không có bước `dotnet test`. Repository có [kế hoạch kiểm thử Sprint 4](../architecture/sprint-4-test-plan.md) và [yêu cầu phi chức năng](../architecture/non-functional-requirements.md), nhưng tài liệu kế hoạch không đồng nghĩa các phép đo đã chạy hoặc đạt.
+
+Trước khi phát hành cần lưu bằng chứng có commit, môi trường, cấu hình, dữ liệu thử, kết quả và giới hạn của mỗi phép đo. Báo cáo này không công bố số người dùng, điểm hài lòng, thời gian phản hồi, mức tiết kiệm tiền hoặc kết quả kiểm thử xâm nhập khi chưa có hồ sơ tương ứng.
+
+## 9. Hướng phát triển
+
+### Ưu tiên trước khi phát hành rộng
+
+1. Khóa route demo và bổ sung bảo vệ brute-force cho đăng nhập email/mật khẩu.
+2. Băm refresh token khi lưu, đánh giá chuyển token dài hạn khỏi `localStorage`, ghi rõ vòng đời phiên.
+3. Bổ sung đo usage Gemini và quota để biết chi phí theo tính năng/người dùng.
+4. Hoàn tất test bảo mật, backup/restore, migration và smoke test trên staging.
+5. Đồng bộ lại ERD với migrations hiện hành và đưa các sơ đồ phụ thuộc vào gói báo cáo phát hành.
+
+### Ngoài MVP
+
+- Đồng bộ offline đa thiết bị có xử lý xung đột.
+- Học nhóm, chia sẻ notebook và cộng tác.
+- Ứng dụng mobile native và mở rộng đa ngôn ngữ.
+- Phân tích tiến độ sâu hơn, dashboard/nhắc học cá nhân hóa.
+- Mở rộng cache theo loại tác vụ sau khi đánh giá tính đúng đắn và chính sách dữ liệu.
+
+Các mục này là đề xuất lộ trình, không phải tính năng đã cam kết hoặc đã triển khai.
+
+## 10. Kết luận
+
+MindSprintAI đã có nền tảng web cho các luồng học tập chính và tích hợp Gemini ở phía server. Issue #12 bổ sung chọn ngữ cảnh theo câu hỏi và cache cho một số kết quả Notebook, giúp hạn chế gửi lại dữ liệu trong các trường hợp khớp cache; repository hiện chưa có số đo hóa đơn để kết luận mức giảm chi phí. Issue #5 bổ sung JWT access ngắn hạn, refresh rotation và thu hồi refresh session, nhưng còn các điểm cần xử lý trước khi khẳng định an toàn production, đặc biệt là token trong `localStorage`, refresh token lưu gốc trong DB và route demo.
+
+Vì vậy, phạm vi MVP phù hợp để tiếp tục nghiệm thu nội bộ. Việc phát hành rộng nên đi cùng các bước hardening bảo mật, kiểm thử có bằng chứng, theo dõi chi phí AI và quy trình khôi phục dữ liệu.
+
+## Tài liệu tham chiếu
+
+- [README dự án](../../README.md)
+- [Issue #5 - JWT, refresh token và thu hồi phiên](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/5)
+- [Issue #12 - Tối ưu chi phí AI](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/12)
+- [Issue #20 - ERD và sơ đồ UML](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/20)
+- [Issue #21 - Báo cáo, tầm nhìn MVP, phân tích rủi ro](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/21)
+- [NotebookAi.cs](../../backend/MindSprint.Api/Services/NotebookAi.cs), [GeminiService.cs](../../backend/MindSprint.Api/Services/GeminiService.cs)
+- [TokenService.cs](../../backend/MindSprint.Api/Services/TokenService.cs), [AuthController.cs](../../backend/MindSprint.Api/Controllers/AuthController.cs)
+- [Program.cs](../../backend/MindSprint.Api/Program.cs), [CI/CD workflow](../../.github/workflows/ci-cd.yml)
+- [ERD](../architecture/erd.md), [kiến trúc phần mềm](../architecture/software-architecture.md), [Use Case](../architecture/usecase.mmd)
+- [Activity Notebook](../architecture/activity-notebook.mmd), [Activity Kanban](../architecture/activity-kanban.mmd)
+- [Sequence xác thực/flashcard](../architecture/sequence-auth-flashcard.mmd), [Sequence Notebook](../architecture/sequence-notebook.mmd)
