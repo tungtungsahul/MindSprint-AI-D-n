@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const auth = window.MindSprintAuth;
     const api = window.MindSprintApi;
+    const esc = window.MindSprintText.escapeHTML;
     let activeAccountId = auth?.isLoggedIn() ? String(auth.getCurrentUser().id) : 'guest';
     let accountVersion = 0;
     const personalStorage = {
@@ -599,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cardDiv.innerHTML = `
                 <span class="deck-feature-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                 <span class="deck-badge ${badgeClass}">${badgeText}</span>
-                <h4 class="deck-title">${subName}</h4>
+                <h4 class="deck-title">${esc(subName)}</h4>
                 <div class="deck-meta">
                     ${cardsInfoText}
                     <span class="suggestion-mastery" style="font-weight: 600; color: var(--primary-color);">Thành thạo ${masteryPercent}%</span>
@@ -726,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
         subs.forEach(sub => {
             const item = document.createElement('li');
             item.className = 'option-item' + (currentSubCategory === sub ? ' selected' : '');
-            item.innerHTML = `<span>${sub}</span> ${currentSubCategory === sub ? '<i class="fas fa-check"></i>' : ''}`;
+            item.innerHTML = `<span>${esc(sub)}</span> ${currentSubCategory === sub ? '<i class="fas fa-check"></i>' : ''}`;
             item.setAttribute('data-value', sub);
             optionsList.appendChild(item);
         });
@@ -1041,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardDiv.innerHTML = `
                     <span class="deck-feature-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                     <span class="suggestion-badge ${badgeClass}" style="background: var(--bg-secondary); padding: var(--space-step-4) var(--space-step-8); border-radius: 6px; font-weight: 700; font-size: 0.75rem; align-self: flex-start; letter-spacing: 0.5px;">${badgeText}</span>
-                    <h4 class="suggestion-title" style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-top: var(--space-step-8);">${sub.name}</h4>
+                    <h4 class="suggestion-title" style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-top: var(--space-step-8);">${esc(sub.name)}</h4>
                     <div class="suggestion-meta" style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-top: var(--space-step-8);">
                         <span>${sub.total} thẻ học</span>
                         <span class="suggestion-mastery" style="font-weight: 600; color: var(--primary-color);">Thành thạo ${sub.pct}%</span>
@@ -2061,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quizCurrentOptions.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.className = 'quiz-option-btn';
-            btn.innerHTML = `<span class="option-prefix">${prefixes[idx]}</span><span class="option-text">${opt}</span>`;
+            btn.innerHTML = `<span class="option-prefix">${prefixes[idx]}</span><span class="option-text">${esc(opt)}</span>`;
             btn.addEventListener('click', () => {
                 if (!isQuizAnswered) checkChoiceAnswer(idx, btn);
             });
@@ -2197,9 +2198,9 @@ document.addEventListener('DOMContentLoaded', () => {
             quizWrongAnswers.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${item.question}</strong></td>
-                    <td class="text-danger">${item.userAnswer || '(Bỏ trống)'}</td>
-                    <td class="text-success">${item.correctAnswer}</td>
+                    <td><strong>${esc(item.question)}</strong></td>
+                    <td class="text-danger">${esc(item.userAnswer || '(Bỏ trống)')}</td>
+                    <td class="text-success">${esc(item.correctAnswer)}</td>
                 `;
                 wrongAnswersTbody.appendChild(tr);
             });
@@ -2366,11 +2367,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const catName = getCategoryName(slot.category);
-            const noteText = slot.note ? `<span class="slot-desc" title="${slot.note}">${slot.note}</span>` : '';
+            const noteText = slot.note ? `<span class="slot-desc" title="${esc(slot.note)}">${esc(slot.note)}</span>` : '';
 
             slotDiv.innerHTML = `
-                <span class="slot-time"><i class="far fa-clock"></i> ${slot.start} - ${slot.end}</span>
-                <span class="slot-title" title="${catName}">${catName}</span>
+                <span class="slot-time"><i class="far fa-clock"></i> ${esc(slot.start)} - ${esc(slot.end)}</span>
+                <span class="slot-title" title="${esc(catName)}">${esc(catName)}</span>
                 ${noteText}
                 <button class="delete-slot-btn" aria-label="Xóa giờ học"><i class="fas fa-trash"></i></button>
             `;
@@ -2949,7 +2950,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; margin-bottom: var(--space-step-12); color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">🔔 Lịch Học Bù</h2>
             <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: var(--space-step-28); font-size: 0.95rem;">
-                Hệ thống phát hiện bạn đã bỏ lỡ giờ học môn <strong>${categoryName}</strong> lúc <strong>${start} - ${end}</strong> hôm nay do thiết bị khóa màn hình. Hãy học bù ngay nhé!
+                Hệ thống phát hiện bạn đã bỏ lỡ giờ học môn <strong>${esc(categoryName)}</strong> lúc <strong>${esc(start)} - ${esc(end)}</strong> hôm nay do thiết bị khóa màn hình. Hãy học bù ngay nhé!
             </p>
             <button class="btn btn-primary btn-large" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--space-step-8);" id="makeup-study-now-btn" type="button">
                 <i class="fas fa-book-reader"></i> Học bù ngay bây giờ
@@ -3399,7 +3400,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const opt = document.createElement('div');
                     opt.className = 'option-item';
                     opt.style.cssText = 'padding: var(--space-step-8) var(--space-step-16); cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
-                    opt.innerHTML = `<span>${optVal}</span><i class="fas fa-check check-icon" style="display: none; color: var(--primary-color); font-size: 0.8rem;"></i>`;
+                    opt.innerHTML = `<span>${esc(optVal)}</span><i class="fas fa-check check-icon" style="display: none; color: var(--primary-color); font-size: 0.8rem;"></i>`;
                     
                     opt.addEventListener('click', () => {
                         optionsContainer.querySelectorAll('.option-item').forEach(el => {
