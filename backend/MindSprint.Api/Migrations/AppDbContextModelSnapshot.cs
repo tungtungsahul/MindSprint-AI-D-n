@@ -99,6 +99,7 @@ namespace MindSprint.Api.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -266,6 +267,7 @@ namespace MindSprint.Api.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsRevoked")
+                        .IsConcurrencyToken()
                         .HasColumnType("bit");
 
                     b.Property<string>("Token")
