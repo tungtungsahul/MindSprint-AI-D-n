@@ -71,6 +71,10 @@ public class KanbanTask
     public TaskStatus Status { get; set; } = TaskStatus.Todo;
     public int Position { get; set; }
     public DateTime? DueDate { get; set; }
+    /// <summary>Stable key used to make AI study-plan saves safe to retry.</summary>
+    public Guid? ClientRequestId { get; set; }
+    /// <summary>Planned session duration in minutes; null for ordinary tasks.</summary>
+    public int? DurationMinutes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

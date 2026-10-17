@@ -23,7 +23,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="vendor/katex/katex.min.css">
     <link rel="stylesheet" href="tokens.css?v=39">
-    <link rel="stylesheet" href="style.css?v=64">
+    <link rel="stylesheet" href="style.css?v=65">
     <link rel="stylesheet" href="kanban.css?v=54">
     <link rel="stylesheet" href="cockpit.css?v=65">
 </head>
@@ -707,6 +707,41 @@
                     </div>
                 </header>
 
+                <section class="study-plan-panel glass-panel" id="study-plan-panel" aria-labelledby="study-plan-title">
+                    <div class="study-plan-heading">
+                        <div>
+                            <h2 id="study-plan-title"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Lập kế hoạch ôn thi với AI</h2>
+                            <p>Nhập ngày thi và thời gian rảnh. Xem lại, chỉnh sửa, chọn các buổi rồi xác nhận để thêm vào Công việc.</p>
+                        </div>
+                        <label class="study-plan-weak-toggle"><input id="study-plan-use-weak-areas" type="checkbox" checked> Ưu tiên điểm yếu của tôi</label>
+                    </div>
+                    <form id="study-plan-form">
+                        <div class="study-plan-fields">
+                            <label>Ngày thi<input id="study-plan-exam-date" type="date" required></label>
+                            <label>Môn học<input id="study-plan-subject" type="text" maxlength="120" required placeholder="Ví dụ: Cơ sở dữ liệu"></label>
+                            <label>Chủ đề cần ôn<input id="study-plan-topic" type="text" maxlength="240" required placeholder="Ví dụ: Chuẩn hóa và truy vấn SQL"></label>
+                            <label class="study-plan-goal">Mục tiêu<input id="study-plan-goal" type="text" maxlength="500" required placeholder="Ví dụ: Nắm chắc lý thuyết và làm được bài tập"></label>
+                        </div>
+                        <fieldset class="study-plan-availability">
+                            <legend>Thời gian rảnh lặp lại mỗi tuần</legend>
+                            <p>Chọn ngày và khung giờ có thể học. Lịch học đã có sẽ được loại khỏi các khung giờ này.</p>
+                            <div id="study-plan-days" class="study-plan-days"></div>
+                        </fieldset>
+                        <p class="study-plan-status" id="study-plan-status" role="status" aria-live="polite"></p>
+                        <button class="btn btn-primary" id="study-plan-generate" type="submit"><i class="fas fa-sparkles" aria-hidden="true"></i> Tạo bản nháp</button>
+                    </form>
+                    <section id="study-plan-preview" class="study-plan-preview" aria-label="Bản nháp kế hoạch" hidden>
+                        <div class="study-plan-preview-heading"><div><h3>Bản nháp kế hoạch</h3><p id="study-plan-summary"></p></div><span class="study-plan-draft-badge">Chưa lưu</span></div>
+                        <ul id="study-plan-warnings" class="study-plan-warnings" hidden></ul>
+                        <div id="study-plan-items" class="study-plan-items"></div>
+                        <div class="study-plan-save-row"><span id="study-plan-save-status" role="status" aria-live="polite"></span><button class="btn btn-primary" id="study-plan-save" type="button">Thêm buổi đã chọn vào Công việc</button></div>
+                    </section>
+                    <section class="study-plan-saved" id="study-plan-saved" aria-labelledby="study-plan-saved-title">
+                        <div class="study-plan-preview-heading"><div><h3 id="study-plan-saved-title">Buổi ôn đã xác nhận</h3><p>Các buổi này đã lưu trong Công việc và gắn với lịch tài khoản của bạn.</p></div><button class="btn btn-secondary" id="study-plan-open-work" type="button">Mở Công việc</button></div>
+                        <ul id="study-plan-saved-items" class="study-plan-saved-items"><li>Đăng nhập để xem lịch ôn đã lưu.</li></ul>
+                    </section>
+                </section>
+
                 <!-- Notification Widget -->
                 <div class="timetable-widget glass-panel" id="timetable-today-widget">
                     <div class="widget-icon">
@@ -1192,7 +1227,7 @@
                         <div class="form-group"><label for="task-priority">Ưu tiên</label><select id="task-priority"><option value="Low">Thấp</option><option value="Medium" selected>Trung bình</option><option value="High">Cao</option></select></div>
                         <div class="form-group"><label for="task-status">Trạng thái</label><select id="task-status"><option value="Todo">Chưa bắt đầu</option><option value="InProgress">Đang làm</option><option value="Completed">Hoàn thành</option></select></div>
                     </div>
-                    <div class="form-group"><label for="task-due-date">Hạn hoàn thành</label><input id="task-due-date" type="date"></div>
+                    <div class="kanban-form-row"><div class="form-group"><label for="task-due-date">Ngày</label><input id="task-due-date" type="date"></div><div class="form-group"><label for="task-due-time">Giờ (không bắt buộc)</label><input id="task-due-time" type="time"></div></div>
                     <p id="task-form-error" role="alert" hidden></p>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-secondary" id="task-modal-cancel">Hủy</button><button class="btn btn-primary" type="submit" id="task-modal-submit">Lưu công việc</button></div>
@@ -1222,14 +1257,15 @@
     <script src="text-renderer.js?v=33"></script>
     <script src="vocab_data.js?v=24"></script>
     <script src="runtime-config.js"></script>
-    <script src="api.js?v=56"></script>
+    <script src="api.js?v=57"></script>
     <script src="auth.js?v=44"></script>
     <script src="dialogs.js?v=45"></script>
     <script src="voice.js?v=64"></script>
     <script src="notebook.js?v=64"></script>
     <script src="script.js?v=63"></script>
     <script src="ui.js?v=59"></script>
-    <script src="kanban.js?v=54"></script>
+    <script src="kanban.js?v=55"></script>
+    <script src="study-planner.js?v=1"></script>
     <script src="cockpit.js?v=65"></script>
 </body>
 </html>

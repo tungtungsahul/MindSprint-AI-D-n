@@ -44,6 +44,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<NotebookGenerationCache>().Property(x => x.SourcesHash).HasMaxLength(64);
         b.Entity<NotebookGenerationCache>().HasIndex(x => new { x.NotebookId, x.Type, x.RequestHash, x.SourcesHash }).IsUnique();
         b.Entity<KanbanTask>().HasIndex(t => new { t.UserId, t.Status, t.Position });
+        b.Entity<KanbanTask>().HasIndex(t => new { t.UserId, t.ClientRequestId }).IsUnique()
+            .HasFilter("\"ClientRequestId\" IS NOT NULL");
 
         // #5 – Refresh token: unique index để lookup nhanh và thu hồi
         b.Entity<RefreshToken>().HasIndex(r => r.Token).IsUnique();

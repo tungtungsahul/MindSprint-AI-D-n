@@ -130,6 +130,12 @@ namespace MindSprint.Api.Migrations
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("ClientRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Position")
                         .HasColumnType("integer");
 
@@ -150,6 +156,10 @@ namespace MindSprint.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId", "Status", "Position");
+
+                    b.HasIndex("UserId", "ClientRequestId")
+                        .IsUnique()
+                        .HasFilter("\"ClientRequestId\" IS NOT NULL");
 
                     b.ToTable("Tasks");
                 });

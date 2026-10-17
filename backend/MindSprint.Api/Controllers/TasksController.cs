@@ -1,13 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using MindSprint.Api.Data;
 using MindSprint.Api.Models;
 using TaskStatus = MindSprint.Api.Models.TaskStatus;
 
 namespace MindSprint.Api.Controllers;
 
-public record TaskDto(string Title, string? Description, DateTime? DueDate, string? Priority = null, TaskStatus? Status = null);
+public record TaskDto(string Title, string? Description, DateTime? DueDate, string? Priority = null, TaskStatus? Status = null,
+    Guid? ClientRequestId = null, int? DurationMinutes = null);
 public record MoveDto(TaskStatus Status, int Position); // gọi khi kéo/thả thẻ sang cột khác
 
 /// <summary>API CRUD cho bảng Kanban (Todo / Doing / Done).</summary>
@@ -23,13 +25,28 @@ public class TasksController(AppDbContext db) : ApiBase
     {
         if (Validate(dto) is { } error) return BadRequest(new { message = error });
         var uid = UserId;
+        if (dto.ClientRequestId is { } requestId)
+        {
+            var existing = await db.Tasks.FirstOrDefaultAsync(task => task.UserId == uid && task.ClientRequestId == requestId);
+            if (existing is not null) return Ok(existing);
+        }
         var status = dto.Status ?? TaskStatus.Todo;
         var pos = await db.Tasks.Where(t => t.UserId == uid && t.Status == status).CountAsync();
         var normalizedDueDate = NormalizeUtc(dto.DueDate);
         var t = new KanbanTask { UserId = uid, Title = dto.Title.Trim(), Description = dto.Description?.Trim(),
-            DueDate = normalizedDueDate, Priority = dto.Priority ?? "Medium", Status = status, Position = pos };
+            DueDate = normalizedDueDate, ClientRequestId = dto.ClientRequestId, DurationMinutes = dto.DurationMinutes,
+            Priority = dto.Priority ?? "Medium", Status = status, Position = pos };
         db.Tasks.Add(t);
-        await db.SaveChangesAsync();
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateException ex) when (dto.ClientRequestId is not null
+            && ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Two retries can race. The unique index chooses one row; return that row to the other request.
+            db.Entry(t).State = EntityState.Detached;
+            var existing = await db.Tasks.FirstOrDefaultAsync(task => task.UserId == uid && task.ClientRequestId == dto.ClientRequestId);
+            if (existing is not null) return Ok(existing);
+            throw;
+        }
         return Ok(t);
     }
 
@@ -41,6 +58,7 @@ public class TasksController(AppDbContext db) : ApiBase
         if (t is null) return NotFound();
         var normalizedDueDate = NormalizeUtc(dto.DueDate);
         (t.Title, t.Description, t.DueDate) = (dto.Title.Trim(), dto.Description?.Trim(), normalizedDueDate);
+        if (dto.DurationMinutes is not null) t.DurationMinutes = dto.DurationMinutes;
         t.Priority = dto.Priority ?? t.Priority;
         if (dto.Status is { } status && status != t.Status) await Arrange(t, status, int.MaxValue);
         await db.SaveChangesAsync();
@@ -90,6 +108,8 @@ public class TasksController(AppDbContext db) : ApiBase
         if (dto.Description?.Length > 5000) return "Mô tả tối đa 5000 ký tự.";
         if (dto.Priority is not (null or "Low" or "Medium" or "High")) return "Mức ưu tiên không hợp lệ.";
         if (dto.Status is { } status && !Enum.IsDefined(status)) return "Trạng thái không hợp lệ.";
+        if (dto.ClientRequestId == Guid.Empty) return "Mã yêu cầu không hợp lệ.";
+        if (dto.DurationMinutes is < 1 or > 480) return "Thời lượng phải nằm trong khoảng 1 đến 480 phút.";
         return null;
     }
 

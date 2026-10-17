@@ -10,7 +10,7 @@ public record GenerateDto(string Text, int Count = 10);
 
 /// <summary>Sinh Flashcard / trắc nghiệm từ văn bản người dùng gửi lên bằng Gemini.</summary>
 [Authorize, Route("api/ai")]
-public class AiController(GeminiService gemini) : ApiBase
+public class AiController(GeminiService gemini, StudyPlanService studyPlans) : ApiBase
 {
     private const int MaxChars = 60_000;
     private const long MaxFileBytes = 10 * 1024 * 1024;
@@ -91,6 +91,14 @@ public class AiController(GeminiService gemini) : ApiBase
         try { return Ok(await gemini.GenerateQuizAsync(clean, Math.Clamp(dto.Count, 1, 100))); }
         catch (GeminiUnavailableException ex) { return AiError(ex); }
         catch (Exception ex) { return StatusCode(502, new { message = "Gemini lỗi: " + ex.Message }); }
+    }
+
+    [HttpPost("study-plan")]
+    public async Task<IActionResult> StudyPlan([FromBody] StudyPlanRequest dto)
+    {
+        try { return Ok(await studyPlans.CreateAsync(UserId, dto)); }
+        catch (StudyPlanValidationException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+        catch (GeminiUnavailableException ex) { return AiError(ex); }
     }
 
     private IActionResult AiError(GeminiUnavailableException ex) => StatusCode(ex.StatusCode,

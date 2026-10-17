@@ -181,7 +181,14 @@ class KanbanBoard {
     try {
       const data = await api.getTasks();
       if (version !== this.version) return false;
-      this.tasks = data.map(task => ({ ...task, status: this.normalizeStatus(task.status), due_date: (task.dueDate || '').slice(0, 10) }));
+      this.tasks = data.map(task => {
+        const due = task.dueDate || '';
+        const hasExactTime = Boolean(task.clientRequestId || (due && due.slice(11, 19) !== '00:00:00'));
+        const local = hasExactTime && due ? new Date(due) : null;
+        return { ...task, status: this.normalizeStatus(task.status),
+          due_date: local && !Number.isNaN(local.valueOf()) ? `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}` : due.slice(0, 10),
+          due_time: local && !Number.isNaN(local.valueOf()) ? `${String(local.getHours()).padStart(2, '0')}:${String(local.getMinutes()).padStart(2, '0')}` : '' };
+      });
       this.render();
       showToast(this.tasks.length ? 'Kéo thả thẻ để sắp xếp; dùng nút mũi tên để đổi vị trí hoặc chuyển cột.' : 'Chưa có công việc. Thêm công việc đầu tiên của bạn.');
       return true;
@@ -286,7 +293,7 @@ class KanbanBoard {
 
     const dueDateHtml = task.due_date ? `
       <span class="card-date" title="Hạn hoàn thành">
-        <i class="fas fa-calendar-alt" aria-hidden="true"></i> ${escapeHtml(task.due_date)}
+        <i class="fas fa-calendar-alt" aria-hidden="true"></i> ${escapeHtml(task.due_date)}${task.due_time ? ` · ${escapeHtml(task.due_time)}` : ''}${task.durationMinutes ? ` · ${escapeHtml(task.durationMinutes)} phút` : ''}
       </span>
     ` : '<span></span>';
 
@@ -451,6 +458,7 @@ class KanbanBoard {
     const prioritySelect = document.getElementById('task-priority');
     const statusSelect = document.getElementById('task-status');
     const dueDateInput = document.getElementById('task-due-date');
+    const dueTimeInput = document.getElementById('task-due-time');
     const modalTitle = document.getElementById('task-modal-title');
     const submitBtn = document.getElementById('task-modal-submit');
 
@@ -464,6 +472,7 @@ class KanbanBoard {
       if (prioritySelect) prioritySelect.value = task.priority || 'Medium';
       if (statusSelect) statusSelect.value = this.normalizeStatus(task.status);
       if (dueDateInput) dueDateInput.value = task.due_date || '';
+      if (dueTimeInput) dueTimeInput.value = task.due_time || '';
     } else {
       if (modalTitle) modalTitle.textContent = '+ Tạo Công Việc Mới (Task)';
       if (submitBtn) submitBtn.textContent = 'Lưu công việc';
@@ -496,12 +505,14 @@ class KanbanBoard {
     const prioritySelect = document.getElementById('task-priority');
     const statusSelect = document.getElementById('task-status');
     const dueDateInput = document.getElementById('task-due-date');
+    const dueTimeInput = document.getElementById('task-due-time');
 
     const title = titleInput?.value.trim() || '';
     const description = descInput?.value.trim() || '';
     const priority = prioritySelect?.value || 'Medium';
     const status = statusSelect?.value || 'Todo';
     const due_date = dueDateInput?.value || null;
+    const due_time = dueTimeInput?.value || null;
 
     if (!title) {
       showToast('Vui lòng nhập tiêu đề task', 'warning');
@@ -510,7 +521,7 @@ class KanbanBoard {
 
     const payload = { title, description, priority,
       status: {Todo: 0, InProgress: 1, Completed: 2}[status],
-      dueDate: due_date ? due_date + 'T00:00:00' : null };
+      dueDate: due_date ? (due_time ? new Date(`${due_date}T${due_time}:00`).toISOString() : due_date + 'T00:00:00') : null };
     const id = this.currentEditingTaskId;
     return this.mutate(() => id ? api.updateTask(id, payload) : api.createTask(payload),
       id ? 'Đã cập nhật công việc.' : 'Đã thêm công việc.');
