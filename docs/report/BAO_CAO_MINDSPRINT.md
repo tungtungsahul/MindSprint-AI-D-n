@@ -2,6 +2,12 @@
 
 **Đối chiếu 0.1 ngày 26/10/2026:** [đặc tả yêu cầu và ma trận truy vết](../requirements/software-requirements.md), [UML](../architecture/uml.md), [kết quả chạy ban đầu](../testing/sprint-3-results.md). Mốc mã nguồn: `1a9fecb807e7232a898a27c826615aac657fd798`. Các mô tả tính năng dưới đây là phạm vi/mã nguồn, không thay nghiệm thu live. FR-23 (AI lập kế hoạch, #36) chưa tìm thấy triển khai ở baseline dù issue đã đóng; xem GAP-01. #19 đã đóng nhưng không đính kèm báo cáo để xác minh lại; các kết quả mới tách rõ giả lập, SQLite và phần chưa chạy.
 
+## PHÁT BIỂU BÀI TOÁN
+
+Xây dựng một ứng dụng web hỗ trợ học tập cá nhân, cho phép học sinh, sinh viên và người tự học chuyển tài liệu của mình thành nội dung học có cấu trúc; hỏi đáp và nhận hỗ trợ theo tài liệu; ôn tập theo lịch dựa trên kết quả học; đồng thời quản lý công việc, lịch học và theo dõi tiến độ trong một hệ thống thống nhất.
+
+Xem [phát biểu bài toán đầy đủ](../requirements/problem-statement.md) để biết bối cảnh, đối tượng sử dụng, đầu vào/đầu ra, phạm vi và căn cứ đánh giá.
+
 ## TẦM NHÌN MVP (Minimum Viable Product)
 
 MindSprintAI là nền tảng học tập thông minh giúp người học tối ưu hóa quá trình học tập thông qua:

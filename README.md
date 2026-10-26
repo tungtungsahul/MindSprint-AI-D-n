@@ -271,6 +271,7 @@ Xem hướng dẫn chi tiết tại [CI-CD-SETUP.md](CI-CD-SETUP.md).
 
 | Tài liệu | Nội dung |
 |-----------|----------|
+| [Phát biểu bài toán](docs/requirements/problem-statement.md) | Bối cảnh, vấn đề cần giải quyết, đối tượng, đầu vào/đầu ra và phạm vi MVP |
 | [Kiến trúc phần mềm](docs/architecture/software-architecture.md) | Bối cảnh, thành phần, dữ liệu, luồng xử lý, triển khai |
 | [Đặc tả yêu cầu 0.1](docs/requirements/software-requirements.md) | Phạm vi, 23 FR, 14 NFR, truy vết và các điểm chưa nghiệm thu (#58) |
 | [UML hiện trạng](docs/architecture/uml.md) | ERD, 18 use case, Activity/Sequence và bản SVG (#20) |
