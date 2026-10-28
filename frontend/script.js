@@ -190,17 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return normalizeCards(cards);
     }
     let flashcards = loadLocalCards();
-    
+
     // #9 – Offline queue for flashcard operations
     const OFFLINE_QUEUE_KEY = 'ms-offline-queue';
     let offlineQueue = readPersonalJSON(OFFLINE_QUEUE_KEY, []);
     let processingQueue = false;
     let studyDays = readPersonalJSON('study-days', []);
-    
+
     function saveOfflineQueue() {
         personalStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(offlineQueue));
     }
-    
+
     async function processOfflineQueue() {
         if (!api?.isLoggedIn() || processingQueue || offlineQueue.length === 0) return;
         const version = accountVersion;
@@ -228,10 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (version === accountVersion) processingQueue = false;
         }
     }
-    
+
     // Process queue when online
     window.addEventListener('online', processOfflineQueue);
-    
+
     // Variables for App State
     let currentCategory = 'all';
     let currentSubCategory = 'all';
@@ -295,22 +295,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const exampleEl = document.getElementById('card-example');
     const frontCatEl = document.getElementById('card-front-cat');
     const backCatEl = document.getElementById('card-back-cat');
-    
+
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const progressText = document.getElementById('progress-text');
     const progressBar = document.getElementById('progress-bar');
-    
+
     const statTotal = document.getElementById('stat-total');
     const statKnown = document.getElementById('stat-known');
     const statReview = document.getElementById('stat-review');
-    
+
     const categoryItems = document.querySelectorAll('.category-item');
     const subFilterContainer = document.getElementById('sub-filter-container');
     const subCategorySelect = document.getElementById('topic-options-list');
     const srsToggle = document.getElementById('srs-toggle');
     const srsStatusText = document.getElementById('srs-status-text');
-    
+
     const btnRemember = document.getElementById('btn-remember');
     const btnForget = document.getElementById('btn-forget');
 
@@ -319,6 +319,682 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeAddModalBtn = document.getElementById('close-add-modal');
     const cancelAddModalBtn = document.getElementById('cancel-add-modal');
     const addCardForm = document.getElementById('add-card-form');
+    const aiCardModal = document.getElementById('ai-card-modal');
+    const aiCardForm = document.getElementById('ai-card-generator-form');
+    const aiCardSource = document.getElementById('ai-card-source');
+    const aiCardCategory = document.getElementById('ai-card-category');
+    const aiCardSubcategory = document.getElementById('ai-card-subcategory');
+    const aiCardNewSubGroup = document.getElementById('ai-card-new-sub-group');
+    const aiCardNewSub = document.getElementById('ai-card-new-sub');
+    const aiCardNewCatGroup = document.getElementById('ai-card-new-cat-group');
+    const aiCardNewCat = document.getElementById('ai-card-new-cat');
+    const aiCardSubSearch = document.getElementById('ai-card-sub-search');
+    const aiCardDropzone = document.getElementById('ai-card-dropzone');
+    const aiCardBrowseBtn = document.getElementById('ai-card-browse-btn');
+    const aiCardFileInput = document.getElementById('ai-card-file-input');
+    const aiCardFileInfo = document.getElementById('ai-card-file-info');
+    const aiCardFileName = document.getElementById('ai-card-file-name');
+    const aiCardFileRemove = document.getElementById('ai-card-file-remove');
+    const aiCardCount = document.getElementById('ai-card-count');
+    const aiCardStatus = document.getElementById('ai-card-status');
+    const aiCardResults = document.getElementById('ai-card-results');
+    const generateAiCardsBtn = document.getElementById('generate-ai-cards-btn');
+    const saveAiCardsBtn = document.getElementById('save-ai-cards-btn');
+    let aiGeneratedCards = [];
+
+    function removeVietnameseTones(str) {
+        if (!str) return '';
+        str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+        str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+        str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+        str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+        str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+        str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+        str = str.replace(/đ/g, "d");
+        str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+        str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+        str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+        str = str.replace(/Ò|Ó|Ọ|B|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+        str = str.replace(/Ù|Ý|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+        str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+        str = str.replace(/Đ/g, "D");
+        str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
+        str = str.replace(/\u02C6|\u0306|\u031B/g, "");
+        return str;
+    }
+
+    function populateAiCategoryDropdown() {
+        if (!aiCardCategory) return;
+        const currentVal = aiCardCategory.value;
+        const standardCats = [
+            { key: 'english', label: 'Tiếng Anh' },
+            { key: 'programming', label: 'Lập trình' },
+            { key: 'general', label: 'Kiến thức chung' }
+        ];
+
+        // Tìm các danh mục tùy chỉnh khác từ thẻ hiện có
+        const customCatKeys = [...new Set(flashcards.map(c => c.category).filter(Boolean))]
+            .filter(c => !standardCats.some(s => s.key === c))
+            .sort((a, b) => a.localeCompare(b, 'vi'));
+
+        aiCardCategory.innerHTML = '';
+        standardCats.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.key;
+            opt.textContent = cat.label;
+            aiCardCategory.appendChild(opt);
+        });
+
+        customCatKeys.forEach(catKey => {
+            const opt = document.createElement('option');
+            opt.value = catKey;
+            opt.textContent = getCategoryName(catKey);
+            aiCardCategory.appendChild(opt);
+        });
+
+        const newCatOpt = document.createElement('option');
+        newCatOpt.value = '__new_category__';
+        newCatOpt.textContent = '+ Thêm danh mục mới...';
+        aiCardCategory.appendChild(newCatOpt);
+
+        if (currentVal && Array.from(aiCardCategory.options).some(o => o.value === currentVal)) {
+            aiCardCategory.value = currentVal;
+        } else {
+            aiCardCategory.value = 'general';
+        }
+
+        if (aiCardNewCatGroup) {
+            aiCardNewCatGroup.style.display = aiCardCategory.value === '__new_category__' ? 'block' : 'none';
+        }
+    }
+
+    function updateAiSubcategoryOptions() {
+        if (!aiCardCategory || !aiCardSubcategory) return;
+        const isNewCat = aiCardCategory.value === '__new_category__';
+        const cat = isNewCat ? (aiCardNewCat ? aiCardNewCat.value.trim() : '') : aiCardCategory.value;
+        const matchingCards = flashcards.filter(c => c.category === cat);
+        const existingSubs = [...new Set(matchingCards.map(c => c.subCategory).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'vi'));
+
+        const searchQuery = aiCardSubSearch ? aiCardSubSearch.value.trim() : '';
+        const normalizedSearch = removeVietnameseTones(searchQuery.toLowerCase());
+
+        let filteredSubs = existingSubs;
+        if (normalizedSearch) {
+            filteredSubs = existingSubs.filter(sub =>
+                removeVietnameseTones(sub.toLowerCase()).includes(normalizedSearch)
+            );
+        }
+
+        aiCardSubcategory.innerHTML = '';
+
+        const newOpt = document.createElement('option');
+        newOpt.value = '__new__';
+        newOpt.textContent = searchQuery ? `+ Tạo chủ đề mới: "${searchQuery}"` : '+ Tạo chủ đề mới...';
+        aiCardSubcategory.appendChild(newOpt);
+
+        filteredSubs.forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub;
+            opt.textContent = sub;
+            aiCardSubcategory.appendChild(opt);
+        });
+
+        if (filteredSubs.length > 0) {
+            const exactMatch = filteredSubs.find(s => removeVietnameseTones(s.toLowerCase()) === normalizedSearch);
+            if (exactMatch) {
+                aiCardSubcategory.value = exactMatch;
+                if (aiCardNewSubGroup) aiCardNewSubGroup.style.display = 'none';
+            } else if (!searchQuery) {
+                aiCardSubcategory.value = filteredSubs[0];
+                if (aiCardNewSubGroup) aiCardNewSubGroup.style.display = 'none';
+            } else {
+                aiCardSubcategory.value = filteredSubs[0];
+                if (aiCardNewSubGroup) aiCardNewSubGroup.style.display = 'none';
+            }
+        } else {
+            aiCardSubcategory.value = '__new__';
+            if (aiCardNewSubGroup) {
+                aiCardNewSubGroup.style.display = 'block';
+                if (searchQuery && aiCardNewSub && !aiCardNewSub.value.trim()) {
+                    aiCardNewSub.value = searchQuery;
+                }
+            }
+        }
+    }
+
+    if (aiCardSubcategory) {
+        aiCardSubcategory.addEventListener('change', () => {
+            if (aiCardSubcategory.value === '__new__') {
+                if (aiCardNewSubGroup) aiCardNewSubGroup.style.display = 'block';
+                if (aiCardNewSub) {
+                    const searchVal = aiCardSubSearch ? aiCardSubSearch.value.trim() : '';
+                    if (searchVal && !aiCardNewSub.value.trim()) {
+                        aiCardNewSub.value = searchVal;
+                    }
+                    aiCardNewSub.focus();
+                }
+            } else {
+                if (aiCardNewSubGroup) aiCardNewSubGroup.style.display = 'none';
+            }
+        });
+    }
+
+    if (aiCardCategory) {
+        aiCardCategory.addEventListener('change', () => {
+            if (aiCardCategory.value === '__new_category__') {
+                if (aiCardNewCatGroup) aiCardNewCatGroup.style.display = 'block';
+                if (aiCardNewCat) {
+                    aiCardNewCat.value = '';
+                    aiCardNewCat.focus();
+                }
+            } else {
+                if (aiCardNewCatGroup) aiCardNewCatGroup.style.display = 'none';
+                if (aiCardNewCat) aiCardNewCat.value = '';
+            }
+            updateAiSubcategoryOptions();
+        });
+    }
+
+    if (aiCardNewCat) {
+        aiCardNewCat.addEventListener('input', () => {
+            updateAiSubcategoryOptions();
+        });
+    }
+
+    if (aiCardSubSearch) {
+        aiCardSubSearch.addEventListener('input', () => {
+            updateAiSubcategoryOptions();
+        });
+    }
+
+    function setAiCardStatus(message, isError = false) {
+        aiCardStatus.textContent = message;
+        aiCardStatus.hidden = !message;
+        aiCardStatus.classList.toggle('is-error', isError);
+    }
+
+    function estimateOptimalCardCount(text) {
+        if (!text || !text.trim()) return 10;
+        const clean = text.trim();
+        // Cứ khoảng 350-400 ký tự văn bản tương ứng với 1 đơn vị kiến thức/thẻ
+        const lengthBased = Math.round(clean.length / 380);
+        const keyMatches = clean.match(/(?:định nghĩa|công thức|tính chất|khái niệm|nguyên lý|đặc điểm|quy tắc|bước|lý thuyết|phương pháp|theorem|definition|formula|\$|£|≤|≥|=)/gi) || [];
+        const keyCount = Math.round(keyMatches.length * 0.4);
+        let count = Math.max(lengthBased, Math.min(keyCount, Math.round(lengthBased * 1.8)));
+        return Math.max(5, Math.min(100, count));
+    }
+
+    async function handleAiCardFile(file) {
+        if (!file) return;
+        const maxBytes = 10 * 1024 * 1024;
+        if (file.size > maxBytes) {
+            setAiCardStatus('File vượt quá giới hạn 10MB.', true);
+            return;
+        }
+
+        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        const allowedExts = ['.txt', '.md', '.csv', '.json', '.pdf', '.doc', '.docx'];
+        if (!allowedExts.includes(ext)) {
+            setAiCardStatus('Định dạng file không được hỗ trợ. Vui lòng chọn .txt, .md, .pdf, .csv, .json.', true);
+            return;
+        }
+
+        if (aiCardFileInfo && aiCardFileName) {
+            const sizeStr = (file.size / 1024).toLocaleString('vi', { maximumFractionDigits: 1 }) + ' KB';
+            aiCardFileName.textContent = `${file.name} (${sizeStr})`;
+            aiCardFileInfo.hidden = false;
+        }
+        if (aiCardDropzone) {
+            aiCardDropzone.classList.add('has-file');
+        }
+
+        setAiCardStatus(`Đang đọc nội dung từ "${file.name}"...`);
+
+        // Với file dạng text: đọc trực tiếp trong trình duyệt bằng FileReader
+        if (['.txt', '.md', '.csv', '.json'].includes(ext)) {
+            try {
+                const text = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('Không đọc được file.'));
+                    reader.readAsText(file, 'UTF-8');
+                });
+
+                if (!text || !text.trim()) {
+                    setAiCardStatus('File không có nội dung chữ.', true);
+                    return;
+                }
+
+                aiCardSource.value = text.trim();
+                const suggestedCount = estimateOptimalCardCount(text);
+                if (aiCardCount) aiCardCount.value = suggestedCount;
+                aiCardSource.dispatchEvent(new Event('input', { bubbles: true }));
+                setAiCardStatus(`Đã tải tài liệu từ "${file.name}" (${text.length.toLocaleString('vi')} ký tự). Đã tự động điều chỉnh số thẻ đề xuất: ${suggestedCount} thẻ (tối đa 100). Bạn có thể chỉnh lại hoặc bấm "Tạo flashcard" ngay.`);
+            } catch (err) {
+                setAiCardStatus(`Lỗi đọc file: ${err.message}`, true);
+            }
+            return;
+        }
+
+        // Với file PDF: trích xuất qua endpoint server
+        try {
+            if (!api?.isLoggedIn()) {
+                setAiCardStatus('Vui lòng đăng nhập để trích xuất file PDF.', true);
+                return;
+            }
+            const res = await api.aiExtractFile(file);
+            if (res && res.text) {
+                aiCardSource.value = res.text.trim();
+                const suggestedCount = estimateOptimalCardCount(res.text);
+                if (aiCardCount) aiCardCount.value = suggestedCount;
+                aiCardSource.dispatchEvent(new Event('input', { bubbles: true }));
+                setAiCardStatus(`Đã trích xuất thành công từ "${file.name}" (${res.text.length.toLocaleString('vi')} ký tự). Đã tự động điều chỉnh số thẻ đề xuất: ${suggestedCount} thẻ (tối đa 100). Bạn có thể chỉnh lại hoặc bấm "Tạo flashcard" ngay.`);
+            } else {
+                setAiCardStatus('Không trích xuất được nội dung từ file này.', true);
+            }
+        } catch (err) {
+            setAiCardStatus(`Không thể trích xuất file: ${err.message || 'Lỗi xử lý file'}`, true);
+        }
+    }
+
+    function clearAiCardFile() {
+        if (aiCardFileInput) aiCardFileInput.value = '';
+        if (aiCardFileInfo) aiCardFileInfo.hidden = true;
+        if (aiCardFileName) aiCardFileName.textContent = '';
+        if (aiCardDropzone) aiCardDropzone.classList.remove('has-file');
+    }
+
+    if (aiCardDropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            aiCardDropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                aiCardDropzone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            aiCardDropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                aiCardDropzone.classList.remove('drag-over');
+            });
+        });
+
+        aiCardDropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt ? dt.files : null;
+            if (files && files.length > 0) {
+                handleAiCardFile(files[0]);
+            }
+        });
+
+        aiCardDropzone.addEventListener('click', (e) => {
+            if (e.target.closest('#ai-card-file-remove') || e.target.closest('#ai-card-browse-btn')) return;
+            if (aiCardFileInput) aiCardFileInput.click();
+        });
+    }
+
+    if (aiCardBrowseBtn && aiCardFileInput) {
+        aiCardBrowseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            aiCardFileInput.click();
+        });
+    }
+
+    if (aiCardFileInput) {
+        aiCardFileInput.addEventListener('change', () => {
+            if (aiCardFileInput.files && aiCardFileInput.files.length > 0) {
+                handleAiCardFile(aiCardFileInput.files[0]);
+            }
+        });
+    }
+
+    if (aiCardFileRemove) {
+        aiCardFileRemove.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearAiCardFile();
+            setAiCardStatus('Đã gỡ file.');
+        });
+    }
+
+    if (aiCardSource && aiCardCount) {
+        let countEstimateTimer = null;
+        aiCardSource.addEventListener('input', () => {
+            clearTimeout(countEstimateTimer);
+            countEstimateTimer = setTimeout(() => {
+                if (!aiCardCount.dataset.userEdited && aiCardSource.value.trim().length > 80) {
+                    aiCardCount.value = estimateOptimalCardCount(aiCardSource.value);
+                }
+            }, 300);
+        });
+        aiCardCount.addEventListener('input', () => {
+            aiCardCount.dataset.userEdited = 'true';
+        });
+    }
+
+    function renderAiCardResults() {
+        aiCardResults.replaceChildren();
+        aiCardResults.hidden = aiGeneratedCards.length === 0;
+        saveAiCardsBtn.hidden = aiGeneratedCards.length === 0;
+        saveAiCardsBtn.disabled = !aiGeneratedCards.some(card => card.selected && !card.saved);
+        if (!aiGeneratedCards.length) return;
+
+        aiGeneratedCards.forEach((card, index) => {
+            const item = document.createElement('article');
+            item.className = 'ai-card-result';
+
+            const label = document.createElement('label');
+            label.className = 'ai-card-result-select';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = card.selected;
+            checkbox.disabled = card.saved;
+            checkbox.setAttribute('aria-label', `Chọn thẻ ${index + 1}`);
+            checkbox.addEventListener('change', () => {
+                card.selected = checkbox.checked;
+                saveAiCardsBtn.disabled = !aiGeneratedCards.some(item => item.selected && !item.saved);
+            });
+            label.append(checkbox, document.createTextNode(card.saved ? 'Đã lưu' : 'Lưu thẻ này'));
+
+            const question = document.createElement('strong');
+            const answer = document.createElement('p');
+            if (window.MindSprintText && typeof window.MindSprintText.markdown === 'function') {
+                question.innerHTML = window.MindSprintText.markdown(card.question || '');
+                answer.innerHTML = window.MindSprintText.markdown(card.answer || '');
+                if (typeof window.MindSprintText.renderMath === 'function') {
+                    window.MindSprintText.renderMath(question);
+                    window.MindSprintText.renderMath(answer);
+                }
+            } else {
+                question.textContent = card.question;
+                answer.textContent = card.answer;
+            }
+            item.append(label, question, answer);
+            if (card.example) {
+                const example = document.createElement('p');
+                example.className = 'ai-card-result-example';
+                if (window.MindSprintText && typeof window.MindSprintText.markdown === 'function') {
+                    example.innerHTML = window.MindSprintText.markdown(card.example);
+                    if (typeof window.MindSprintText.renderMath === 'function') {
+                        window.MindSprintText.renderMath(example);
+                    }
+                } else {
+                    example.textContent = card.example;
+                }
+                item.append(example);
+            }
+            aiCardResults.append(item);
+        });
+    }
+
+    function cleanOcrText(str) {
+        if (!str) return '';
+        let s = String(str);
+        // Sửa các ký tự vỡ font từ file PDF/OCR
+        s = s.replace(/£/g, ' ≤ ');
+        s = s.replace(/¥/g, ' ∞ ');
+        s = s.replace(/x!"#/g, 'x_{i-1}');
+        s = s.replace(/!"#/g, '_{i-1}');
+        s = s.replace(/x!/g, 'x_i');
+        s = s.replace(/\bDx\s*=/g, 'Δx = ');
+        s = s.replace(/\bDx\b/g, 'Δx');
+        s = s.replace(/([a-zÀ-ỹ0-9])\.([A-ZÀ-Ỹ])/g, '$1. $2');
+        s = s.replace(/,([^\s\d])/g, ', $1');
+        s = s.replace(/\s+,\s*/g, ', ');
+        s = s.replace(/[ \t]+/g, ' ');
+        return s.trim();
+    }
+
+    function extractFallbackCards(rawText, count) {
+        const text = cleanOcrText(rawText);
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const drafts = [];
+        const seen = new Set();
+
+        function addDraft(question, answer, example = '') {
+            const q = cleanOcrText(question).trim();
+            const a = cleanOcrText(answer).trim();
+            if (!q || !a || q.length < 3 || a.length < 3) return false;
+            const key = q.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            drafts.push({
+                question: q,
+                answer: a,
+                example: example ? cleanOcrText(example).trim() : '',
+                selected: true,
+                saved: false
+            });
+            return drafts.length >= count;
+        }
+
+        function isIrrelevantNoise(s) {
+            const trimmed = s.trim();
+            // Lọc bỏ bài tập tính toán lan man, đề bài, lời giải, số trang, mục lục
+            return /^(?:Bài tập|Bài \d+|Câu \d+|Ví dụ \d+|Đề bài|Hướng dẫn giải|Lời giải|Lời giải chi tiết|Đáp án|Trang \d+|Mục lục|Chương \d+:|Phần \d+:)/i.test(trimmed);
+        }
+
+        // Bước 1: Trích xuất các cặp thuật ngữ - định nghĩa có dấu hai chấm / gạch ngang
+        const colonRegex = /^([^:\-–—\n]{2,50})[:\-–—]\s*(.+)$/;
+        for (const line of lines) {
+            const cleaned = line.replace(/^[*•\-\d.)\s]+/, '').trim();
+            if (isIrrelevantNoise(cleaned)) continue;
+            const match = cleaned.match(colonRegex);
+            if (match && match[1].length >= 2 && match[2].length >= 3) {
+                if (addDraft(match[1], match[2])) return drafts;
+            }
+        }
+
+        // Bước 2: Trích xuất câu định nghĩa ("được gọi là [X]", "Ta gọi [Mô tả] là [X]", "[X] là [Y]", "công thức")
+        const sentences = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length >= 10);
+        for (const s of sentences) {
+            // Mẫu 2a: "Ta gọi [Mô tả] là [Khái niệm]" hoặc "[Mô tả] được gọi là [Khái niệm]"
+            const passiveMatch = s.match(/^(?:Ta gọi\s+)?(.+?)\s+(?:được gọi là|là)\s+([A-Za-z0-9À-ỹ\s\-_()]{2,40})[.!?]?$/i);
+            if (passiveMatch && !passiveMatch[1].toLowerCase().startsWith('ý chính')) {
+                const term = passiveMatch[2].trim();
+                const desc = passiveMatch[1].replace(/^Ta gọi\s+/i, '').trim();
+                if (term.split(/\s+/).length <= 6 && desc.length >= 10) {
+                    const q = `Khái niệm: ${term} là gì?`;
+                    const a = desc;
+                    if (addDraft(q, a, s)) return drafts;
+                }
+            }
+
+            // Mẫu 2b: "[X] là [Y]" trực tiếp
+            const defMatch = s.match(/^([A-Z0-9a-zÀ-ỹ\s\-_()]{2,35}?)\s+(?:là|is an?|are|refers to|means|được định nghĩa là)\s+(.+)$/i);
+            if (defMatch) {
+                const term = defMatch[1].trim();
+                if (term.split(/\s+/).length <= 5) {
+                    const q = `${term} là gì?`;
+                    const a = defMatch[2].trim().replace(/\.$/, '');
+                    if (addDraft(q, a, s)) return drafts;
+                }
+            }
+
+            // Mẫu 2c: Công thức toán học có dấu bằng
+            const formulaMatch = s.match(/([a-zA-ZÀ-ỹ0-9\s()_,\[\]]{2,40}?)\s*(?:bằng nhau và bằng|có công thức là|bằng)\s*([a-zA-Z0-9_+\-*\/^=().\s]{2,50})/i);
+            if (formulaMatch) {
+                const q = `Công thức tính ${formulaMatch[1].trim()}?`;
+                const formula = formulaMatch[2].trim().replace(/\.$/, '');
+                const a = formula.includes('=') ? `$${formula}$` : `$$${formula}$$`;
+                if (addDraft(q, a, s)) return drafts;
+            }
+        }
+
+        // Bước 3: Tách câu thông minh theo nguyên tắc Single Fact Principle (tránh dồn đoạn dài)
+        for (const s of sentences) {
+            if (drafts.length >= count) return drafts;
+            if (isIrrelevantNoise(s)) continue;
+            if ([...seen].some(key => s.toLowerCase().includes(key))) continue;
+
+            const clauseMatch = s.match(/^(Cho|Giả sử|Nếu|Khi|Để|Với)\s+([^,;]{5,60})[,;]\s*(.+)$/i);
+            if (clauseMatch) {
+                const q = `${clauseMatch[1]} ${clauseMatch[2].trim()}: điều kiện / hệ quả là gì?`;
+                const a = clauseMatch[3].trim().replace(/\.$/, '');
+                if (a.length >= 8 && a.length <= 160) {
+                    if (addDraft(q, a, s)) return drafts;
+                }
+            } else if (s.length >= 15 && s.length <= 150) {
+                const words = s.split(/\s+/);
+                const q = `Ý chính: ${words.slice(0, 5).join(' ')}...?`;
+                if (addDraft(q, s)) return drafts;
+            }
+        }
+
+        return drafts;
+    }
+
+    async function generateAiCards() {
+        if (!api?.isLoggedIn()) {
+            setAiCardStatus('Hãy đăng nhập để tạo và lưu flashcard bằng AI.', true);
+            return;
+        }
+
+        const text = aiCardSource.value.trim();
+        const count = Number(aiCardCount.value);
+        if (!text) {
+            setAiCardStatus('Hãy dán nội dung tài liệu trước khi tạo thẻ.', true);
+            aiCardSource.focus();
+            return;
+        }
+        if (!Number.isInteger(count) || count < 1 || count > 100) {
+            setAiCardStatus('Số lượng thẻ phải từ 1 đến 100.', true);
+            aiCardCount.focus();
+            return;
+        }
+
+        const version = accountVersion;
+        setAiCardStatus('AI đang đọc nội dung và tạo flashcard…');
+        generateAiCardsBtn.disabled = true;
+        saveAiCardsBtn.disabled = true;
+        try {
+            const generated = await api.aiFlashcards(text, count);
+            if (version !== accountVersion) return;
+            if (!Array.isArray(generated)) throw new Error('AI trả về dữ liệu thẻ không hợp lệ. Vui lòng thử lại.');
+
+            const cards = generated
+                .filter(card => card && typeof card.question === 'string' && card.question.trim() &&
+                    typeof card.answer === 'string' && card.answer.trim())
+                .map(card => ({
+                    question: card.question.trim(),
+                    answer: card.answer.trim(),
+                    example: typeof card.example === 'string' ? card.example.trim() : '',
+                    selected: true,
+                    saved: false
+                }));
+
+            if (!cards.length) {
+                throw new Error('AI chưa tạo được thẻ hợp lệ từ nội dung này.');
+            }
+
+            aiGeneratedCards = cards;
+            renderAiCardResults();
+            const countMessage = aiGeneratedCards.length < count
+                ? `AI tạo được ${aiGeneratedCards.length}/${count} thẻ yêu cầu. Bạn vẫn có thể chọn và lưu các thẻ đã tạo.`
+                : `AI đã tạo ${aiGeneratedCards.length} thẻ. Chọn thẻ bạn muốn lưu vào Thư viện.`;
+            const invalidCount = generated.length - aiGeneratedCards.length;
+            setAiCardStatus(invalidCount > 0
+                ? `${countMessage} Bỏ qua ${invalidCount} thẻ có dữ liệu không hợp lệ.`
+                : countMessage);
+        } catch (error) {
+            if (version !== accountVersion) return;
+            // Xử lý khi AI gặp lỗi giữa chừng / chưa cấu hình API key:
+            // Tự động kích hoạt bộ trích xuất nội dung dự phòng từ tài liệu
+            const fallbackCards = extractFallbackCards(text, count);
+            if (fallbackCards.length > 0) {
+                aiGeneratedCards = fallbackCards;
+                renderAiCardResults();
+                const warningMsg = `Dịch vụ AI gặp sự cố (${error.message || 'lỗi kết nối'}). Đã kích hoạt bộ trích xuất nội dung dự phòng: tạo được ${aiGeneratedCards.length} thẻ. Hãy chọn thẻ bạn muốn lưu vào Thư viện.`;
+                setAiCardStatus(warningMsg, false);
+                return;
+            }
+            setAiCardStatus(error.message || 'Không thể tạo flashcard. Vui lòng thử lại.', true);
+        } finally {
+            if (version === accountVersion) {
+                generateAiCardsBtn.disabled = false;
+                saveAiCardsBtn.disabled = false;
+            }
+        }
+    }
+
+    async function saveAiGeneratedCards() {
+        if (!api?.isLoggedIn()) {
+            setAiCardStatus('Phiên đăng nhập không còn hiệu lực. Hãy đăng nhập lại để lưu thẻ.', true);
+            return;
+        }
+        const pendingCards = aiGeneratedCards.filter(card => card.selected && !card.saved);
+        if (!pendingCards.length) {
+            setAiCardStatus('Hãy chọn ít nhất một thẻ chưa lưu.', true);
+            return;
+        }
+
+        const version = accountVersion;
+        let savedCount = 0;
+        saveAiCardsBtn.disabled = true;
+        generateAiCardsBtn.disabled = true;
+        const chosenCat = aiCardCategory && aiCardCategory.value === '__new_category__'
+            ? ((aiCardNewCat && aiCardNewCat.value.trim()) || 'Danh mục mới')
+            : (aiCardCategory ? aiCardCategory.value : 'general');
+
+        const chosenSub = aiCardSubcategory && aiCardSubcategory.value === '__new__'
+            ? ((aiCardNewSub && aiCardNewSub.value.trim()) || (aiCardSubSearch && aiCardSubSearch.value.trim()) || 'Chủ đề mới')
+            : (aiCardSubcategory ? aiCardSubcategory.value : 'Kiến thức chung khác');
+
+        try {
+            for (const [index, card] of aiGeneratedCards.entries()) {
+                if (!card.selected || card.saved) continue;
+                const newCard = {
+                    id: `ai-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+                    category: chosenCat,
+                    subCategory: chosenSub,
+                    question: card.question,
+                    answer: card.answer,
+                    example: card.example,
+                    status: 'new',
+                    repetition: 0,
+                    interval: 1,
+                    efactor: 2.5,
+                    nextReviewDate: 0,
+                    version: 1,
+                    updatedAt: new Date().toISOString()
+                };
+                const result = await api.createCard(newCard);
+                if (version !== accountVersion) return;
+                newCard.version = result.version;
+                newCard.updatedAt = result.updatedAt;
+                flashcards.push(newCard);
+                card.saved = true;
+                savedCount++;
+                updateStats();
+            }
+
+            renderAiCardResults();
+            populateAiCategoryDropdown();
+            updateAiSubcategoryOptions();
+            updateOverviewAndSuggestions();
+            populateSubCategoryDropdown();
+            if (currentCategory === 'all' || currentCategory === chosenCat) {
+                filterDeck();
+                currentIndex = Math.max(0, filteredCards.length - savedCount);
+                renderCard();
+            }
+            renderLibraryDecks();
+            setAiCardStatus(`Đã lưu ${aiGeneratedCards.filter(card => card.saved).length} thẻ vào Thư viện.`);
+        } catch (error) {
+            if (version !== accountVersion) return;
+            renderAiCardResults();
+            setAiCardStatus(savedCount
+                ? `Lượt này đã lưu ${savedCount} thẻ. Lỗi khi lưu thẻ tiếp theo: ${error.message || 'Vui lòng thử lại.'} Các thẻ chưa lưu vẫn được giữ lại.`
+                : `Không lưu được thẻ: ${error.message || 'Vui lòng thử lại.'}`, true);
+        } finally {
+            if (version === accountVersion) {
+                saveAiCardsBtn.disabled = false;
+                generateAiCardsBtn.disabled = false;
+            }
+        }
+    }
 
     // DOM Elements - Quiz Tab
     const quizSetupContainer = document.getElementById('quiz-setup-container');
@@ -330,10 +1006,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizSubcategorySelect = document.getElementById('quiz-subcategory');
     const quizModeSelect = document.getElementById('quiz-mode');
     const quizLimitSelect = document.getElementById('quiz-limit');
-    
+
     let quizSubDropdownController = null;
     let gameSubDropdownController = null;
-    
+
     const quizQNum = document.getElementById('quiz-q-num');
     const quizQBar = document.getElementById('quiz-q-bar');
     const quizScoreText = document.getElementById('quiz-score');
@@ -342,16 +1018,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizCardCat = document.getElementById('quiz-card-cat');
     const quizQuestionLabel = document.getElementById('quiz-question-label');
     const quizExitOngoingBtn = document.getElementById('quiz-exit-ongoing-btn');
-    
+
     const quizOptionsGrid = document.getElementById('quiz-options-grid');
     const quizWritePanel = document.getElementById('quiz-write-panel');
     const quizWriteInput = document.getElementById('quiz-write-input');
     const quizWriteSubmitBtn = document.getElementById('quiz-write-submit-btn');
-    
+
     const quizFeedbackBanner = document.getElementById('quiz-feedback-banner');
     const quizFeedbackText = document.getElementById('quiz-feedback-text');
     const quizNextQBtn = document.getElementById('quiz-next-q-btn');
-    
+
     const resScore = document.getElementById('res-score');
     const resPercent = document.getElementById('res-percent');
     const wrongAnswersSection = document.getElementById('wrong-answers-section');
@@ -427,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateStats();
         renderTimetable();
         updateTodayWidget();
-        
+
         // Handle action parameters from notifications
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('action') === 'disable-notifications') {
@@ -459,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     function switchTab(tabId) {
         activeTab = tabId;
-        
+
         navTabs.forEach(tab => {
             if (tab.getAttribute('data-tab') === tabId) {
                 tab.classList.add('active');
@@ -476,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        sidebarCategories.hidden = tabId !== 'flashcards';
+sidebarCategories.hidden = tabId !== 'flashcards';
         document.querySelector('.sidebar [data-tab="flashcards"]').setAttribute('aria-expanded', String(tabId === 'flashcards'));
 
         if (tabId === 'timetable') {
@@ -484,8 +1160,68 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTimetable();
         }
 
+        if (tabId === 'weak-areas') {
+            loadWeakAreas();
+        }
+
         if (tabId === 'flashcards') {
             renderLibraryDecks();
+        }
+    }
+    async function deleteDeckBySubCategory(subName, category) {
+        const cardsToDelete = flashcards.filter(c => c.subCategory === subName && c.category === category);
+        if (cardsToDelete.length === 0) return;
+
+        const version = accountVersion;
+        const confirmed = await window.MindSprintDialogs.confirm(
+            `Bạn có chắc chắn muốn xóa bộ thẻ "${subName}" (${cardsToDelete.length} thẻ) không?\n\nHành động này không thể hoàn tác!`,
+            { title: 'Xóa bộ thẻ', confirmText: `Xóa ${cardsToDelete.length} thẻ` }
+        );
+        if (!confirmed) return;
+        if (version !== accountVersion) return;
+
+        // Lưu lại backup để rollback nếu cần
+        const backupCards = cardsToDelete.map(c => ({ ...c }));
+        const backupIndices = cardsToDelete.map(c => flashcards.indexOf(c));
+
+        // Xóa khỏi mảng local
+        flashcards = flashcards.filter(c => !(c.subCategory === subName && c.category === category));
+        updateStats();
+        filterDeck();
+        renderCard();
+        renderLibraryDecks();
+        populateSubCategoryDropdown();
+        updateOverviewAndSuggestions();
+
+        // Đồng bộ xóa lên server
+        if (MindSprintApi.isLoggedIn()) {
+            let failedCount = 0;
+            for (const card of backupCards) {
+                if (version !== accountVersion) return;
+                try {
+                    await MindSprintApi.deleteCard(card.id, card.version);
+                } catch (err) {
+                    if (version !== accountVersion) return;
+                    if (err.isConflict) {
+                        try {
+                            await MindSprintApi.deleteCard(card.id, err.serverData?.serverVersion);
+                        } catch (e) {
+                            failedCount++;
+                            console.error('Force delete failed for card:', card.id, e);
+                        }
+                    } else if (!navigator.onLine || !err.status) {
+                        offlineQueue.push({ cardId: card.id, version: card.version, type: 'delete' });
+                        saveOfflineQueue();
+                    } else {
+                        failedCount++;
+                        console.error('Delete card failed:', card.id, err);
+                    }
+                }
+            }
+            if (version !== accountVersion) return;
+            if (failedCount > 0) {
+                window.MindSprintDialogs.alert(`Đã xóa ${backupCards.length - failedCount}/${backupCards.length} thẻ. ${failedCount} thẻ gặp lỗi khi đồng bộ.`);
+            }
         }
     }
 
@@ -503,13 +1239,14 @@ document.addEventListener('DOMContentLoaded', () => {
         itDecksGrid.innerHTML = '';
         englishSection.style.display = 'block';
         itSection.style.display = 'block';
-        
+        viewContainer.querySelectorAll('.library-custom-section').forEach(sec => sec.remove());
+
         const oldMsg = viewContainer.querySelector('.no-cards-message');
         if (oldMsg) oldMsg.remove();
 
         // Lọc các thẻ học dựa trên danh mục chính đang hoạt động (english, programming, general, all)
-        let activeCategoryCards = currentCategory === 'all' 
-            ? flashcards 
+        let activeCategoryCards = currentCategory === 'all'
+            ? flashcards
             : flashcards.filter(c => c.category === currentCategory);
 
         // Lọc theo chủ đề chi tiết (subCategory) nếu người dùng chọn cụ thể
@@ -532,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dueSubCategoryGroups = {};
         let newCardsLimit = 20;
         let newCardsSeen = 0;
-        
+
         Object.keys(subCategoryGroups).forEach(subName => {
             const allCardsInSub = subCategoryGroups[subName];
             if (srsToggle.checked) {
@@ -548,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return false;
                     }
                 });
-                
+
                 if (dueCards.length > 0) {
                     dueSubCategoryGroups[subName] = {
                         all: allCardsInSub,
@@ -570,16 +1307,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupData = dueSubCategoryGroups[subName];
             const totalCount = groupData.all.length;
             const dueCount = groupData.due.length;
-            
+
             // Tính toán mức độ thành thạo trung bình của chủ đề đó (số thẻ đã thuộc / tổng số thẻ)
             const knownCnt = groupData.all.filter(c => c.status === 'known').length;
             const masteryPercent = totalCount > 0 ? Math.round((knownCnt / totalCount) * 100) : 0;
-            
+
             // Xác định màu huy hiệu
             const firstCard = groupData.all[0];
             let badgeClass = 'badge-general';
             let badgeText = 'KIẾN THỨC CHUNG';
-            
+
             if (firstCard.category === 'english') {
                 badgeClass = 'badge-english';
                 badgeText = 'TIẾNG ANH';
@@ -590,13 +1327,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const cardDiv = document.createElement('div');
             cardDiv.className = 'deck-card glass-panel' + (masteryPercent >= 80 ? ' ai-glow-border' : '');
-            
+
             // Nội dung mô tả số thẻ học tùy thuộc vào chế độ SRS có đang được bật hay không
-            const cardsInfoText = srsToggle.checked 
+            const cardsInfoText = srsToggle.checked
                 ? `<span style="color: var(--warning-color); font-weight: bold;">${dueCount} thẻ cần ôn lại</span> / ${totalCount} thẻ`
                 : `<span>${totalCount} thẻ học</span>`;
 
             cardDiv.innerHTML = `
+                <button class="deck-delete-btn" title="Xóa bộ thẻ này" aria-label="Xóa bộ thẻ ${subName}"><i class="fas fa-trash-alt"></i></button>
                 <span class="deck-feature-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                 <span class="deck-badge ${badgeClass}">${badgeText}</span>
                 <h4 class="deck-title">${subName}</h4>
@@ -625,11 +1363,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 startQuizForTopic(subName);
             });
 
+            // Xử lý sự kiện click nút xóa bộ thẻ
+            cardDiv.querySelector('.deck-delete-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteDeckBySubCategory(subName, firstCard.category);
+            });
+
             // Phân chia đưa vào đúng Grid tương ứng
             if (firstCard.category === 'english') {
                 englishDecksGrid.appendChild(cardDiv);
-            } else {
+            } else if (firstCard.category === 'programming') {
                 itDecksGrid.appendChild(cardDiv);
+            } else {
+                const catKey = firstCard.category || 'general';
+                let customSec = viewContainer.querySelector(`.library-custom-section[data-category="${catKey}"]`);
+                if (!customSec) {
+                    customSec = document.createElement('div');
+                    customSec.className = 'library-section library-custom-section';
+                    customSec.setAttribute('data-category', catKey);
+                    const catName = getCategoryName(catKey);
+                    customSec.innerHTML = `
+                        <h3 class="library-section-header" style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-step-16); display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: var(--space-step-8); border-radius: var(--border-radius-md); transition: background 0.2s ease;">
+                            <span style="display: flex; align-items: center; gap: var(--space-step-8);">
+                                <i class="fas fa-layer-group" style="color: var(--primary-color); font-size: 1.3rem;"></i> ${catName}
+                            </span>
+                            <i class="fas fa-chevron-down section-toggle-icon" style="transition: transform 0.3s ease; font-size: 1rem; color: var(--text-muted);"></i>
+                        </h3>
+                        <div class="decks-grid"></div>
+                    `;
+                    customSec.querySelector('.library-section-header').addEventListener('click', () => {
+                        customSec.classList.toggle('collapsed');
+                    });
+                    viewContainer.appendChild(customSec);
+                }
+                customSec.querySelector('.decks-grid').appendChild(cardDiv);
             }
         });
 
@@ -641,15 +1408,26 @@ document.addEventListener('DOMContentLoaded', () => {
             itSection.style.display = 'none';
         }
 
-        // Trường hợp cả 2 mục đều trống
-        if (englishDecksGrid.children.length === 0 && itDecksGrid.children.length === 0) {
+        const customSections = viewContainer.querySelectorAll('.library-custom-section');
+        let hasCustomCards = false;
+        customSections.forEach(sec => {
+            const grid = sec.querySelector('.decks-grid');
+            if (!grid || grid.children.length === 0) {
+                sec.style.display = 'none';
+            } else {
+                hasCustomCards = true;
+            }
+        });
+
+        // Trường hợp tất cả các mục đều trống
+        if (englishDecksGrid.children.length === 0 && itDecksGrid.children.length === 0 && !hasCustomCards) {
             englishSection.style.display = 'none';
             itSection.style.display = 'none';
 
             const emptyMsgDiv = document.createElement('div');
             emptyMsgDiv.className = 'no-cards-message glass-panel text-center';
             emptyMsgDiv.style.cssText = 'padding: var(--space-step-48); border-radius: var(--border-radius-lg); width: 100%;';
-            
+
             if (srsToggle.checked) {
                 emptyMsgDiv.innerHTML = `
                     <i class="fas fa-check-circle" style="font-size: 3.5rem; color: var(--success-color); margin-bottom: var(--space-step-20); display: block;"></i>
@@ -669,10 +1447,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openStudyModal(subName) {
         currentSubCategory = subName;
-        
+
         // Gọi lại hàm lọc thẻ học theo chủ đề này
         filterDeck();
-        
+
         const modal = document.getElementById('study-overlay-modal');
         const title = document.getElementById('study-modal-title');
         if (title) title.innerText = `Ôn tập bộ thẻ: ${subName}`;
@@ -681,14 +1459,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startQuizForTopic(subName) {
         switchTab('quiz');
-        
+
         // Chọn danh mục tương ứng
         if (quizCategorySelect) {
             quizCategorySelect.value = currentCategory;
             // Kích hoạt sự kiện thay đổi để cập nhật dropdown chủ đề chi tiết
             quizCategorySelect.dispatchEvent(new Event('change'));
         }
-        
+
         // Gán chủ đề chi tiết tương ứng sau khi DOM nạp các tùy chọn
         setTimeout(() => {
             if (quizSubcategorySelect) {
@@ -701,10 +1479,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // FLASHCARD VIEW - FILTER & RENDER (WITH SPACED REPETITION SRS)
     // ==========================================================================
     function populateSubCategoryDropdown() {
-        const activeCategoryCards = currentCategory === 'all' 
-            ? flashcards 
+        const activeCategoryCards = currentCategory === 'all'
+            ? flashcards
             : flashcards.filter(c => c.category === currentCategory);
-            
+
         const subs = [...new Set(activeCategoryCards
             .map(c => c.subCategory)
             .filter(sub => sub))]
@@ -747,10 +1525,10 @@ document.addEventListener('DOMContentLoaded', () => {
             item.addEventListener('click', () => {
                 const val = item.getAttribute('data-value');
                 currentSubCategory = val;
-                
+
                 // Ẩn menu dropdown
                 document.getElementById('topic-searchable-select').classList.remove('active');
-                
+
                 // Lọc lại thẻ học
                 filterDeck();
             });
@@ -782,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const now = Date.now();
             let newCardsLimit = 20;
             let newCardsSeen = 0;
-            
+
             tempCards = tempCards.filter(card => {
                 if (card.nextReviewDate > 0) {
                     // Thẻ đã được học và đã đến hạn ôn tập
@@ -797,7 +1575,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        
+
         filteredCards = tempCards;
         currentIndex = 0;
         renderCard();
@@ -821,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backCatEl.innerText = "-";
             progressText.innerText = "Thẻ 0 / 0";
             progressBar.style.width = "0%";
-            
+
             btnRemember.style.display = 'none';
             btnForget.style.display = 'none';
             return;
@@ -831,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnForget.style.display = 'inline-flex';
 
         const currentCard = filteredCards[currentIndex];
-        
+
         // Tự động điều chỉnh cỡ chữ nếu text quá dài
         if (currentCard.question.length > 50) {
             questionEl.classList.add('text-long');
@@ -845,12 +1623,29 @@ document.addEventListener('DOMContentLoaded', () => {
             answerEl.classList.remove('text-long');
         }
 
-        questionEl.innerText = currentCard.question;
+        if (window.MindSprintText && typeof window.MindSprintText.markdown === 'function') {
+            questionEl.innerHTML = window.MindSprintText.markdown(currentCard.question || '');
+            answerEl.innerHTML = window.MindSprintText.markdown(currentCard.answer || '');
+            if (currentCard.example) {
+                exampleEl.innerHTML = window.MindSprintText.markdown(currentCard.example);
+                exampleEl.style.display = 'inline-block';
+            } else {
+                exampleEl.innerText = "Không có ví dụ.";
+                exampleEl.style.display = 'none';
+            }
+            if (typeof window.MindSprintText.renderMath === 'function') {
+                window.MindSprintText.renderMath(questionEl);
+                window.MindSprintText.renderMath(answerEl);
+                if (currentCard.example) window.MindSprintText.renderMath(exampleEl);
+            }
+        } else {
+            questionEl.innerText = currentCard.question;
+            answerEl.innerText = currentCard.answer;
+            exampleEl.innerText = currentCard.example || "Không có ví dụ.";
+            exampleEl.style.display = currentCard.example ? 'inline-block' : 'none';
+        }
         const subSuffix = currentCard.subCategory ? ` - ${currentCard.subCategory}` : '';
         frontCatEl.innerText = getCategoryName(currentCard.category) + subSuffix;
-        
-        answerEl.innerText = currentCard.answer;
-        exampleEl.innerText = currentCard.example || "Không có ví dụ.";
         backCatEl.innerText = getCategoryName(currentCard.category) + subSuffix;
 
         progressText.innerText = `Thẻ ${currentIndex + 1} / ${filteredCards.length}`;
@@ -862,29 +1657,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateStats() {
         if (statTotal) statTotal.innerText = flashcards.length;
-        
+
         // Count cards memorized (nextReviewDate > now)
         const now = Date.now();
         const memorized = flashcards.filter(c => c.nextReviewDate > now).length;
         if (statKnown) statKnown.innerText = memorized;
-        
+
         // Cần ôn lại is cards marked as 'review'
         const reviewCount = flashcards.filter(c => c.status === 'review').length;
         if (statReview) statReview.innerText = reviewCount;
-        
+
         // Cập nhật các ô thống kê trực quan trên Trang chủ (Home Tab)
         const homeStreakVal = document.getElementById('home-streak-val');
         const homeAnsweredVal = document.getElementById('home-answered-val');
         const homeAccuracyVal = document.getElementById('home-accuracy-val');
         const homeFavoriteVal = document.getElementById('home-favorite-val');
         const streakStatBox = document.getElementById('streak-stat-box');
-        
+
         const streakCount = parseInt(personalStorage.getItem('study-streak') || '0', 10);
 
         if (homeStreakVal) {
             homeStreakVal.innerText = streakCount + ' Ngày';
         }
-        
+
         // Cập nhật màu sắc và hiệu ứng viền cho ô Streak theo các cột mốc
         if (streakStatBox) {
             streakStatBox.classList.remove('streak-bronze', 'streak-silver', 'streak-gold', 'streak-platinum', 'streak-diamond', 'streak-legendary');
@@ -920,7 +1715,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const subCategories = [...new Set(flashcards.map(c => c.subCategory).filter(s => s))];
             homeFavoriteVal.innerText = subCategories.length + ' Bộ thẻ';
         }
-        
+
         // Đồng bộ hóa với số từ đã ôn tập hôm nay trên tab Tổng quan
         const overviewStudiedToday = document.getElementById('overview-studied-today');
         if (overviewStudiedToday) {
@@ -928,9 +1723,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const reviewed = studyDays.find(day => day.studyDate === today)?.cardsReviewed || 0;
             overviewStudiedToday.innerText = Math.max(studiedToday.size, reviewed) + ' từ';
         }
-        
+
         personalStorage.setItem('flashcards', JSON.stringify(flashcards));
-        
+
         // Cập nhật thống kê Trang chủ và Tổng quan thực tế
         updateOverviewAndSuggestions();
     }
@@ -961,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
         const known = flashcards.filter(c => c.nextReviewDate > now).length;
         const overallMastery = total > 0 ? Math.round((known / total) * 100) : 0;
-        
+
         const overviewScoreEl = document.getElementById('overview-mastery-score');
         if (overviewScoreEl) {
             overviewScoreEl.innerText = `${overallMastery}/100`;
@@ -971,7 +1766,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const needsImprovement = subCategoryList
             .filter(sub => sub.pct < 100)
             .sort((a, b) => a.pct - b.pct)[0];
-        
+
         const improveSubEl = document.getElementById('overview-improve-subject');
         if (improveSubEl) {
             if (needsImprovement) {
@@ -985,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const masteryListEl = document.querySelector('.mastery-list');
         if (masteryListEl) {
             masteryListEl.innerHTML = '';
-            
+
             const catStats = {
                 'english': { total: 0, known: 0, name: 'Tiếng Anh Oxford' },
                 'programming': { total: 0, known: 0, name: 'Lập trình Frontend' },
@@ -1026,7 +1821,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const homeSuggestionsGrid = document.querySelector('.home-suggestions-grid');
         if (homeSuggestionsGrid) {
             homeSuggestionsGrid.innerHTML = '';
-            
+
             const topSubCategories = subCategoryList
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 3);
@@ -1034,10 +1829,10 @@ document.addEventListener('DOMContentLoaded', () => {
             topSubCategories.forEach(sub => {
                 const badgeClass = sub.category === 'english' ? 'badge-english' : (sub.category === 'programming' ? 'badge-cntt' : 'badge-general');
                 const badgeText = sub.category === 'english' ? 'TIẾNG ANH' : (sub.category === 'programming' ? 'LẬP TRÌNH' : 'CHUNG');
-                
+
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'suggestion-card glass-panel' + (sub.pct >= 80 ? ' ai-glow-border' : '');
-                
+
                 cardDiv.innerHTML = `
                     <span class="deck-feature-icon" aria-hidden="true"><i class="fas fa-layer-group"></i></span>
                     <span class="suggestion-badge ${badgeClass}" style="background: var(--bg-secondary); padding: var(--space-step-4) var(--space-step-8); border-radius: 6px; font-weight: 700; font-size: 0.75rem; align-self: flex-start; letter-spacing: 0.5px;">${badgeText}</span>
@@ -1069,14 +1864,174 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ==========================================================================
+    // WEAK AREAS - Điểm yếu cá nhân hóa (Issue #35)
+    // ==========================================================================
+    async function loadWeakAreas() {
+        const statusEl = document.getElementById('weak-areas-status');
+        const listEl = document.getElementById('weak-areas-list');
+        const actionsEl = document.getElementById('weak-areas-actions');
+
+        if (!statusEl || !listEl || !actionsEl) return;
+
+        statusEl.hidden = false;
+        statusEl.innerHTML = `
+            <div class="weak-areas-empty">
+                <i class="fas fa-spinner fa-spin"></i>
+                <h3 id="weak-areas-title">Đang phân tích...</h3>
+                <p id="weak-areas-message">Đang quét lịch sử học tập để tìm điểm yếu.</p>
+            </div>`;
+        listEl.hidden = true;
+        listEl.innerHTML = '';
+        actionsEl.hidden = true;
+
+        try {
+            let result = await api.getWeakAreas();
+
+            if (!result || result.length === 0) {
+                // No cached analysis, trigger new analysis
+                result = await api.analyzeWeakAreas();
+                if (result && result.weakAreas) {
+                    result = result.weakAreas;
+                } else {
+                    result = [];
+                }
+            }
+
+            if (!result || result.length === 0) {
+                statusEl.hidden = false;
+                statusEl.innerHTML = `
+                    <div class="weak-areas-empty">
+                        <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                        <h3>Chưa có điểm yếu rõ rệt</h3>
+                        <p>Bạn đã làm tốt các bài ôn tập! Hãy tiếp tục duy trì thói quen học đều đặn.</p>
+                        <button class="btn btn-secondary" onclick="loadWeakAreas()" style="margin-top: var(--space-step-16);">
+                            <i class="fas fa-sync"></i> Phân tích lại
+                        </button>
+                    </div>`;
+                listEl.hidden = true;
+                actionsEl.hidden = true;
+                return;
+            }
+
+            statusEl.hidden = true;
+            listEl.hidden = false;
+            actionsEl.hidden = false;
+
+            listEl.innerHTML = result.map((area, index) => `
+                <div class="weak-area-card glass-panel" data-category="${area.category}" data-topic="${area.topic}">
+                    <div class="weak-area-header">
+                        <span class="weak-area-category badge-${area.category}">${getCategoryName(area.category)}</span>
+                        <span class="weak-area-accuracy">${Math.round((1 - area.accuracyRate) * 100)}% lỡ</span>
+                    </div>
+                    <h4 class="weak-area-topic">${area.topic}</h4>
+                    <p class="weak-area-reason">${area.reason}</p>
+                    <p class="weak-area-action"><i class="fas fa-lightbulb"></i> ${area.suggestedAction}</p>
+                    <div class="weak-area-meta">
+                        <span>${area.wrongCount}/${area.totalAttempts} lần thử</span>
+                        <span>${Math.round(area.accuracyRate * 100)}% chính xác</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers for practice buttons
+            const practiceBtn = document.getElementById('btn-practice-weak');
+            const createCardsBtn = document.getElementById('btn-create-weak-cards');
+            const analyzeBtn = document.getElementById('btn-analyze-weak-areas');
+
+            if (practiceBtn) {
+                practiceBtn.onclick = () => startWeakAreaPractice(result);
+            }
+            if (createCardsBtn) {
+                createCardsBtn.onclick = () => createWeakAreaCards(result);
+            }
+            if (analyzeBtn) {
+                analyzeBtn.onclick = async () => {
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang phân tích...';
+                    try {
+                        await api.analyzeWeakAreas();
+                        await loadWeakAreas();
+                    } catch (e) {
+                        console.error('Analyze failed:', e);
+                    } finally {
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.innerHTML = '<i class="fas fa-brain"></i> Phân tích lại';
+                    }
+                };
+            }
+        } catch (e) {
+            console.error('Load weak areas failed:', e);
+            statusEl.hidden = false;
+            statusEl.innerHTML = `
+                <div class="weak-areas-empty">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i>
+                    <h3>Không thể tải dữ liệu</h3>
+                    <p>${e.message || 'Vui lòng thử lại sau.'}</p>
+                    <button class="btn btn-secondary" onclick="loadWeakAreas()" style="margin-top: var(--space-step-16);">
+                        <i class="fas fa-sync"></i> Thử lại
+                    </button>
+                </div>`;
+            listEl.hidden = true;
+            actionsEl.hidden = true;
+        }
+    }
+
+    function startWeakAreaPractice(weakAreas) {
+        // Filter flashcards matching weak areas
+        const topics = weakAreas.map(w => w.topic.toLowerCase());
+        const practiceCards = flashcards.filter(c =>
+            topics.some(t => c.question.toLowerCase().includes(t) || c.answer.toLowerCase().includes(t))
+        );
+
+        if (practiceCards.length === 0) {
+            alert('Không tìm thấy thẻ phù hợp với điểm yếu. Hãy thêm thẻ hoặc học thêm từ Sổ tay AI.');
+            return;
+        }
+
+        // Set category filter to first weak area's category
+        currentCategory = weakAreas[0].category;
+        currentSubCategory = 'all';
+        filteredCards = practiceCards;
+        currentIndex = 0;
+
+        // Switch to quiz tab
+        const quizTab = document.querySelector('.sidebar [data-tab="quiz"]');
+        if (quizTab) quizTab.click();
+
+        renderCard();
+        updateStats();
+    }
+
+    function createWeakAreaCards(weakAreas) {
+        // This would integrate with Notebook AI to generate flashcards
+        // For now, show a message guiding user to Notebook AI
+        if (confirm('Tính năng này sẽ mở Sổ tay AI để tạo thẻ ôn tập từ các chủ đề điểm yếu. Bạn muốn tiếp tục?')) {
+            const notebookTab = document.querySelector('.sidebar [data-tab="notebook"]');
+            if (notebookTab) notebookTab.click();
+
+            // Pre-fill the chat with a request to generate flashcards
+            setTimeout(() => {
+                const chatInput = document.getElementById('nb-q');
+                if (chatInput) {
+                    const topics = weakAreas.map(w => w.topic).join(', ');
+                    chatInput.value = `Tạo ${weakAreas.length} thẻ flashcard ôn tập cho các chủ đề: ${topics}. Mỗi thẻ gồm câu hỏi, đáp án và ví dụ.`;
+                    const sendBtn = document.querySelector('[data-act="send"]');
+                    if (sendBtn) sendBtn.click();
+                }
+            }, 500);
+        }
+    }
+
     function getCategoryName(catKey) {
+        if (!catKey) return 'Kiến thức chung';
         const mapping = {
             'english': 'Tiếng Anh',
             'programming': 'Lập trình',
             'general': 'Kiến thức chung',
             'mixed': 'Tổng hợp'
         };
-        return mapping[catKey] || 'Thẻ học';
+        return mapping[catKey] || catKey;
     }
 
     function updateCardFeedbackUI(status) {
@@ -1084,7 +2039,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnForget.style.boxShadow = 'none';
         btnRemember.dataset.selected = 'false';
         btnForget.dataset.selected = 'false';
-        
+
         if (status === 'known') {
             btnRemember.dataset.selected = 'true';
         } else if (status === 'review') {
@@ -1161,7 +2116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('keydown', (e) => {
             if (activeTab === 'quiz' && quizOngoingContainer.style.display !== 'none' && quizMode === 'write') {
-                return; 
+                return;
             }
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT') {
                 return;
@@ -1185,14 +2140,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentCard) {
                 applySpacedRepetition(currentCard.id, 5);
                 updateCardFeedbackUI('known');
-                
+
                 // Ghi nhận số từ đã ôn trong ngày
                 studiedToday.add(currentCard.id);
                 personalStorage.setItem('studied-today', JSON.stringify([...studiedToday]));
                 checkAndUpdateStreak(true); // Tự động cập nhật chuỗi streak
                 updateStats();
             }
-            
+
             setTimeout(() => {
                 // If in SRS mode, card might disappear on filter deck update
                 if (srsToggle.checked) {
@@ -1209,14 +2164,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentCard) {
                 applySpacedRepetition(currentCard.id, 0);
                 updateCardFeedbackUI('review');
-                
+
                 // Ghi nhận số từ đã ôn trong ngày
                 studiedToday.add(currentCard.id);
                 personalStorage.setItem('studied-today', JSON.stringify([...studiedToday]));
                 checkAndUpdateStreak(true); // Tự động cập nhật chuỗi streak
                 updateStats();
             }
-            
+
             setTimeout(() => {
                 if (srsToggle.checked) {
                     filterDeck();
@@ -1275,12 +2230,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tìm kiếm chủ đề thời gian thực (Real-time search)
             if (topicSearchInput) {
                 const removeVietnameseTones = (str) => {
-                    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a"); 
-                    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e"); 
-                    str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i"); 
-                    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o"); 
-                    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u"); 
-                    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y"); 
+                    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a");
+                    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e");
+                    str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i");
+                    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o");
+                    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");
+                    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");
                     str = str.replace(/đ/g,"d");
                     str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
                     str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
@@ -1289,8 +2244,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     str = str.replace(/Ù|Ý|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
                     str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
                     str = str.replace(/Đ/g, "D");
-                    str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, ""); 
-                    str = str.replace(/\u02C6|\u0306|\u031B/g, ""); 
+                    str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
+                    str = str.replace(/\u02C6|\u0306|\u031B/g, "");
                     return str;
                 };
 
@@ -1316,10 +2271,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
+
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('app-theme', newTheme);
-            
+
             const icon = themeToggle.querySelector('i');
             icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         });
@@ -1348,7 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 appContainer.classList.toggle('sidebar-hidden');
                 const isHidden = appContainer.classList.contains('sidebar-hidden');
                 localStorage.setItem('sidebar-hidden', isHidden ? 'true' : 'false');
-                
+
                 const icon = sidebarToggleBtn.querySelector('i');
                 if (icon) {
                     icon.className = isHidden ? 'fas fa-outdent' : 'fas fa-indent';
@@ -1361,11 +2316,34 @@ document.addEventListener('DOMContentLoaded', () => {
         openAddModalBtn.addEventListener('click', () => addModal.classList.add('active'));
         closeAddModalBtn.addEventListener('click', () => addModal.classList.remove('active'));
         cancelAddModalBtn.addEventListener('click', () => addModal.classList.remove('active'));
+        document.getElementById('open-ai-card-modal').addEventListener('click', () => {
+            populateAiCategoryDropdown();
+            if (aiCardSubSearch) aiCardSubSearch.value = '';
+            if (aiCardNewSub) aiCardNewSub.value = '';
+            if (aiCardNewCat) aiCardNewCat.value = '';
+            clearAiCardFile();
+            updateAiSubcategoryOptions();
+            aiCardModal.classList.add('active');
+            aiCardSource.focus();
+        });
+        document.getElementById('close-ai-card-modal').addEventListener('click', () => {
+            clearAiCardFile();
+            aiCardModal.classList.remove('active');
+        });
+        document.getElementById('cancel-ai-card-modal').addEventListener('click', () => {
+            clearAiCardFile();
+            aiCardModal.classList.remove('active');
+        });
+        aiCardForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            await generateAiCards();
+        });
+        saveAiCardsBtn.addEventListener('click', saveAiGeneratedCards);
 
         addCardForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const version = accountVersion;
-            
+
             const category = document.getElementById('new-category').value;
             const question = document.getElementById('new-question').value;
             const answer = document.getElementById('new-answer').value;
@@ -1409,7 +2387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 addCardForm.reset();
                 addModal.classList.remove('active');
                 updateStats();
-                
+
                 if (currentCategory === 'all' || currentCategory === category) {
                     filterDeck();
                     currentIndex = filteredCards.length - 1;
@@ -1417,7 +2395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     window.MindSprintDialogs.alert("Đã thêm thẻ mới thành công! Bạn có thể xem trong mục danh mục tương ứng.");
                 }
-                
+
                 // Sync to server if logged in
                 if (MindSprintApi.isLoggedIn()) {
                     try {
@@ -1435,7 +2413,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             };
-            
+
             await doAdd();
         });
 
@@ -1528,7 +2506,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (title.includes('Cơ sở dữ liệu')) {
                     topicName = 'Cơ sở dữ liệu';
                 }
-                
+
                 // Mở học tập bộ thẻ này
                 openStudyModal(topicName);
             });
@@ -1548,11 +2526,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.style.background = 'var(--primary-glow)';
                 }
             }
-            
+
             radio.addEventListener('change', (e) => {
                 alarmStyle = e.target.value;
                 localStorage.setItem('alarm-style', alarmStyle);
-                
+
                 // Cập nhật giao diện lựa chọn
                 alarmRadios.forEach(r => {
                     const card = r.closest('.alarm-option-card');
@@ -1593,19 +2571,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function openEditCardModal() {
         if (filteredCards.length === 0) return;
         const currentCard = filteredCards[currentIndex];
-        
+
         document.getElementById('edit-category').value = currentCard.category;
         document.getElementById('edit-question').value = currentCard.question;
         document.getElementById('edit-answer').value = currentCard.answer;
         document.getElementById('edit-example').value = currentCard.example || '';
-        
+
         editModal.classList.add('active');
     }
 
     function submitEditCard() {
         if (filteredCards.length === 0) return;
         const currentCard = filteredCards[currentIndex];
-        
+
         const cardIndex = flashcards.findIndex(c => c.id == currentCard.id);
         if (cardIndex === -1) return;
         const version = accountVersion;
@@ -1634,10 +2612,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateStats();
         editModal.classList.remove('active');
-        
+
         let prevIndex = currentIndex;
         filterDeck();
-        
+
         currentIndex = Math.min(prevIndex, filteredCards.length - 1);
         renderCard();
 
@@ -1665,7 +2643,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             {title: 'Thẻ có phiên bản mới', confirmText: 'Giữ bản server', cancelText: 'Ghi đè bản cục bộ', dismissValue: null}
                         );
                         if (version !== accountVersion || userChoice === null) return;
-                        
+
                         if (userChoice) {
                             // Use server version
                             card.category = serverCard.category;
@@ -1710,7 +2688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             };
-            
+
             syncToServer();
         }
 
@@ -1727,13 +2705,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Store for rollback
             const deletedCard = { ...currentCard };
             const deletedIndex = flashcards.findIndex(c => c.id == currentCard.id);
-            
+
             flashcards = flashcards.filter(c => c.id != currentCard.id);
             updateStats();
-            
+
             let prevIndex = currentIndex;
             filterDeck();
-            
+
             if (filteredCards.length > 0) {
                 currentIndex = Math.min(prevIndex, filteredCards.length - 1);
                 renderCard();
@@ -1787,7 +2765,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 };
-                
+
                 syncToServer();
             }
         }
@@ -1888,11 +2866,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (targetMode === 'game') {
                     quizPracticeSection.style.display = 'none';
                     gamePracticeSection.style.display = 'block';
-                    
+
                     quizOngoingContainer.style.display = 'none';
                     quizResultsContainer.style.display = 'none';
                     quizSetupContainer.style.display = 'block';
-                    
+
                     resetGameSetup();
                 }
             });
@@ -1984,7 +2962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quizCurrentIndex = 0;
         quizScore = 0;
         quizWrongAnswers = [];
-        
+
         quizSetupContainer.style.display = 'none';
         quizResultsContainer.style.display = 'none';
         quizOngoingContainer.style.display = 'block';
@@ -1999,7 +2977,7 @@ document.addEventListener('DOMContentLoaded', () => {
         quizWriteInput.value = '';
 
         const currentCard = quizDeck[quizCurrentIndex];
-        
+
         quizQNum.innerText = `Câu hỏi ${quizCurrentIndex + 1} / ${quizDeck.length}`;
         quizQBar.style.width = `${((quizCurrentIndex) / quizDeck.length) * 100}%`;
         quizScoreText.innerText = quizScore;
@@ -2011,7 +2989,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quizQuestionLabel.innerText = "Chọn nghĩa phù hợp cho từ:";
             quizQuestionText.innerText = currentCard.question;
             quizHintText.innerText = currentCard.example ? `Gợi ý: ${currentCard.example}` : '';
-            
+
             quizOptionsGrid.style.display = 'grid';
             quizWritePanel.style.display = 'none';
 
@@ -2019,7 +2997,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             quizQuestionLabel.innerText = "Gõ từ vựng tiếng Anh tương ứng với nghĩa:";
             quizQuestionText.innerText = currentCard.answer;
-            
+
             let hint = '';
             if (currentCard.example) {
                 hint += currentCard.example;
@@ -2088,7 +3066,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quizScore++;
             quizScoreText.innerText = quizScore;
             showQuizFeedback(true, "Chính xác! Làm tốt lắm.");
-            
+
             if (dbCard) {
                 dbCard.status = 'known';
                 dbCard.repetition = (dbCard.repetition || 0) + 1;
@@ -2103,7 +3081,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 correctAnswer: correctVal
             });
             showQuizFeedback(false, `Sai rồi! Đáp án đúng là: ${correctVal}`);
-            
+
             if (dbCard) {
                 dbCard.status = 'review';
                 dbCard.repetition = 0;
@@ -2137,7 +3115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             quizScore++;
             quizScoreText.innerText = quizScore;
             showQuizFeedback(true, "Chính xác! Bạn viết chuẩn rồi.");
-            
+
             if (dbCard) {
                 dbCard.status = 'known';
                 dbCard.repetition = (dbCard.repetition || 0) + 1;
@@ -2151,7 +3129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 correctAnswer: correctVal
             });
             showQuizFeedback(false, `Sai rồi! Từ đúng phải viết là: ${correctVal}`);
-            
+
             if (dbCard) {
                 dbCard.status = 'review';
                 dbCard.repetition = 0;
@@ -2268,10 +3246,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             personalStorage.setItem('timetable-slots', JSON.stringify(timetableSlots));
-            
+
             timetableForm.reset();
             timetableModal.classList.remove('active');
-            
+
             renderTimetable();
             updateTodayWidget();
             editingSlotId = null;
@@ -2301,7 +3279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Queue for offline sync if needed
                 }
             }
-            
+
         });
 
         // Toggle browser notifications settings
@@ -2406,19 +3384,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function openEditTimetableModal(slot) {
         editingSlotId = slot.id;
         timetableModalTitle.innerText = "Chỉnh Sửa Giờ Học";
-        
+
         document.getElementById('slot-day').value = slot.day;
         document.getElementById('slot-start').value = slot.start;
         document.getElementById('slot-end').value = slot.end;
         document.getElementById('slot-category').value = slot.category;
         document.getElementById('slot-note').value = slot.note || '';
-        
+
         timetableModal.classList.add('active');
     }
 
     function updateTodayWidget() {
         const now = new Date();
-        const jsDay = now.getDay(); 
+        const jsDay = now.getDay();
         const currentDay = jsDay === 0 ? 8 : jsDay + 1; // Map Sunday to 8
 
         const hours = String(now.getHours()).padStart(2, '0');
@@ -2480,15 +3458,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function playSyntheticAlarm() {
         if (alarmIntervalId) return; // already ringing
-        
+
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        
+
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
-        
+
         // Ring sound: double beeps every 1 second
         alarmIntervalId = setInterval(() => {
             playBeep(880, 0.12);
@@ -2501,16 +3479,16 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            
+
             osc.type = 'sine';
             osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-            
+
             gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-            
+
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
+
             osc.start();
             osc.stop(audioCtx.currentTime + duration);
         } catch (e) {
@@ -2530,7 +3508,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.MindSprintDialogs.alert('Trình duyệt của bạn không hỗ trợ tính năng thông báo!');
             return;
         }
-        
+
         if (notificationsEnabled) {
             notificationsEnabled = false;
             localStorage.setItem('notifications-enabled', 'false');
@@ -2563,11 +3541,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateNotificationButtonState() {
         if (!('Notification' in window)) return;
-        
+
         const btn = document.getElementById('notification-toggle-btn');
         const span = btn.querySelector('span');
         const icon = btn.querySelector('i');
-        
+
         if (notificationsEnabled && Notification.permission === 'granted') {
             btn.classList.remove('btn-secondary');
             btn.classList.add('btn-primary');
@@ -2587,34 +3565,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkScheduleReminders() {
         if (!notificationsEnabled) return;
-        
+
         const now = new Date();
         const date = now.getDate();
-        
+
         // Reset notified list at start of new day
         if (date !== lastNotificationDay) {
             notifiedSlotsToday.clear();
             lastNotificationDay = date;
         }
-        
+
         const jsDay = now.getDay();
         const currentDay = jsDay === 0 ? 8 : jsDay + 1;
-        
+
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const currentTime = `${hours}:${minutes}`;
-        
+
         const todaySlots = timetableSlots.filter(s => s.day === currentDay);
-        
+
         todaySlots.forEach(slot => {
             // So sánh khoảng thời gian (lớn hơn hoặc bằng giờ bắt đầu và nhỏ hơn giờ kết thúc)
             // Việc này giúp tránh bị hụt thông báo khi điện thoại bị delay/sleep trình duyệt
             if (currentTime >= slot.start && currentTime < slot.end && !notifiedSlotsToday.has(slot.id)) {
                 notifiedSlotsToday.add(slot.id);
-                
+
                 const catName = getCategoryName(slot.category);
                 const noteText = slot.note ? ` - Ghi chú: ${slot.note}` : '';
-                
+
                 // 1. Text Notification
                 if (alarmStyle === 'text' || alarmStyle === 'both') {
                     showNotification('Đến giờ học MindSprintAI rồi!', {
@@ -2627,13 +3605,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         ]
                     });
                 }
-                
+
                 // 2. Sound Alarm Overlay
                 if (alarmStyle === 'sound' || alarmStyle === 'both') {
                     alarmTimeText.innerText = `${slot.start} - ${slot.end}`;
                     alarmTitleText.innerText = catName;
                     alarmNoteText.innerText = slot.note || 'Không có ghi chú';
-                    
+
                     alarmRingOverlay.style.display = 'flex';
                     playSyntheticAlarm();
                 }
@@ -2648,21 +3626,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkAndUpdateStreak(actionTaken) {
         const today = new Date();
         const todayStr = today.toLocaleDateString('en-CA'); // Định dạng YYYY-MM-DD
-        
+
         let lastActiveDate = personalStorage.getItem('last-active-date');
         let streak = parseInt(personalStorage.getItem('study-streak') || '0', 10);
-        
+
         if (!actionTaken) {
             // Kiểm tra khi tải trang xem chuỗi streak có bị đứt hay không
             if (lastActiveDate) {
                 const lastDate = new Date(lastActiveDate);
                 const diffTime = Math.abs(today - lastDate);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
+
                 const yesterday = new Date(today);
                 yesterday.setDate(today.getDate() - 1);
                 const yesterdayStr = yesterday.toLocaleDateString('en-CA');
-                
+
                 // Nếu ngày hoạt động cuối cùng không phải hôm nay và không phải hôm qua -> mất streak
                 if (lastActiveDate !== todayStr && lastActiveDate !== yesterdayStr) {
                     streak = 0;
@@ -2674,17 +3652,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return streak;
         }
-        
+
         // Khi người dùng thực hiện học bài hoặc trả lời quiz:
         if (lastActiveDate === todayStr) {
             // Đã hoạt động hôm nay rồi, không tăng thêm nữa
             return streak;
         }
-        
+
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
         const yesterdayStr = yesterday.toLocaleDateString('en-CA');
-        
+
         if (lastActiveDate === yesterdayStr) {
             // Học liên tục -> Tăng streak
             streak += 1;
@@ -2692,20 +3670,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // Đứt streak hoặc lần đầu học -> Bắt đầu lại mốc 1
             streak = 1;
         }
-        
+
         personalStorage.setItem('study-streak', streak.toString());
         personalStorage.setItem('last-active-date', todayStr);
-        
+
         // Kiểm tra xem có trúng mốc cột mốc nào để chúc mừng không
         checkStreakMilestones(streak);
-        
+
         return streak;
     }
 
     function checkStreakMilestones(streak) {
         // Các cột mốc chúc mừng nổi bật
         const milestones = [30, 50, 100, 200, 300, 365, 400, 500, 600, 700, 800, 900, 1000];
-        
+
         if (milestones.includes(streak)) {
             const celebratedMilestones = JSON.parse(personalStorage.getItem('celebrated-milestones') || '[]');
             if (!celebratedMilestones.includes(streak)) {
@@ -2721,14 +3699,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleEl = document.getElementById('streak-milestone-title');
         const descEl = document.getElementById('streak-milestone-desc');
         const iconEl = document.querySelector('.streak-celebration-icon');
-        
+
         if (!modal) return;
-        
+
         let title = `Mốc Chuỗi ${streak} Ngày!`;
         let desc = `Bạn đã kiên trì học tập liên tiếp ${streak} ngày. MindSprintAI tự hào về sự bền bỉ của bạn!`;
         let color = 'var(--primary-color)'; // Màu mặc định: Tím
         let iconClass = 'fa-fire';
-        
+
         if (streak >= 365) {
             title = `👑 HUYỀN THOẠI 365 NGÀY! 👑`;
             desc = `Không thể tin được! Bạn đã duy trì thói quen học tập ròng rã suốt 1 năm (${streak} ngày) liên tục! Bạn đã trở thành BẬC THẦY VÔ SONG của MindSprintAI!`;
@@ -2760,7 +3738,7 @@ document.addEventListener('DOMContentLoaded', () => {
             color = 'var(--text-secondary)'; // Đồng
             iconClass = 'fa-certificate';
         }
-        
+
         if (titleEl) titleEl.innerText = title;
         if (descEl) descEl.innerText = desc;
         if (iconEl) {
@@ -2768,9 +3746,9 @@ document.addEventListener('DOMContentLoaded', () => {
             iconEl.style.color = color;
             iconEl.style.filter = 'none';
         }
-        
+
         modal.style.display = 'flex';
-        
+
         // Tạo pháo hoa hoa giấy giấy confetti
         triggerConfetti();
     }
@@ -2781,23 +3759,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const confetti = document.createElement('div');
             confetti.className = 'confetti-piece';
             confetti.setAttribute('aria-hidden', 'true');
-            
+
             confetti.style.left = Math.random() * 100 + 'vw';
             confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
             confetti.style.width = Math.random() * 8 + 6 + 'px';
             confetti.style.height = confetti.style.width;
-            
+
             const delay = Math.random() * 1.5;
             const duration = Math.random() * 2 + 1.5;
             confetti.style.animationDelay = delay + 's';
             confetti.style.animationDuration = duration + 's';
-            
+
             if (Math.random() > 0.5) {
                 confetti.style.borderRadius = '50%';
             }
-            
+
             document.body.appendChild(confetti);
-            
+
             setTimeout(() => {
                 confetti.remove();
             }, (delay + duration) * 1000);
@@ -2809,11 +3787,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeStreakModalBtn = document.getElementById('close-streak-modal');
         const streakMilestoneModal = document.getElementById('streak-milestone-modal');
         const streakMilestoneClaimBtn = document.getElementById('streak-milestone-claim-btn');
-        
+
         const closeModal = () => {
             if (streakMilestoneModal) streakMilestoneModal.style.display = 'none';
         };
-        
+
         if (closeStreakModalBtn) {
             closeStreakModalBtn.addEventListener('click', closeModal);
         }
@@ -2856,7 +3834,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Trình giả lập Streak (Dành cho việc kiểm tra cột mốc lập tức)
         const testStreakInput = document.getElementById('test-streak-input');
         const testStreakBtn = document.getElementById('test-streak-btn');
-        
+
         if (testStreakBtn && testStreakInput) {
             testStreakBtn.addEventListener('click', () => {
                 const targetDays = parseInt(testStreakInput.value, 10);
@@ -2864,14 +3842,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.MindSprintDialogs.alert("Vui lòng nhập số ngày hợp lệ!");
                     return;
                 }
-                
+
                 // Cập nhật chuỗi giả lập vào LocalStorage
                 personalStorage.setItem('study-streak', targetDays.toString());
                 personalStorage.setItem('last-active-date', new Date().toLocaleDateString('en-CA'));
-                
+
                 // Đồng bộ và tải lại giao diện
                 updateStats();
-                
+
                 // Bỏ qua điều kiện chặn để kích hoạt modal chúc mừng ngay lập tức
                 celebrateMilestone(targetDays);
             });
@@ -2881,50 +3859,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     // TÍNH NĂNG NHẮC NHỞ HỌC BÙ (MAKEUP STUDY ALERT) CHO IOS & ANDROID
     // ==========================================================================
-    
+
     function checkMakeupStudyAlert() {
         const now = new Date();
         const jsDay = now.getDay();
         const currentDay = jsDay === 0 ? 8 : jsDay + 1; // 2 đến 8 (Thứ 2 đến Chủ nhật)
-        
+
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const currentTime = `${hours}:${minutes}`;
-        
+
         const todayStr = now.toLocaleDateString('en-CA'); // Định dạng YYYY-MM-DD
         const lastCheckedStr = personalStorage.getItem('last-makeup-check-time');
-        
+
         // Lưu thời điểm kiểm tra hiện tại vào localStorage
         personalStorage.setItem('last-makeup-check-time', `${todayStr} ${currentTime}`);
-        
+
         if (!lastCheckedStr) {
             // Lần đầu chạy app hoặc đã bị xóa cache, không kiểm tra học bù
             return;
         }
-        
+
         const parts = lastCheckedStr.split(' ');
         const lastDate = parts[0];
         const lastTime = parts[1];
-        
+
         // Chỉ kiểm tra học bù trong cùng ngày để tránh bị spam dồn lịch cũ
         if (lastDate !== todayStr) {
             return;
         }
-        
+
         // Lấy tất cả lịch học của ngày hôm nay
         const todaySlots = timetableSlots.filter(s => s.day === currentDay);
-        
+
         // Tìm các slot học đã trôi qua trong khoảng thời gian từ lúc tắt app đến lúc mở app
         const missedSlots = todaySlots.filter(slot => {
             // Lịch học đã bắt đầu sau thời điểm kiểm tra cuối và đã kết thúc trước/bằng thời điểm hiện tại
             return slot.end > lastTime && slot.end <= currentTime;
         });
-        
+
         if (missedSlots.length > 0) {
             // Lấy slot học bị lỡ gần nhất để thông báo
             const slot = missedSlots[0];
             const catName = getCategoryName(slot.category);
-            
+
             // Hiện hộp thoại vinh danh học bù sau 1.5 giây để tránh giật lag khi tải trang
             setTimeout(() => {
                 showMakeupModal(catName, slot.start, slot.end);
@@ -2937,11 +3915,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         overlay.style.cssText = 'display: flex; z-index: 3500; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--overlay-color); justify-content: center; align-items: center;';
-        
+
         const content = document.createElement('div');
         content.className = 'modal-content glass-panel text-center';
         content.style.cssText = 'max-width: 420px; padding: var(--space-step-36); border-radius: var(--border-radius-lg); position: relative; margin: auto; border: 1px solid var(--border-color); animation: fadeIn 0.3s ease, slideUp 0.3s ease;';
-        
+
         content.innerHTML = `
             <button class="close-btn" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.4rem; color: var(--text-muted); cursor: pointer;" type="button"><i class="fas fa-times"></i></button>
             <div style="margin-bottom: var(--space-step-20); display: inline-block;">
@@ -2955,14 +3933,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="fas fa-book-reader"></i> Học bù ngay bây giờ
             </button>
         `;
-        
+
         overlay.appendChild(content);
         document.body.appendChild(overlay);
-        
+
         // Đóng nút
         const closeBtn = content.querySelector('.close-btn');
         closeBtn.addEventListener('click', () => overlay.remove());
-        
+
         // Vào học ngay
         const studyBtn = content.querySelector('#makeup-study-now-btn');
         studyBtn.addEventListener('click', () => {
@@ -2991,14 +3969,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (audioCtxGame.state === 'suspended') {
                 audioCtxGame.resume();
             }
-            
+
             const osc = audioCtxGame.createOscillator();
             const gain = audioCtxGame.createGain();
             osc.connect(gain);
             gain.connect(audioCtxGame.destination);
-            
+
             const now = audioCtxGame.currentTime;
-            
+
             if (type === 'click') {
                 osc.frequency.setValueAtTime(600, now);
                 gain.gain.setValueAtTime(0.08, now);
@@ -3047,7 +4025,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameSetupContainer) gameSetupContainer.style.display = 'block';
         if (gameBoardContainer) gameBoardContainer.style.display = 'none';
         if (gameVictoryContainer) gameVictoryContainer.style.display = 'none';
-        
+
         clearInterval(gameTimerInterval);
         gameTimerInterval = null;
         selectedCards = [];
@@ -3060,17 +4038,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame() {
         const category = document.getElementById('game-category').value;
         const subcategory = document.getElementById('game-subcategory').value;
-        
+
         // Lọc thẻ theo Danh mục chính
-        let filtered = category === 'all' 
-            ? [...flashcards] 
+        let filtered = category === 'all'
+            ? [...flashcards]
             : flashcards.filter(c => c.category === category);
-            
+
         // Lọc thêm theo Chủ đề chi tiết (nếu có chọn chủ đề cụ thể)
         if (category !== 'all' && subcategory !== 'all') {
             filtered = filtered.filter(c => c.subCategory === subcategory);
         }
-            
+
         if (filtered.length < 3) {
             window.MindSprintDialogs.alert("Số từ vựng trong chủ đề này quá ít (yêu cầu tối thiểu 3 từ). Vui lòng chọn danh mục/chủ đề khác hoặc thêm thẻ học!");
             return;
@@ -3084,7 +4062,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Tạo mảnh ghép 2 bên (Trái: Từ vựng, Phải: Ý nghĩa)
         let leftItems = [];
         let rightItems = [];
-        
+
         gameDeck.forEach(card => {
             leftItems.push({ id: card.id, text: card.question, type: 'term' });
             rightItems.push({ id: card.id, text: card.answer, type: 'meaning' });
@@ -3097,7 +4075,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Lấy hai cột hiển thị
         const leftGrid = document.getElementById('game-left-grid');
         const rightGrid = document.getElementById('game-right-grid');
-        
+
         leftGrid.innerHTML = '';
         rightGrid.innerHTML = '';
 
@@ -3166,7 +4144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameTime = 0;
         gameMatchesCount = 0;
         selectedCards = [];
-        
+
         const timerVal = document.getElementById('game-timer-val');
         if (timerVal) timerVal.innerText = '0.0';
 
@@ -3202,7 +4180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (card1.item.id === card2.item.id && card1.item.type !== card2.item.type) {
                 // Khớp chính xác!
                 gameMatchesCount++;
-                
+
                 // Gỡ class selected ngay lập tức để không thể nhấp lại
                 card1.element.classList.remove('selected');
                 card2.element.classList.remove('selected');
@@ -3239,12 +4217,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame(isVictory) {
         try {
             clearInterval(gameTimerInterval);
-            
+
             if (isVictory) {
                 try {
                     playSound('victory');
                 } catch(e) {}
-                
+
                 let category = 'all';
                 let subcategory = 'all';
                 try {
@@ -3311,7 +4289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.searchable-select').forEach(el => {
                 if (el !== container) el.classList.remove('active');
             });
-            
+
             container.classList.toggle('active');
             if (container.classList.contains('active')) {
                 dropdown.style.display = 'block';
@@ -3337,12 +4315,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Search options
         if (searchInput) {
             const removeTones = (str) => {
-                str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a"); 
-                str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e"); 
-                str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i"); 
-                str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o"); 
-                str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u"); 
-                str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y"); 
+                str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a");
+                str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e");
+                str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i");
+                str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o");
+                str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");
+                str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");
                 str = str.replace(/đ/g,"d");
                 str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
                 str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
@@ -3351,8 +4329,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 str = str.replace(/Ù|Ý|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
                 str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
                 str = str.replace(/Đ/g, "D");
-                str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, ""); 
-                str = str.replace(/\u02C6|\u0306|\u031B/g, ""); 
+                str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
+                str = str.replace(/\u02C6|\u0306|\u031B/g, "");
                 return str;
             };
 
@@ -3374,20 +4352,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             updateOptions: (optionsList) => {
                 optionsContainer.innerHTML = '';
-                
+
                 // Add "Tất cả chủ đề"
                 const allOpt = document.createElement('div');
                 allOpt.className = 'option-item active';
                 allOpt.style.cssText = 'padding: var(--space-step-8) var(--space-step-16); cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
                 allOpt.innerHTML = `<span>Tất cả chủ đề</span><i class="fas fa-check check-icon" style="color: var(--primary-color); font-size: 0.8rem;"></i>`;
-                
+
                 allOpt.addEventListener('click', () => {
                     optionsContainer.querySelectorAll('.option-item').forEach(el => el.classList.remove('active'));
                     allOpt.classList.add('active');
-                    
+
                     hiddenInput.value = 'all';
                     if (textEl) textEl.innerText = 'Tất cả chủ đề';
-                    
+
                     container.classList.remove('active');
                     dropdown.style.display = 'none';
                     if (onSelectCallback) onSelectCallback('all');
@@ -3400,7 +4378,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     opt.className = 'option-item';
                     opt.style.cssText = 'padding: var(--space-step-8) var(--space-step-16); cursor: pointer; color: var(--text-primary); transition: background 0.2s ease; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem;';
                     opt.innerHTML = `<span>${optVal}</span><i class="fas fa-check check-icon" style="display: none; color: var(--primary-color); font-size: 0.8rem;"></i>`;
-                    
+
                     opt.addEventListener('click', () => {
                         optionsContainer.querySelectorAll('.option-item').forEach(el => {
                             el.classList.remove('active');
@@ -3410,10 +4388,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         opt.classList.add('active');
                         const chk = opt.querySelector('.check-icon');
                         if (chk) chk.style.display = 'inline-block';
-                        
+
                         hiddenInput.value = optVal;
                         if (textEl) textEl.innerText = optVal;
-                        
+
                         container.classList.remove('active');
                         dropdown.style.display = 'none';
                         if (onSelectCallback) onSelectCallback(optVal);
@@ -3547,7 +4525,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupStreakEventListeners(); // Lắng nghe sự kiện chúc mừng & giả lập
         checkMakeupStudyAlert(); // Kiểm tra lịch học bù khi mở ứng dụng
     }
-    
+
     launchApp();
     auth?.onAuthChange(user => loadAccountData(user));
 });
