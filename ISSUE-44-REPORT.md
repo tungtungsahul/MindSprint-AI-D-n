@@ -1,7 +1,8 @@
 # Báo cáo kết quả Issue #44 — [Test][NFR-03] Kiểm thử xác thực, phân quyền và cô lập tài khoản
 
 * **Người thực hiện:** `phandien665-prog`
-* **Nhánh:** `main` (hoặc nhánh feature kiểm thử)
+* **Nhánh:** `dien/issue-44-nfr03-auth-isolation`
+* **Pull Request:** https://github.com/tungtungsahul/MindSprint-AI-D-n/pull/new/dien/issue-44-nfr03-auth-isolation
 * **Ngày kiểm tra:** 28/10/2026
 * **Mức độ ưu tiên:** P0 (Milestone: Sprint 4 - Tuần 4: Kiểm thử, triển khai, đóng gói)
 * **Issue:** https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/44
