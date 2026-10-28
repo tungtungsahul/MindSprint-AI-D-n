@@ -10,7 +10,7 @@ Mỗi ID trong [yêu cầu phi chức năng](non-functional-requirements.md) có
 | --- | --- | --- | --- |
 | [NFR-01: Hiệu năng phản hồi](non-functional-requirements.md#nfr-01) | [#42](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/42) | P1 | Không |
 | [NFR-02: Khả năng chịu tải và giới hạn tài nguyên](non-functional-requirements.md#nfr-02) | [#43](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/43) | P1 | NFR-01 |
-| [NFR-03: Xác thực, phân quyền và cô lập tài khoản](non-functional-requirements.md#nfr-03) | [#44](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/44) | P0 | Không |
+| [NFR-03: Xác thực, phân quyền và cô lập tài khoản](non-functional-requirements.md#nfr-03) | [#44](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/44) | P0 | Không (Đã nghiệm thu ✅) |
 | [NFR-04: An toàn dữ liệu đầu vào và nguồn ngoài](non-functional-requirements.md#nfr-04) | [#45](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/45) | P0 | Không |
 | [NFR-05: Bảo mật cấu hình, truyền tải và quyền riêng tư](non-functional-requirements.md#nfr-05) | [#46](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/46) | P0 | Không |
 | [NFR-06: Khả năng phục hồi khi AI và mạng lỗi](non-functional-requirements.md#nfr-06) | [#47](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/47) | P1 | Không |
