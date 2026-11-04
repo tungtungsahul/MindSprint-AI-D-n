@@ -6,6 +6,11 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Gemini AI](https://img.shields.io/badge/Gemini-AI-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Vercel](https://img.shields.io/badge/Vercel-Frontend%20Live-black?logo=vercel)](https://mindsprint-ai-d-n-frontend.vercel.app/)
+[![Render](https://img.shields.io/badge/Render-Backend%20Live-46E3B7?logo=render)](https://mindsprint-api-zyur.onrender.com)
+
+> 🌐 **Bản triển khai trực tiếp (Live Production):** [https://mindsprint-ai-d-n-frontend.vercel.app/](https://mindsprint-ai-d-n-frontend.vercel.app/)
+> ⚡ **Backend API (Render Cloud):** [https://mindsprint-api-zyur.onrender.com](https://mindsprint-api-zyur.onrender.com)
 
 **MindSprint AI** là ứng dụng web giáo dục giúp sinh viên và người học tự chủ ôn tập hiệu quả hơn. Ứng dụng kết hợp **Flashcards thông minh** (Spaced Repetition), **Sổ tay AI**, **Gia sư AI** và **Kanban quản lý công việc** — tất cả trong một nền tảng duy nhất, hỗ trợ cả online và offline.
 
