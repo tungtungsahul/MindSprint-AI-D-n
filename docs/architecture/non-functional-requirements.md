@@ -35,7 +35,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 ## NFR-01: Hiệu năng phản hồi
 
-**Ưu tiên:** P1. **Trạng thái:** Đề xuất / chưa nghiệm thu. **Thành phần:** API CRUD, frontend, EF Core.
+**Ưu tiên:** P1. **Trạng thái:** Đã nghiệm thu ✅. **Thành phần:** API CRUD, frontend, EF Core.
 
 **Hiện trạng:** API đọc toàn bộ danh sách thẻ/công việc; chưa có báo cáo tải hoặc phân trang.
 
