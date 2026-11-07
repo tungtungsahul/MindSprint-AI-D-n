@@ -64,6 +64,14 @@ public class FlashcardsController(AppDbContext db) : ApiBase
     [HttpPost]
     public async Task<IActionResult> Create(CardDto dto)
     {
+        var externalId = string.IsNullOrWhiteSpace(dto.ExternalId) ? null : dto.ExternalId;
+        if (externalId is not null)
+        {
+            var existing = await db.Flashcards.AsNoTracking()
+                .SingleOrDefaultAsync(f => f.ExternalId == externalId);
+            if (existing is not null) return ExistingCreateResult(existing, dto);
+        }
+
         var card = new Flashcard
         {
             Category = dto.Category, SubCategory = dto.SubCategory, Question = dto.Question,
@@ -71,11 +79,36 @@ public class FlashcardsController(AppDbContext db) : ApiBase
             UpdatedAt = DateTime.UtcNow,
             Version = 1
         };
-        if (!string.IsNullOrWhiteSpace(dto.ExternalId)) card.ExternalId = dto.ExternalId;
+        if (externalId is not null) card.ExternalId = externalId;
         db.Flashcards.Add(card);
-        await db.SaveChangesAsync();
-        return Ok(new { id = card.ExternalId, version = card.Version, updatedAt = card.UpdatedAt });
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateException) when (externalId is not null)
+        {
+            // A concurrent retry can pass the initial lookup before the first insert commits.
+            db.Entry(card).State = EntityState.Detached;
+            var racedExisting = await db.Flashcards.AsNoTracking()
+                .SingleOrDefaultAsync(f => f.ExternalId == externalId);
+            if (racedExisting is null) throw;
+            return ExistingCreateResult(racedExisting, dto);
+        }
+
+        return CreatedCard(card);
     }
+
+    private IActionResult ExistingCreateResult(Flashcard existing, CardDto dto)
+    {
+        if (existing.OwnerId != UserId || !SameCreatePayload(existing, dto))
+            return Conflict(new { message = "Mã thẻ đã được sử dụng cho nội dung khác." });
+
+        return CreatedCard(existing);
+    }
+
+    private static bool SameCreatePayload(Flashcard card, CardDto dto) =>
+        card.Category == dto.Category && card.SubCategory == dto.SubCategory &&
+        card.Question == dto.Question && card.Answer == dto.Answer && card.Example == dto.Example;
+
+    private IActionResult CreatedCard(Flashcard card) =>
+        Ok(new { id = card.ExternalId, version = card.Version, updatedAt = card.UpdatedAt });
 
     [HttpPut("{externalId}")]
     public async Task<IActionResult> Update(string externalId, CardDto dto)

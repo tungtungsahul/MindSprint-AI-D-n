@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using MindSprint.Api.Controllers;
 using MindSprint.Api.Data;
 using MindSprint.Api.Models;
@@ -34,6 +36,63 @@ await using (var seed = new AppDbContext(Options())) {
         new RefreshToken { UserId = 1, Token = "synthetic-revoked", ExpiresAt = DateTime.UtcNow.AddDays(1), IsRevoked = true });
     seed.Flashcards.Add(new Flashcard { OwnerId = 1, ExternalId = "synthetic-card", Question = "Original", Answer = "Answer", Version = 1 });
     await seed.SaveChangesAsync();
+}
+
+await using (var createDb = new AppDbContext(Options()))
+{
+    var dto = new CardDto("nfr06-retry-card", "general", "NFR-06", "Retry me", "Saved once", null, null);
+    var first = await Controller(createDb).Create(dto);
+    var replay = await Controller(createDb).Create(dto);
+    Check(Status(first) == 200 && Status(replay) == 200, "replaying a flashcard create with the same external ID succeeds");
+    Check(Body(first).GetProperty("id").GetString() == Body(replay).GetProperty("id").GetString(), "idempotent replay returns the original card ID");
+    Check(await createDb.Flashcards.CountAsync(f => f.ExternalId == dto.ExternalId) == 1, "idempotent replay stores only one flashcard");
+
+    var changedPayload = dto with { Answer = "Changed after the first request" };
+    Check(Status(await Controller(createDb).Create(changedPayload)) == 409, "reusing an external ID with different content is rejected");
+    Check((await createDb.Flashcards.SingleAsync(f => f.ExternalId == dto.ExternalId)).Answer == dto.Answer, "a conflicting replay does not overwrite the original card");
+
+    Check(Status(await Controller(createDb, 2).Create(dto)) == 409, "another account cannot claim an existing external ID");
+    Check(await createDb.Flashcards.CountAsync(f => f.ExternalId == dto.ExternalId) == 1, "cross-account replay does not disclose or duplicate the original card");
+}
+
+var createGate = new SaveGate();
+await using (var createOne = new AppDbContext(Options(createGate)))
+await using (var createTwo = new AppDbContext(Options(createGate)))
+{
+    var dto = new CardDto("nfr06-concurrent-retry-card", "general", "NFR-06", "Concurrent retry", "Saved once", null, null);
+    var results = await Task.WhenAll(Controller(createOne).Create(dto), Controller(createTwo).Create(dto));
+    Check(results.All(result => Status(result) == 200), "concurrent replays with the same external ID return success");
+    await using var inspectCreates = new AppDbContext(Options());
+    Check(await inspectCreates.Flashcards.CountAsync(f => f.ExternalId == dto.ExternalId) == 1, "concurrent replays persist one flashcard");
+}
+
+var aiFailureConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Gemini:ApiKey"] = "synthetic-test-key",
+    ["Gemini:Model"] = "synthetic-primary",
+    ["Gemini:FallbackModels:0"] = "synthetic-backup",
+    ["Gemini:MaxRetries"] = "0",
+    ["Gemini:RetryDelayMilliseconds"] = "1",
+    ["Gemini:AttemptTimeoutSeconds"] = "1",
+    ["Gemini:TotalTimeoutSeconds"] = "2"
+}).Build();
+var failedGemini = new GeminiService(new HttpClient(new StatusHandler(HttpStatusCode.ServiceUnavailable))
+    { Timeout = Timeout.InfiniteTimeSpan }, aiFailureConfig, new GeminiAvailability(aiFailureConfig),
+    NullLogger<GeminiService>.Instance, new HttpContextAccessor());
+var aiController = new AiController(failedGemini)
+{
+    ControllerContext = new() { HttpContext = new DefaultHttpContext
+    {
+        User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "1")], "check"))
+    } }
+};
+Check(Status(await aiController.Flashcards(new GenerateDto("synthetic source", 3))) == 503, "AI provider outage returns a controlled 503");
+await using (var crudDuringAiFailure = new AppDbContext(Options()))
+{
+    var dto = new CardDto("nfr06-crud-during-ai-outage", "general", "NFR-06", "CRUD still works", "Provider independent", null, null);
+    var result = await Controller(crudDuringAiFailure).Create(dto);
+    Check(Status(result) == 200 && await crudDuringAiFailure.Flashcards.CountAsync(f => f.ExternalId == dto.ExternalId) == 1,
+        "flashcard creation remains available after a Gemini 503");
 }
 
 if (!args.Contains("--cards")) {
@@ -84,7 +143,7 @@ if (!args.Contains("--tokens")) {
             Controller(two).Update("synthetic-card", new(null, "general", null, "Edit B", "Answer", null, 1)));
         Check(results.Select(Status).Order().SequenceEqual(new[] { 200, 409 }), "two updates from the same version return one success and one conflict");
         await using var inspect = new AppDbContext(Options());
-        var card = await inspect.Flashcards.SingleAsync();
+        var card = await inspect.Flashcards.SingleAsync(f => f.ExternalId == "synthetic-card");
         Check(card.Version == 2, "winning update advances the version exactly once");
         var conflict = Body(results.Single(r => Status(r) == 409));
         Check(conflict.GetProperty("serverVersion").GetInt32() == 2 && conflict.GetProperty("serverCard").GetProperty("question").GetString() == card.Question, "conflict includes the actual winning card for the client to reload");
@@ -113,4 +172,10 @@ sealed class SaveGate : SaveChangesInterceptor
         await release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
         return result;
     }
+}
+
+sealed class StatusHandler(HttpStatusCode status) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent("{}") });
 }

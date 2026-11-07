@@ -26,7 +26,7 @@ test('AI cards preview, selection, partial save retry, reload and quota fallback
         const context = await browser.newContext({serviceWorkers:'block', viewport:{width:1440,height:1000}});
         const page = await context.newPage(), base = `http://127.0.0.1:${server.address().port}`;
         const cards = [], errors = [], generated = ['Alpha', 'Beta', 'Gamma'].map(word => ({question:word, answer:word+' definition'}));
-        let saveAttempts = 0, failSecond = true, quota = false, generations = 0;
+        let saveAttempts = 0, failSecond = true, quota = false, generations = 0, lostSaveResponses = 0;
         page.on('pageerror', error => errors.push(error.message));
         await context.route('**/*', async route => {
             const request = route.request(), url = new URL(request.url());
@@ -44,8 +44,19 @@ test('AI cards preview, selection, partial save retry, reload and quota fallback
                     body = quota ? {message:'Synthetic quota',code:'ai_rate_limited',retryAfterSeconds:60} : [...generated,{question:'',answer:'invalid'}];
                 } else if (p === '/api/flashcards' && method === 'POST') {
                     saveAttempts++;
-                    if (failSecond && saveAttempts === 2) {status=503; body={message:'Synthetic save failure'};}
-                    else {body={...request.postDataJSON(),version:1,updatedAt:'2026-10-26T00:00:00Z'}; cards.push(body);}
+                    const cardRequest = request.postDataJSON();
+                    const existing = cards.find(card => card.externalId === cardRequest.externalId);
+                    if (existing) {
+                        body = {id:existing.externalId,version:existing.version,updatedAt:existing.updatedAt};
+                    } else if (failSecond && saveAttempts === 2) {status=503; body={message:'Synthetic save failure'};}
+                    else {
+                        body={...cardRequest,version:1,updatedAt:'2026-10-26T00:00:00Z'};
+                        cards.push(body);
+                    }
+                    if (lostSaveResponses > 0) {
+                        lostSaveResponses--;
+                        return route.abort('failed');
+                    }
                 } else if (p === '/api/flashcards') body = cards;
                 return route.fulfill({status,contentType:'application/json',headers:{'Access-Control-Allow-Origin':base,'Access-Control-Allow-Headers':'authorization,content-type','Access-Control-Allow-Methods':'GET,POST,OPTIONS'},body:JSON.stringify(body)});
             }
@@ -92,6 +103,24 @@ test('AI cards preview, selection, partial save retry, reload and quota fallback
         assert.equal(generations,2);
         assert.equal(cards.length,2,'fallback needs an explicit save');
         assert.equal(await page.locator('#sidebar-user-name').innerText(),'QA','quota must preserve the session');
+
+        quota=false;
+        const beforeLostResponse = cards.length;
+        await page.locator('#ai-card-source').fill('A unique source for lost-response retry verification.');
+        await page.locator('#ai-card-count').fill('3');
+        await page.locator('#generate-ai-cards-btn').click();
+        await page.locator('.ai-card-result').nth(2).waitFor();
+        lostSaveResponses=2; // The initial POST and its alternate-port retry both lose their responses.
+        await page.locator('#save-ai-cards-btn').click();
+        await page.waitForFunction(() => document.querySelector('#ai-card-status').textContent.includes('Không lưu được thẻ'));
+        assert.equal(cards.length-beforeLostResponse,1,'the first request committed before both responses were lost');
+        const committedAlphaId = cards.at(-1).externalId;
+        await page.locator('#save-ai-cards-btn').click();
+        await page.waitForFunction(() => document.querySelector('#ai-card-status').textContent.includes('Đã lưu 3 thẻ'));
+        const afterRetry = cards.slice(beforeLostResponse);
+        assert.equal(afterRetry.length,3,'retry after a committed request must not create a duplicate');
+        assert.equal(afterRetry[0].externalId,committedAlphaId,'retry reuses the committed card ID');
+        assert.equal(afterRetry.filter(card => card.question === 'Alpha').length,1,'the first generated card is present once');
         assert.deepEqual(errors,[]);
         console.log('PASS TC-AI-01/02/03/04/05; browser '+browser.version()+'; HTTP and Gemini synthetic');
     } finally {

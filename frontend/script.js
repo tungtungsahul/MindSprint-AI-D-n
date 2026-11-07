@@ -949,8 +949,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             for (const [index, card] of aiGeneratedCards.entries()) {
                 if (!card.selected || card.saved) continue;
+                card.clientId ||= `ai-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
                 const newCard = {
-                    id: `ai-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+                    id: card.clientId,
                     category: chosenCat,
                     subCategory: chosenSub,
                     question: card.question,
