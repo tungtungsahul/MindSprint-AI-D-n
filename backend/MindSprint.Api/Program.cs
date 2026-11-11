@@ -9,17 +9,22 @@ using MindSprint.Api.Models;
 using MindSprint.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
+cfg["Gemini:ApiKey"] = SecurityConfiguration.GetGeminiApiKey(cfg);
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 var isProduction = builder.Environment.IsProduction();
 
 var connectionString = SecurityConfiguration.GetConnectionString(cfg, isProduction);
 var jwtKey = SecurityConfiguration.GetJwtKey(cfg, isProduction);
 var corsOrigins = SecurityConfiguration.GetCorsOrigins(cfg, isProduction);
 
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(PostgresConnectionString.Normalize(connectionString)));
+builder.Services.AddMindSprintDatabase(cfg, connectionString);
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", timeout: TimeSpan.FromSeconds(3));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -51,7 +56,8 @@ builder.Services.AddScoped<SpacedRepetitionService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<GeminiAvailability>();
-builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = Timeout.InfiniteTimeSpan);
+builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = Timeout.InfiniteTimeSpan)
+    .RedactLoggedHeaders(_ => true);
 builder.Services.AddHttpClient("web", c => c.Timeout = TimeSpan.FromSeconds(15))
     .ConfigurePrimaryHttpMessageHandler(NotebookUrlReader.CreateHandler);
 builder.Services.AddScoped<NotebookAi>();
@@ -99,10 +105,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseExceptionHandler(handler => handler.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new { message = "Máy chủ chưa xử lý được yêu cầu. Hãy thử lại sau.", code = "server_error" });
+    }));
+}
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    await next();
+});
 
-var serveFrontend = SecurityConfiguration.IsSelfHost(cfg);
 string? frontendRoot = null;
-if (serveFrontend)
+if (SecurityConfiguration.IsSelfHost(cfg))
 {
     var candidates = new[]
     {
@@ -110,16 +130,15 @@ if (serveFrontend)
         Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "frontend")),
         Path.Combine(app.Environment.ContentRootPath, "frontend")
     };
-    frontendRoot = candidates.FirstOrDefault(Directory.Exists);
+    frontendRoot = candidates.FirstOrDefault(path => File.Exists(Path.Combine(path, "index.html")));
 }
 
-if (!string.IsNullOrEmpty(frontendRoot))
+if (frontendRoot is not null)
 {
     var fileProvider = new PhysicalFileProvider(frontendRoot);
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
     app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
 }
-
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -127,44 +146,33 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
-
-app.MapGet("/readyz", async (AppDbContext db, CancellationToken ct) =>
+app.MapHealthChecks("/readyz", new HealthCheckOptions
 {
-    try
+    ResponseWriter = (context, report) => context.Response.WriteAsJsonAsync(new
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(TimeSpan.FromSeconds(3));
-        var canConnect = await db.Database.CanConnectAsync(cts.Token);
-        if (canConnect)
-            return Results.Ok(new { status = "ready", database = "connected" });
-        return Results.Json(new { status = "unhealthy", database = "cannot_connect" }, statusCode: 503);
-    }
-    catch
-    {
-        return Results.Json(new { status = "unhealthy", error = "database_unavailable" }, statusCode: 503);
-    }
+        status = report.Status == HealthStatus.Healthy ? "ready" : "unavailable",
+        database = report.Status == HealthStatus.Healthy ? "connected" : "unavailable"
+    }, context.RequestAborted)
 }).AllowAnonymous();
 
-if (!string.IsNullOrEmpty(frontendRoot))
+if (frontendRoot is not null)
 {
     var indexPath = Path.Combine(frontendRoot, "index.html");
-    if (File.Exists(indexPath))
+    app.MapFallback(async context =>
     {
-        app.MapFallback(async context =>
+        var path = context.Request.Path.Value ?? "";
+        if (path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/readyz", StringComparison.OrdinalIgnoreCase) ||
+            path.Split('/').Any(segment => segment.StartsWith('.')))
         {
-            var path = context.Request.Path.Value ?? "";
-            if (path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/readyz", StringComparison.OrdinalIgnoreCase))
-            {
-                context.Response.StatusCode = 404;
-                return;
-            }
-            context.Response.ContentType = "text/html; charset=utf-8";
-            await context.Response.SendFileAsync(indexPath);
-        });
-    }
+            context.Response.StatusCode = 404;
+            return;
+        }
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(indexPath);
+    });
 }
 
 app.Run();

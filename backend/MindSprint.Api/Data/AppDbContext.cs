@@ -3,8 +3,11 @@ using MindSprint.Api.Models;
 
 namespace MindSprint.Api.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext : DbContext
 {
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    protected AppDbContext(DbContextOptions options) : base(options) { }
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Flashcard> Flashcards => Set<Flashcard>();
     public DbSet<CardProgress> CardProgresses => Set<CardProgress>();

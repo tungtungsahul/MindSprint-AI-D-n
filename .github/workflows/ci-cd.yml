@@ -66,6 +66,8 @@ jobs:
             project: backend/KanbanChecks/KanbanChecks.csproj
           - name: seed
             project: backend/SeedChecks/SeedChecks.csproj
+          - name: sql-server
+            project: backend/SqlServerChecks/SqlServerChecks.csproj
           - name: tutor
             project: backend/TutorChecks/TutorChecks.csproj
           - name: url-import

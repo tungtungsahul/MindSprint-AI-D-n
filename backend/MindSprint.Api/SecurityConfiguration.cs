@@ -2,7 +2,23 @@ namespace MindSprint.Api;
 
 public static class SecurityConfiguration
 {
+    public static string GetGeminiApiKey(IConfiguration configuration)
+    {
+        var path = configuration["Gemini:ApiKeyFile"];
+        if (string.IsNullOrWhiteSpace(path)) return configuration["Gemini:ApiKey"] ?? "";
+        try
+        {
+            if (new FileInfo(path).Length > 4096) throw new InvalidOperationException("Gemini secret file is invalid.");
+            return File.ReadAllText(path).Trim();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException("Cannot read Gemini secret file.");
+        }
+    }
+
     public static bool IsSelfHost(IConfiguration configuration) =>
+        configuration.GetValue<bool>("Hosting:ServeFrontend") ||
         configuration.GetValue<bool>("SelfHost") ||
         configuration.GetValue<bool>("ServeFrontend") ||
         string.Equals(Environment.GetEnvironmentVariable("SELF_HOST"), "true", StringComparison.OrdinalIgnoreCase) ||
@@ -14,7 +30,7 @@ public static class SecurityConfiguration
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("ConnectionStrings:Default must be configured.");
         if (isProduction && !IsSelfHost(configuration) && connectionString.Contains("localhost", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Set ConnectionStrings__Default to the production PostgreSQL URL or connection string.");
+            throw new InvalidOperationException("Set ConnectionStrings__Default to the production database connection string.");
         return connectionString;
     }
 
@@ -38,16 +54,11 @@ public static class SecurityConfiguration
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (isSelfHost)
-        {
-            // Self-host serves frontend and API on the same origin (e.g. http://127.0.0.1:8080).
-            // CORS origins are optional; if configured, local HTTP origins are allowed without requiring HTTPS cloud domains.
-            return origins;
-        }
-
-        if (isProduction && origins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
+        if (isProduction && origins.Select(origin => new Uri(origin))
+                .Any(uri => uri.Scheme != "https" && !(isSelfHost && uri.IsLoopback)))
             throw new InvalidOperationException("Cors__AllowedOrigins must use HTTPS origins in Production.");
-        if (isProduction && origins.Length == 0)
+        // A bundled frontend calls the API on its own origin; no cross-origin access is needed.
+        if (isProduction && origins.Length == 0 && !isSelfHost)
             throw new InvalidOperationException("Set Cors__AllowedOrigins to the public frontend origin(s), separated by commas.");
         return origins;
     }

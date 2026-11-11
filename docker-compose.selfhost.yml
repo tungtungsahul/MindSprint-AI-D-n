@@ -37,6 +37,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       SERVE_FRONTEND: "true"
       SELF_HOST: "true"
+      Database__Provider: PostgreSQL
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-mindsprint};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Vui long dat POSTGRES_PASSWORD trong .env.selfhost}"
       Jwt__Key: ${JWT_KEY:?Vui long dat JWT_KEY trong .env.selfhost}
       Jwt__Issuer: "MindSprint"
