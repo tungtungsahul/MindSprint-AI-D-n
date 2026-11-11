@@ -1,3 +1,22 @@
+# Chỉ mục công việc 09–22/11/2026
+
+**Cập nhật kỹ thuật 10/11:** bộ Docker local dùng SQL Server Express 2022, có script
+backup/restore, `/readyz` và restart policy. Xem [runbook](../docs/SELF-HOST-DEMO.md);
+không tự đánh dấu issue/PR hoàn thành từ kết quả chạy local.
+
+Task hiện hành được theo dõi tại [GitHub #92](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/92): 5 issue giữ lại #53/#95/#99/#102/#104 và 15 issue thay thế #105–#119. Xem [kế hoạch hiện tại](plan.md) và [snapshot chỉ triển khai laptop](selfhost-only-2026-11-09.md). Bản phân công trước chỉ để tra cứu lịch sử.
+
+- Sơn: tuần 1 #106/#109; tuần 2 #53/#119.
+- Hùng: tuần 1 #108/#110; tuần 2 #114/#115.
+- Diễn: tuần 1 #107/#113; tuần 2 #116/#117.
+- Linh: tuần 1 #95/#111; tuần 2 #99/#102.
+- Duy: tuần 1 #105; tuần 2 #104.
+- Chiến: tuần 1 #112; tuần 2 #118.
+
+Cập nhật tiến độ trước 20:00 11/11 và 18/11; chốt tuần trước 20:00 15/11 và 22/11, Asia/Saigon. Hạn sớm, reviewer, tiêu chí và phụ thuộc nằm tại từng issue/PR. Việc assign không có nghĩa đã hoàn thành.
+
+---
+
 # Chỉ mục Sprint 3 và checkpoint giữa kỳ
 
 **Bàn giao ngày 26/10/2026:** ba đầu việc còn mở trên milestone Sprint 3 (#17, #20, #58) đã được bổ sung [bộ 46 test case và kết quả ban đầu](../docs/testing/sprint-3-results.md), [UML hiện trạng](../docs/architecture/uml.md) và [đặc tả yêu cầu 0.1](../docs/requirements/software-requirements.md). Xem GitHub Issues để lấy trạng thái đóng mới nhất. #17 thực tế vẫn gắn Sprint 3 trên GitHub, khác lịch điều chỉnh trong kế hoạch. Việc hoàn thành bộ test ban đầu không nghiệm thu thay NFR Sprint 4; FR-23/#36 chưa tìm thấy triển khai tại baseline, xem GAP-01 trong đặc tả.

@@ -1,5 +1,9 @@
 # Kết quả kiểm thử Issue #53 — Dựng gói self-host tái lập từ checkout sạch
 
+> Báo cáo bên dưới ghi cấu hình PostgreSQL tại baseline `15a0e5a`.
+> Baseline self-host laptop hiện hành dùng SQL Server Express 2022 theo issue #105.
+> Lệnh cài đặt, vận hành và sao lưu hiện hành có trong [runbook SQL Server](../SELF-HOST-DEMO.md).
+
 ## Thông tin chung
 - **Issue:** #53 — [Tuần 2][Laptop] Dựng gói self-host tái lập từ checkout sạch
 - **Chủ trì:** tuanlinh0511 (@tuanlinh0511) — reassigned từ minhsonle30122007-png theo yêu cầu ngày 09/11/2026
@@ -164,6 +168,6 @@
 ## Kết luận
 **Pass** — Tất cả 11 tiêu chí chấp nhận của Issue #53 (NFR-12) đã đạt.
 
-**Người chạy:** tuanlinh0511  
-**Thời gian:** Asia/Saigon  
+**Người chạy:** tuanlinh0511\
+**Thời gian:** Asia/Saigon\
 **Theo dõi:** Không có bug liên kết, không cần chạy lại

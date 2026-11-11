@@ -1,3 +1,23 @@
+# Kế hoạch hiện tại — 09–22/11/2026
+
+**Yêu cầu mới ngày 11/11:** người dùng cho phép chia sẻ web qua Internet, giữ SQL Server
+trên laptop và bảo vệ API key/IP gốc. Dùng [HTTPS tunnel tùy chọn](../docs/PUBLIC-ACCESS.md);
+phạm vi localhost của kế hoạch 09/11 được mở rộng theo yêu cầu này.
+
+**Cập nhật kỹ thuật 10/11:** self-host hiện dùng SQL Server Express 2022; backup/restore,
+readiness và tự phục hồi theo [hướng dẫn vận hành](../docs/SELF-HOST-DEMO.md).
+Trạng thái nghiệm thu của thành viên/issue vẫn theo nguồn chính thức bên dưới.
+
+Theo yêu cầu ngày 09/11 sau rà soát phạm vi: chỉ giao công việc triển khai/vận hành server Docker trên laptop, mặc định localhost. Sơn, Hùng, Linh và Diễn mỗi người 4 đầu việc; Duy và Chiến mỗi người 2. Cả 6 người có ít nhất một nhiệm vụ mỗi tuần. Các yêu cầu mở rộng CI/AI/UI ngoài phạm vi đã được rút; không thay cấu hình CI hiện có trong lần lập kế hoạch này.
+
+**Nguồn theo dõi chính thức:** [bảng phân công GitHub #92](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/92). Mỗi task nằm tại issue/PR được liên kết, không nhân đôi checklist ở local.
+
+**Kế hoạch hiện hành:** [chỉ triển khai laptop](selfhost-only-2026-11-09.md). [Phân công ban đầu](assignments-2026-11-09.md) là snapshot lịch sử. Hạn tuần 1: 20:00 15/11/2026; tuần 2: 20:00 22/11/2026, Asia/Saigon; một số task có hạn sớm hơn. Đã xác minh 20 nhiệm vụ với assignee/tuần/hạn và phụ thuộc đang mở; 14 issue cũ đóng not_planned và PR #77 đóng không merge, không ghi là hoàn thành. Xóa vĩnh viễn chưa thực hiện vì công cụ không hỗ trợ/CLI hết phiên. Các issue hoàn thành trước đó giữ nguyên.
+
+Các nội dung giữa kỳ dưới đây được giữ để tra cứu lịch sử; lịch/phân công mới tại #92 có hiệu lực cho đợt 09–22/11 và không thay kết quả lịch sử hoặc tiêu chí nghiệm thu.
+
+---
+
 # Phân công Sprint 3–4 trước kiểm tra giữa kỳ
 
 Tài liệu Issue #11 trước đây: [kế hoạch](issue-11-plan.md), [tiến độ](issue-11-todo.md).

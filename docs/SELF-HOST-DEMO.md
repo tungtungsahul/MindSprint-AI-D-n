@@ -1,162 +1,170 @@
-# Hướng dẫn chạy MindSprint AI Self-Host trên Laptop
+# Vận hành MindSprint trên máy cá nhân
 
-## Mục đích
+Máy Windows chạy Docker Desktop là máy chủ cho giao diện, API và SQL Server Express 2022.
+Mặc định web mở trên máy chủ tại `http://localhost:8080`.
+Theo yêu cầu ngày 11/11/2026, có thể chia sẻ HTTPS qua Cloudflare Tunnel bằng
+`scripts/share.ps1`; xem [truy cập Internet và bảo vệ khóa](PUBLIC-ACCESS.md).
+Không mở cổng router hoặc công khai SQL Server.
+Tên Compose `mindsprint-demo` được giữ để tiếp tục dùng đúng volume hiện tại;
+ứng dụng chạy ở chế độ `Production`, không bật tài khoản đăng nhập demo.
 
-Tài liệu hướng dẫn dựng và chạy gói self-host (frontend + API + PostgreSQL) từ **checkout sạch** trên laptop chủ trì, mặc định truy cập qua `http://127.0.0.1:8080`. Tài liệu phục vụ Issue #53 (NFR-12 - Khả năng bảo trì và triển khai tái lập).
+## Bật và tắt
 
-## Điều kiện tiên quyết
-
-- Docker Desktop đã cài đặt và đang chạy
-- .NET SDK 8.0 (nếu build thủ công không dùng Docker)
-- Node.js 20 (nếu build frontend thủ công)
-- Git đã clone repository về máy
-
-## Cấu trúc tệp liên quan
-
-| Tệp | Mục đích |
-|-----|----------|
-| `Dockerfile.selfhost` | Multi-stage Dockerfile build API + phục vụ frontend tĩnh trên cổng 8080 |
-| `docker-compose.selfhost.yml` | Docker Compose chạy PostgreSQL + web self-host |
-| `.env.selfhost.example` | Mẫu cấu hình môi trường (sao chép thành `.env.selfhost` trước khi chạy) |
-| `scripts/selfhost-up.ps1` | PowerShell: khởi động self-host (build compose, chờ readyz) |
-| `scripts/selfhost-up.sh` | Bash: khởi động self-host (build compose, chờ readyz) |
-| `scripts/selfhost-down.ps1` | PowerShell: dừng container (giữ nguyên volume PostgreSQL) |
-| `scripts/selfhost-down.sh` | Bash: dừng container (giữ nguyên volume PostgreSQL) |
-| `scripts/smoke-selfhost.ps1` | PowerShell: kiểm thử khói (healthz, readyz, frontend, API auth) |
-| `scripts/smoke-selfhost.sh` | Bash: kiểm thử khói (cùng nội dung PS1) |
-| `scripts/backup-postgres.sh` | Bash: sao lưu PostgreSQL với timestamp + checksum (Issue #95) |
-| `scripts/restore-postgres.sh` | Bash: khôi phục backup vào DB test riêng (Issue #102) |
-| `scripts/verify-migration.sh` | Bash: kiểm chứng migration PostgreSQL (Issue #99) |
-| `scripts/verify-volume-persistence.sh` | Bash: kiểm tra giữ dữ liệu khi dừng/tạo lại container (Issue #111) |
-| `backend/MindSprint.Api/Program.cs` | Entry point ASP.NET Core: migration, seed, healthz, readyz, bind PORT |
-| `frontend/build.mjs` | Build frontend, nhúng API_BASE vào runtime-config.js |
-| `backend/MindSprint.Api/Dockerfile` | Dockerfile cho Render (cổng 10000) |
-
-## Bước 1: Chuẩn bị tệp cấu hình
-
-Sao chép tệp mẫu thành tệp thực (không commit `.env.selfhost` lên Git):
+Mở Docker Desktop, đợi Engine sẵn sàng. Tại thư mục gốc dự án, chạy PowerShell:
 
 ```powershell
-# PowerShell
-Copy-Item .env.selfhost.example .env.selfhost
+.\scripts\selfhost.ps1
 ```
 
-```bash
-# Bash
-cp .env.selfhost.example .env.selfhost
-```
+Lần đầu Docker tải image và build ứng dụng. Script tạo `.env.selfhost` với mật khẩu
+database và khóa JWT ngẫu nhiên; file này được Git bỏ qua và không vào Docker image.
+Nếu có Gemini API key trong biến `GEMINI_API_KEY` hoặc cấu hình Development cục bộ,
+script dùng lại key đó cho bản demo; không in key ra terminal.
 
-Chỉnh sửa `.env.selfhost`:
-- `POSTGRES_PASSWORD`: đặt mật khẩu PostgreSQL thật (ít nhất 12 ký tự)
-- `JWT_KEY`: đặt khóa bí mật JWT (ít nhất 32 ký tự, không dùng chuỗi placeholder)
-- `GEMINI_API_KEY`: để trống nếu không dùng tính năng AI live
+- Trên máy chủ: mở `http://localhost:8080`.
+- Tạo tài khoản bằng email/mật khẩu để dùng; đăng nhập Demo bị tắt trong Production.
+- Kết thúc buổi kiểm tra: `.\scripts\selfhost.ps1 -Action Stop`.
+- Xem trạng thái: `.\scripts\selfhost.ps1 -Action Status`.
 
-> **QUAN TRỌNG:** `.env.selfhost` chứa mật khẩu/khoá thật, đã được đưa vào `.gitignore` và `.dockerignore`. Tuyệt đối không commit lên Git.
+Start chờ cả database và web báo healthy, tối đa 240 giây sau khi build.
+Yêu cầu Docker Compose v2 có `up --wait` và `--wait-timeout`.
+Hai container dùng `restart: unless-stopped`: Docker tự khởi động lại khi tiến trình
+kết thúc và khi Docker Engine chạy lại, trừ khi đã chủ động Stop.
+Health check thất bại chỉ đánh dấu unhealthy; Docker Compose không tự restart
+container chỉ vì unhealthy. Web có thể kết nối lại sau khi database hoạt động trở lại.
 
-## Bước 2: Dựng và chạy từ checkout sạch
+Docker Desktop phải đang chạy. Muốn phục vụ sau khi đăng nhập Windows, bật tùy chọn
+khởi động Docker Desktop khi đăng nhập trong ứng dụng Docker. Máy Sleep vẫn ngừng phục vụ;
+restart policy không tự đánh thức máy. Kiểm tra reboot/sleep thực tế do chủ máy thực hiện.
 
-### Sử dụng PowerShell (khuyên dùng trên Windows)
+Lệnh Stop dừng web và database, giữ dữ liệu trong Docker volume `mindsprint-demo_sqlserver-data`.
+Không dùng `docker compose down -v` vì tùy chọn `-v` xóa volume và dữ liệu demo.
+Ở chế độ mặc định, web chỉ phục vụ trên máy chủ; muốn truy cập từ xa phải bật Share.
+Share Stop tắt đường dẫn Internet mà không dừng web/database.
+
+## Dữ liệu và AI
+
+Bộ demo dùng **database riêng**, không tự sao chép tài khoản hoặc sổ tay từ database
+Development, Render hay dự án khác trên máy. Dữ liệu từ vựng được seed khi khởi động.
+Hãy tạo tài khoản và chuẩn bị nội dung trình bày trước giờ kiểm tra.
+
+Volume PostgreSQL cũ `mindsprint-demo_demo-data` được giữ nguyên nếu đã tồn tại.
+SQL Server dùng volume mới; việc chuyển provider không tự chuyển dữ liệu cũ.
+Nếu đang chạy bộ PostgreSQL từ [checkout cũ](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/6422790942ce959494ee9aecbc245706c3ca65a0),
+dùng checkout đó để dừng stack và lưu riêng `.env.selfhost` của PostgreSQL.
+Bản SQL Server dùng cấu hình và volume riêng, cùng cổng `127.0.0.1:8080`.
+
+## Sao lưu và khôi phục SQL Server
+
+Chạy tại thư mục gốc khi database đang hoạt động:
 
 ```powershell
-.\scripts\selfhost-up.ps1
+$backup = .\scripts\selfhost-db.ps1 -Action Backup
+$backup
+.\scripts\selfhost-db.ps1 -Action VerifyRestore -BackupFile $backup.BackupFile
 ```
 
-Script sẽ:
-1. Kiểm tra Docker đã cài đặt
-2. Sao chép `.env.selfhost` từ mẫu nếu chưa có
-3. Build Docker image (`docker compose --build`)
-4. Khởi động PostgreSQL và web self-host
-5. Chờ `/readyz` trả về `"ready"` (tối đa 60 giây)
+Backup dùng `COPY_ONLY, CHECKSUM`, xác minh bằng `RESTORE VERIFYONLY`, rồi xuất file
+`.bak` vào `backups/` trên Windows, kèm SHA256 trong kết quả. Có thể chọn thư mục
+khác bằng `-Directory 'E:\MindSprintBackups'`. Không cần dừng web để tạo backup.
+`VerifyRestore` khôi phục vào database ngẫu nhiên, chạy `DBCC CHECKDB`, đọc các bảng
+MindSprint rồi xóa đúng database thử. Database đang dùng được giữ nguyên.
 
-### Sử dụng Bash (Git Bash, WSL, Linux)
-
-```bash
-./scripts/selfhost-up.sh
-```
-
-## Bước 3: Kiểm thử khói (smoke test)
-
-Sau khi self-host sẵn sàng, chạy smoke test để xác minh các endpoint chính:
+Để phục hồi sử dụng thực tế, giữ lại database khôi phục mới:
 
 ```powershell
-.\scripts\smoke-selfhost.ps1
+$restored = .\scripts\selfhost-db.ps1 -Action Restore -BackupFile $backup.BackupFile
+$restored
 ```
 
-```bash
-./scripts/smoke-selfhost.sh
-```
+Script trả tên `mindsprint_restore_<GUID>`, không ghi đè database hiện hữu.
+Thêm hoặc sửa duy nhất dòng `DATABASE_NAME=<tên Database trong kết quả>` trong
+`.env.selfhost`, rồi chạy `.\scripts\selfhost.ps1` để chuyển web sang database đó.
+Tên chỉ được gồm chữ cái, chữ số và dấu gạch dưới, bắt đầu bằng chữ cái, tối đa 128 ký tự.
+Để quay về database ban đầu, đặt `DATABASE_NAME=mindsprint` rồi chạy Start.
+Sau khi chuyển, Backup tự chọn database đang được cấu hình trong Compose.
 
-Smoke test kiểm tra:
-- `/healthz` trả về 200 (liveness)
-- `/readyz` trả về 200 và database connected (readiness)
-- Trang chủ `/` trả về 200 và chứa nội dung MindSprint
-- Tài nguyên tĩnh `/api.js`, `/style.css` trả về 200
-- Route API không tồn tại trả về 404 (không bị đọa thành HTML index)
-- API `/api/flashcards` yêu cầu Auth trả về 401 (không để lộ dữ liệu)
+`backups/` và `*.bak` được Git bỏ qua, Docker build không đưa các file này vào image.
+Backup chứa dữ liệu tài khoản và nội dung học tập: giữ riêng và sao chép bản cần giữ
+sang ổ đĩa khác. Volume trên cùng Docker Engine không thay thế cho backup ngoài máy.
+Giữ riêng `.env.selfhost`, đặc biệt mật khẩu SQL Server khi dùng lại volume cũ.
 
-## Bước 4: Truy cập ứng dụng
-
-Mở trình duyệt và truy cập:
-
-```
-http://127.0.0.1:8080
-```
-
-- API và frontend chạy cùng origin (cùng cổng 8080)
-- Liveness: `http://127.0.0.1:8080/healthz`
-- Readiness: `http://127.0.0.1:8080/readyz`
-
-## Bước 5: Dừng self-host
-
-Dừng container nhưng **giữ nguyên volume PostgreSQL** để dữ liệu không mất:
+Kiểm chứng backup/restore và đối chiếu dữ liệu trên bản đang chạy (tránh sửa dữ liệu
+đồng thời trong lúc so sánh):
 
 ```powershell
-.\scripts\selfhost-down.ps1
+.\tests\selfhost-db-checks.ps1
 ```
 
-```bash
-./scripts/selfhost-down.sh
+File hỏng bị từ chối; restore lỗi được dọn trong database thử, không dùng `WITH REPLACE`.
+
+Nếu chưa có Gemini key, chạy Start để tạo file `.secrets.selfhost/gemini-api-key`,
+điền khóa vào file đó bằng trình soạn thảo local, rồi chạy lại Start. Không gửi file
+secret hoặc `.env.selfhost` cho người khác hay commit Git.
+
+Khóa Gemini được chuyển tự động từ `.env.selfhost` sang `.secrets.selfhost/gemini-api-key`
+khi chạy Start. Chỉ sửa file secret này để thay khóa, không nhập khóa vào giao diện.
+Docker chỉ gắn file ở chế độ đọc cho backend, không đưa khóa vào environment/image.
+Trên Windows, script giới hạn quyền đọc file secret và `.env.selfhost` cho tài khoản
+đang chạy script và SYSTEM. Người quản trị máy/Docker vẫn có khả năng truy cập secret.
+
+Để đăng nhập Google, tạo OAuth client loại Web application trong Google Cloud Console,
+thêm `http://localhost` và `http://localhost:8080` vào Authorized JavaScript origins.
+Điền Client ID vào dòng `GOOGLE_CLIENT_ID=` trong `.env.selfhost`, rồi chạy lại script Start.
+Mở đúng `http://localhost:8080` để khớp origin Google và danh sách cho phép của backend.
+Luồng popup dùng JavaScript callback nên không cần Authorized redirect URI hoặc Client Secret.
+Khi chia sẻ Internet, Authorized JavaScript origins trên Google cũng cần thêm đúng
+origin HTTPS hiện tại. Client ID là định danh công khai, không phải Gemini API key.
+
+Image demo không cài trình duyệt Chromium. Nhập URL cần chạy JavaScript có thể không
+hoạt động; nên chuẩn bị nguồn văn bản hoặc URL HTML thông thường khi trình bày.
+
+## Phạm vi chạy thử
+
+Trình bày trực tiếp trên máy chủ, giữ máy bật và tránh chế độ Sleep trong buổi kiểm tra.
+Chức năng Gemini cần Internet và gửi nội dung yêu cầu tới dịch vụ AI.
+Chia sẻ web ra Internet chỉ được bật qua script Share theo hướng dẫn riêng.
+
+Web chỉ công bố cổng `8080` trên loopback của máy chủ. SQL Server chỉ có trong mạng
+Docker. Giao diện gọi API cùng origin; chế độ `Hosting:ServeFrontend` không cấp quyền
+CORS cho website khác. Cấu hình Vercel/Render cũ không thay đổi.
+
+## Kiểm tra khi gặp lỗi
+
+```powershell
+docker compose --env-file .env.selfhost -f compose.selfhost.yaml ps
+docker compose --env-file .env.selfhost -f compose.selfhost.yaml logs --tail 80 web
 ```
 
-> **CẢNH BÁO:** Không dùng `docker compose down -v` vì sẽ xóa volume PostgreSQL và mất tất cả dữ liệu. Chỉ dùng `docker compose down` (không có cờ `-v`).
+Nếu cổng 8080 đang được ứng dụng khác sử dụng, dừng ứng dụng đó trước khi chạy demo.
+`/healthz` xác nhận tiến trình web hoạt động (HTTP 200, `status=ok`).
+`/readyz` thực hiện `SELECT 1` vào database: HTTP 200 với `status=ready`, hoặc
+HTTP 503 với `status=unavailable`. Kết nối SQL Server của probe có timeout 2 giây
+và tắt retry kết nối; middleware có timeout 3 giây. Phản hồi không chứa chuỗi kết nối
+hay chi tiết lỗi SQL. Docker health check của web gọi `/readyz` mỗi 10 giây.
 
-## Bước 6: Khởi động lại (dữ liệu giữ nguyên)
+Kiểm tra nhanh toàn bộ đường đi web/API/database (Python 3, không cần cài thư viện):
 
-Volume PostgreSQL (`mindsprint_selfhost_pgdata`) được giữ nguyên khi chỉ dừng/khoi động lại container. Chạy lại `selfhost-up.ps1` hoặc `selfhost-up.sh`, dữ liệu test trước đó vẫn còn.
+```powershell
+python tests/selfhost-smoke.py
+# Có gián đoạn ngắn: dừng/khởi động DB và kết thúc tiến trình web để thử restart.
+python tests/selfhost-smoke.py --recovery
+# Gửi văn bản mẫu tới Gemini; cần Internet, key hợp lệ và quota.
+python tests/selfhost-smoke.py --ai
+# Trình duyệt thật; cần build backend và Chromium/Edge cho Playwright.
+node tests/selfhost-browser.cjs
+```
 
-## Xác minh các tiêu chí NFR-12
+Bài kiểm tra tạo một tài khoản `hosting-check-...@example.com` riêng, thử đăng nhập,
+tạo/đọc/xóa công việc, thẻ tiếng Việt, sổ tay và nguồn văn bản rồi thu hồi phiên đăng nhập.
+Bài này kiểm tra cấu hình/origin Google, không tự đăng nhập tài khoản Google của bạn.
+Mặc định không gọi Gemini hoặc ngắt container; hai thao tác này cần cờ tương ứng.
+`--recovery` luôn thử khởi động lại DB trong `finally` và kiểm tra dữ liệu còn sau phục hồi.
+Kiểm tra trình duyệt tạo tài khoản `hosting-browser-...@example.com` riêng.
+Nếu chỉ có Edge, đặt biến môi trường `TUTOR_BROWSER` thành đường dẫn `msedge.exe`.
+Đăng nhập Google và chấp thuận tài khoản thật vẫn cần kiểm tra thủ công.
 
-| Tiêu chí | Cách xác minh |
-|----------|--------------|
-| dotnet build Release từ checkout sạch | `dotnet build backend/MindSprint.Api/MindSprint.Api.csproj -c Release` |
-| npm run build từ checkout sạch | `npm run build` trong thư mục `frontend/` |
-| API_BASE được nhúng đúng, không chứa secret | Kiểm tra `frontend/dist/runtime-config.js` có `apiBase`, không có API key/JWT |
-| Migration chạy trên DB rỗng | `docker compose exec db psql -U postgres -d mindsprint -c "\dt"` sau khi up |
-| Restart không seed trùng | Chạy `selfhost-up` hai lần, số hàng thẻ hệ thống không thay đổi |
-| Image bind PORT và /healthz trả 200 | `curl -sf http://127.0.0.1:8080/healthz` |
-| Hồi quy API/session/Kanban/URL/tutor | Chạy `scripts/smoke-selfhost.ps1` và các test harness trong `backend/*Checks/` |
-
-## Xử lý sự cố
-
-| Lỗi | Nguyên nhân có thể | Cách khắc phục |
-|-----|-------------------|----------------|
-| `/readyz` không sẵn sàng sau 60s | PostgreSQL chưa khởi động xong | Chờ thêm, hoặc chạy `docker compose -f docker-compose.selfhost.yml logs db` |
-| `/healthz` trả 503 | Database không kết nối được | Kiểm tra `POSTGRES_PASSWORD` trong `.env.selfhost` khớp với compose |
-| Frontend không tải | `SERVE_FRONTEND` không đúng | Kiểm tra `.env.selfhost` có `SERVE_FRONTEND=true` |
-| Build Docker thất bại | Không có Docker hoặc lỗi mạng | Cài Docker Desktop, kiểm tra kết nối internet để pull image |
-
-## Liên kết issue
-
-- [Issue #53 — Dựng gói self-host tái lập từ checkout sạch](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/53)
-- [Issue #99 — Kiểm chứng migration PostgreSQL](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/99)
-- [Issue #95 — Sao lưu PostgreSQL](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/95)
-- [Issue #102 — Khôi phục backup](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/102)
-- [Issue #111 — Giữ dữ liệu khi dừng container](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/111)
-
-## Người chịu trách nhiệm
-
-Chủ trì: tuanlinh0511 (@tuanlinh0511) — reassigned từ minhsonle30122007-png theo yêu cầu ngày 09/11/2026
-
-Reviewer: mchihihaha
-
-Hạn bàn giao: 20:00 19/11/2026 (Asia/Saigon)
+Tham khảo: [backup/restore SQL Server container](https://learn.microsoft.com/sql/linux/migrate/tutorial-restore-backup-sql-server-container),
+[Docker restart policy](https://docs.docker.com/reference/compose-file/services/#restart),
+[ASP.NET Core health checks](https://learn.microsoft.com/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-8.0),
+[SQL Client reconnect](https://learn.microsoft.com/dotnet/api/microsoft.data.sqlclient.sqlconnectionstringbuilder.connectretrycount).
