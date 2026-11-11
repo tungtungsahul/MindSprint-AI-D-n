@@ -66,6 +66,12 @@ try {
         return
     }
     if ($Action -eq 'Start') {
+        $configJson = & docker @composeArgs config --format json
+        if ($LASTEXITCODE -ne 0) { throw 'Cau hinh Docker khong hop le.' }
+        $databaseName = [string](($configJson -join "`n" | ConvertFrom-Json).services.db.environment.MINDSPRINT_DATABASE)
+        if ($databaseName -cnotmatch '^[A-Za-z][A-Za-z0-9_]{0,127}$') {
+            throw 'DATABASE_NAME chi duoc gom chu cai, chu so va dau gach duoi, bat dau bang chu cai.'
+        }
         $secretDirectory = Join-Path $projectRoot '.secrets.selfhost'
         $secretPath = Join-Path $secretDirectory 'gemini-api-key'
         $null = [System.IO.Directory]::CreateDirectory($secretDirectory)
@@ -85,12 +91,6 @@ try {
         # Migrate the key out of .env only after its private secret file is written.
         [System.IO.File]::WriteAllLines($envPath, @($envLines | Where-Object { $_ -notmatch '^GEMINI_API_KEY=' }), (New-Object System.Text.UTF8Encoding($false)))
         Protect-SecretPath $envPath
-        $configJson = & docker @composeArgs config --format json
-        if ($LASTEXITCODE -ne 0) { throw 'Cau hinh Docker khong hop le.' }
-        $databaseName = [string](($configJson -join "`n" | ConvertFrom-Json).services.db.environment.MINDSPRINT_DATABASE)
-        if ($databaseName -cnotmatch '^[A-Za-z][A-Za-z0-9_]{0,127}$') {
-            throw 'DATABASE_NAME chi duoc gom chu cai, chu so va dau gach duoi, bat dau bang chu cai.'
-        }
         & docker @composeArgs up -d --build --wait --wait-timeout 240 db web
         if ($LASTEXITCODE -ne 0) { throw 'Khoi dong that bai. Kiem tra loi Docker phia tren.' }
         $health = Invoke-RestMethod 'http://127.0.0.1:8080/readyz' -TimeoutSec 6

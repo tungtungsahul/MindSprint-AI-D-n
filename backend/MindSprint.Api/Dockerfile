@@ -10,6 +10,7 @@ RUN dotnet publish MindSprint.Api.csproj --configuration Release --no-restore --
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=10000
+ENV Database__Provider=PostgreSQL
 EXPOSE 10000
 COPY --from=build /app/publish ./
 ENTRYPOINT ["dotnet", "MindSprint.Api.dll"]

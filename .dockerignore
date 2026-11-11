@@ -10,6 +10,15 @@
 **/node_modules/
 **/dist/
 **/.env*
+**/.git
+**/.vscode/
+**/.idea/
+**/.venv/
+**/artifacts/
+**/*.db
+**/*.mdf
+**/*.ldf
+**/*.log
 .secrets.selfhost/
 **/appsettings.Development.json
 frontend/design-reference/

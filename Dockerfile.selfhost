@@ -14,8 +14,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 ENV ASPNETCORE_HTTP_PORTS=8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV Hosting__ServeFrontend=true
 COPY --from=build /app/publish ./
 COPY --from=frontend /src/frontend/dist ./wwwroot
 USER app
 EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl --fail --silent --show-error http://127.0.0.1:8080/healthz || exit 1
 ENTRYPOINT ["dotnet", "MindSprint.Api.dll"]
