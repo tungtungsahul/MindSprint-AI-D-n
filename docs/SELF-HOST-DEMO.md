@@ -50,9 +50,9 @@ Hãy tạo tài khoản và chuẩn bị nội dung trình bày trước giờ k
 
 Volume PostgreSQL cũ `mindsprint-demo_demo-data` được giữ nguyên nếu đã tồn tại.
 SQL Server dùng volume mới; việc chuyển provider không tự chuyển dữ liệu cũ.
-Nếu đang dùng `docker-compose.selfhost.yml` với PostgreSQL, dừng bản cũ và lưu
-riêng `.env.selfhost` trước khi chạy script SQL Server lần đầu. Hai cấu hình
-dùng biến mật khẩu và volume riêng nhưng cùng bind cổng `127.0.0.1:8080`.
+Nếu đang chạy bộ PostgreSQL từ [checkout cũ](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/6422790942ce959494ee9aecbc245706c3ca65a0),
+dùng checkout đó để dừng stack và lưu riêng `.env.selfhost` của PostgreSQL.
+Bản SQL Server dùng cấu hình và volume riêng, cùng cổng `127.0.0.1:8080`.
 
 ## Sao lưu và khôi phục SQL Server
 

@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
@@ -120,59 +119,22 @@ app.Use(async (context, next) =>
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     await next();
 });
-
-string? frontendRoot = null;
-if (SecurityConfiguration.IsSelfHost(cfg))
+if (cfg.GetValue<bool>("Hosting:ServeFrontend"))
 {
-    var candidates = new[]
-    {
-        Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
-        Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "frontend")),
-        Path.Combine(app.Environment.ContentRootPath, "frontend")
-    };
-    frontendRoot = candidates.FirstOrDefault(path => File.Exists(Path.Combine(path, "index.html")));
-}
-
-if (frontendRoot is not null)
-{
-    var fileProvider = new PhysicalFileProvider(frontendRoot);
-    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
 }
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
-
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapHealthChecks("/readyz", new HealthCheckOptions
 {
     ResponseWriter = (context, report) => context.Response.WriteAsJsonAsync(new
     {
-        status = report.Status == HealthStatus.Healthy ? "ready" : "unavailable",
-        database = report.Status == HealthStatus.Healthy ? "connected" : "unavailable"
+        status = report.Status == HealthStatus.Healthy ? "ready" : "unavailable"
     }, context.RequestAborted)
 }).AllowAnonymous();
-
-if (frontendRoot is not null)
-{
-    var indexPath = Path.Combine(frontendRoot, "index.html");
-    app.MapFallback(async context =>
-    {
-        var path = context.Request.Path.Value ?? "";
-        if (path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/healthz", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("/readyz", StringComparison.OrdinalIgnoreCase) ||
-            path.Split('/').Any(segment => segment.StartsWith('.')))
-        {
-            context.Response.StatusCode = 404;
-            return;
-        }
-        context.Response.ContentType = "text/html; charset=utf-8";
-        await context.Response.SendFileAsync(indexPath);
-    });
-}
-
 app.Run();
