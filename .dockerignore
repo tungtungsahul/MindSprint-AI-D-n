@@ -1,0 +1,16 @@
+**
+!Dockerfile.selfhost
+!frontend/
+!frontend/**
+!backend/
+!backend/MindSprint.Api/
+!backend/MindSprint.Api/**
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.env*
+.secrets.selfhost/
+**/appsettings.Development.json
+frontend/design-reference/
+frontend/.vercel/

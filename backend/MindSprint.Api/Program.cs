@@ -9,16 +9,21 @@ using MindSprint.Api.Models;
 using MindSprint.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
+cfg["Gemini:ApiKey"] = SecurityConfiguration.GetGeminiApiKey(cfg);
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 var isProduction = builder.Environment.IsProduction();
 
 var connectionString = SecurityConfiguration.GetConnectionString(cfg, isProduction);
 var jwtKey = SecurityConfiguration.GetJwtKey(cfg, isProduction);
 var corsOrigins = SecurityConfiguration.GetCorsOrigins(cfg, isProduction);
 
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(PostgresConnectionString.Normalize(connectionString)));
+builder.Services.AddMindSprintDatabase(cfg, connectionString);
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", timeout: TimeSpan.FromSeconds(3));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -50,7 +55,8 @@ builder.Services.AddScoped<SpacedRepetitionService>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<GeminiAvailability>();
-builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = Timeout.InfiniteTimeSpan);
+builder.Services.AddHttpClient<GeminiService>(c => c.Timeout = Timeout.InfiniteTimeSpan)
+    .RedactLoggedHeaders(_ => true);
 builder.Services.AddHttpClient("web", c => c.Timeout = TimeSpan.FromSeconds(15))
     .ConfigurePrimaryHttpMessageHandler(NotebookUrlReader.CreateHandler);
 builder.Services.AddScoped<NotebookAi>();
@@ -98,10 +104,37 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseExceptionHandler(handler => handler.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new { message = "Máy chủ chưa xử lý được yêu cầu. Hãy thử lại sau.", code = "server_error" });
+    }));
+}
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    await next();
+});
+if (cfg.GetValue<bool>("Hosting:ServeFrontend"))
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+app.MapHealthChecks("/readyz", new HealthCheckOptions
+{
+    ResponseWriter = (context, report) => context.Response.WriteAsJsonAsync(new
+    {
+        status = report.Status == HealthStatus.Healthy ? "ready" : "unavailable"
+    }, context.RequestAborted)
+}).AllowAnonymous();
 app.Run();

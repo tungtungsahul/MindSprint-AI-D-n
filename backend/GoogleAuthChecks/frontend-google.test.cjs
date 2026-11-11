@@ -23,7 +23,10 @@ test('Google configuration/challenge are public and credentials are exchanged fo
     const {api, auth, storage} = harness(async (url, options) => {
         calls.push({url, options});
         if (url.endsWith('/config')) return reply(200, {enabled: true, clientId: 'public-client'});
-        if (url.endsWith('/challenge')) return reply(200, {nonce: 'one-use-nonce'});
+        // Same-origin GET has no Origin header; the Google endpoints reject it.
+        if (url.endsWith('/challenge')) return options.method === 'POST'
+            ? reply(200, {nonce: 'one-use-nonce'})
+            : reply(403, {code: 'google_origin_not_allowed', message: 'Missing browser Origin.'});
         if (url.endsWith('/google')) return reply(200, session(1));
         return reply(200, []);
     });

@@ -14,6 +14,13 @@ packages/
 TestResults/
 
 # Local DB / app settings
+.env.selfhost
+.secrets.selfhost/
+.public.selfhost.json
+.public.alias.selfhost.json
+sites/mindsprint-gateway/
+backups/
+*.bak
 appsettings.Development.json
 *.db
 *.db-shm

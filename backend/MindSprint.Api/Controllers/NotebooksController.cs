@@ -229,7 +229,7 @@ public class NotebooksController(AppDbContext db, NotebookAi ai, IHttpClientFact
         catch (GeminiUnavailableException ex)
         { return new ObjectResult(new { message = ex.Message, code = ex.Code, retryAfterSeconds = ex.RetryAfterSeconds }) { StatusCode = ex.StatusCode }; }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or System.Text.Json.JsonException or ArgumentException or TaskCanceledException)
-        { return new ObjectResult(new { message = "AI gặp lỗi: " + ex.Message }) { StatusCode = 502 }; }
+        { return new ObjectResult(new { message = "AI chưa xử lý được yêu cầu. Hãy thử lại sau.", code = "ai_error" }) { StatusCode = 502 }; }
     }
     private Task<IActionResult> Guard<T>(Func<Task<T>> work) => GuardImpl(work);
 

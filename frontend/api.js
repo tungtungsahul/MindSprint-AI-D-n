@@ -162,7 +162,7 @@
         getApiBase: () => API_BASE,
         login: (email, password) => authenticate('/api/auth/login', { email, password }),
         googleConfig: () => request('/api/auth/google/config', { auth: false }),
-        googleChallenge: () => request('/api/auth/google/challenge', { auth: false }),
+        googleChallenge: () => request('/api/auth/google/challenge', { method: 'POST', auth: false }),
         googleLogin: (credential, nonce, existingPassword) => authenticate('/api/auth/google', { credential, nonce, existingPassword }),
         demoLogin: () => authenticate('/api/auth/demo', {}),
         register: (email, password, displayName) => authenticate('/api/auth/register', { email, password, displayName }),

@@ -1,0 +1,67 @@
+name: mindsprint-demo
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express
+      MINDSPRINT_DATABASE: ${DATABASE_NAME:-mindsprint}
+      MSSQL_SA_PASSWORD: "Ms1!${DB_PASSWORD:?Run scripts/selfhost.ps1 first}"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q 'SELECT 1' -o /dev/null"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 30
+
+  web:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile.selfhost
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Hosting__ServeFrontend: "true"
+      Database__Provider: SqlServer
+      ConnectionStrings__Default: "Server=db,1433;Database=${DATABASE_NAME:-mindsprint};User ID=sa;Password=Ms1!${DB_PASSWORD:?Run scripts/selfhost.ps1 first};Encrypt=True;TrustServerCertificate=True"
+      Jwt__Key: ${JWT_KEY:?Run scripts/selfhost.ps1 first}
+      Gemini__ApiKeyFile: /run/secrets/gemini_api_key
+      Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Google__AllowedOrigins__0: "http://localhost:8080"
+      Google__AllowedOrigins__1: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      Google__AllowedOrigins__2: ${PUBLIC_ALIAS_ORIGIN:-http://localhost:8080}
+    secrets:
+      - gemini_api_key
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "5", "http://127.0.0.1:8080/readyz"]
+      interval: 10s
+      timeout: 6s
+      start_period: 30s
+      retries: 3
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.7
+    profiles: [public]
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--protocol", "http2", "--url", "http://web:8080"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      web:
+        condition: service_healthy
+
+secrets:
+  gemini_api_key:
+    file: ./.secrets.selfhost/gemini-api-key
+
+volumes:
+  sqlserver-data:

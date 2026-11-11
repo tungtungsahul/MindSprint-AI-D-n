@@ -2,6 +2,9 @@
 
 **Trạng thái:** Ghi nhận cấu hình hiện có tại main/9ba7acd, chưa xác nhận production. **Ngày:** 12/10/2026.
 
+**Cập nhật 09/11/2026:** cấu hình mặc định/local chuyển sang SQL Server theo
+[ADR-006](0006-sql-server-default.md); Render hiện có vẫn chọn PostgreSQL rõ ràng.
+
 ## Bối cảnh
 
 main dùng Npgsql và migration InitialCreate_PostgreSQL. Render Blueprint khai báo PostgreSQL + Docker API; Vercel phục vụ frontend tĩnh. Workspace c5e1400 còn provider/migrations SQL Server. FastAPI mặc định SQLite chạy riêng.
