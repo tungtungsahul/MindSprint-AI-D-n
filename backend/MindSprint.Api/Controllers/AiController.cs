@@ -80,7 +80,7 @@ public class AiController(GeminiService gemini) : ApiBase
         var clean = CleanExtractedText(Trim(dto.Text));
         try { return Ok(await gemini.GenerateFlashcardsAsync(clean, Math.Clamp(dto.Count, 1, 100))); }
         catch (GeminiUnavailableException ex) { return AiError(ex); }
-        catch (Exception ex) { return StatusCode(502, new { message = "Gemini lỗi: " + ex.Message }); }
+        catch (Exception) { return StatusCode(502, new { message = "AI chưa xử lý được yêu cầu. Hãy thử lại sau.", code = "ai_error" }); }
     }
 
     [HttpPost("quiz")]
@@ -90,7 +90,7 @@ public class AiController(GeminiService gemini) : ApiBase
         var clean = CleanExtractedText(Trim(dto.Text));
         try { return Ok(await gemini.GenerateQuizAsync(clean, Math.Clamp(dto.Count, 1, 100))); }
         catch (GeminiUnavailableException ex) { return AiError(ex); }
-        catch (Exception ex) { return StatusCode(502, new { message = "Gemini lỗi: " + ex.Message }); }
+        catch (Exception) { return StatusCode(502, new { message = "AI chưa xử lý được yêu cầu. Hãy thử lại sau.", code = "ai_error" }); }
     }
 
     private IActionResult AiError(GeminiUnavailableException ex) => StatusCode(ex.StatusCode,

@@ -48,7 +48,7 @@ public class GoogleAuthController(IConfiguration configuration, IHostEnvironment
         return Ok(new { enabled = !string.IsNullOrEmpty(clientId), clientId = clientId ?? "" });
     }
 
-    [HttpGet("challenge"), EnableRateLimiting("google-auth")]
+    [HttpGet("challenge"), HttpPost("challenge"), EnableRateLimiting("google-auth")]
     public IActionResult CreateChallenge()
     {
         Response.Headers.CacheControl = "no-store";

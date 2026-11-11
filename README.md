@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/badge/Release-v0.2.0-brightgreen.svg)](RELEASE-0.2.md)
 [![Build](https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/tungtungsahul/MindSprint-AI-D-n/actions)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![SQL Server](https://img.shields.io/badge/Database-SQL_Server-CC2927)](docs/SQL-SERVER.md)
 [![Gemini AI](https://img.shields.io/badge/Gemini-AI-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Vercel](https://img.shields.io/badge/Vercel-Frontend%20Live-black?logo=vercel)](https://mindsprint-ai-d-n-frontend.vercel.app/)
@@ -14,7 +14,7 @@
 
 Giao diện Study Cockpit (nền kem/xanh chanh) đã được tích hợp vào frontend chức năng
 HTML/CSS/JS hiện có. Đăng nhập, flashcard/SRS, Sổ tay/Gia sư AI, giọng nói, Kanban
-và thống kê tiếp tục dùng API ASP.NET Core/PostgreSQL. Chạy frontend ở cổng 5500
+và thống kê dùng API ASP.NET Core, mặc định kết nối SQL Server. Chạy frontend ở cổng 5500
 theo hướng dẫn bên dưới; không cần server Node/Vite riêng.
 
 Phần việc Đình Hùng: [báo cáo #16/#37 và NFR #45/#51/#54](docs/HUNG-ISSUES-REPORT.md), [bàn giao hiện tại](docs/AI_HANDOFF.md). Sổ tay có nhập tiếng Việt bằng giọng nói, sửa trước khi gửi và tùy chọn đọc/dừng trả lời; luôn giữ bàn phím.
@@ -61,7 +61,7 @@ Xem [hướng dẫn nguồn ảnh/PDF](backend/TutorChecks/OCR.md) để biết 
 |-----|-----------|
 | **Frontend** | HTML / CSS / JavaScript (Fetch API) |
 | **Backend** | C# ASP.NET Core 8 Web API |
-| **Database** | PostgreSQL (EF Core Code First) |
+| **Database** | SQL Server (EF Core Code First); Render cũ chọn PostgreSQL riêng |
 | **Auth** | JWT + Refresh Token + Google Identity Services |
 | **AI** | Google Gemini API (`gemini-3.8-flash`) |
 | **CI/CD** | GitHub Actions |
@@ -74,13 +74,18 @@ Xem [hướng dẫn nguồn ảnh/PDF](backend/TutorChecks/OCR.md) để biết 
 | Công cụ | Phiên bản |
 |---------|-----------|
 | [.NET SDK](https://dotnet.microsoft.com/download) | 8.0 trở lên |
-| [PostgreSQL](https://www.postgresql.org/download/) | 14 trở lên |
+| [SQL Server](https://www.microsoft.com/sql-server/sql-server-downloads) | 2019 trở lên; Express/Developer cho local |
 | [Node.js](https://nodejs.org/) *(chỉ cần cho build Vercel)* | 20 trở lên |
 | [Git](https://git-scm.com/) | Bất kỳ |
 
 ---
 
 ## 🚀 Cài đặt & Chạy
+
+**Dùng máy cá nhân làm server, chỉ truy cập trên chính máy đó:** xem
+[hướng dẫn vận hành Docker cục bộ](docs/SELF-HOST-DEMO.md), gồm backup/restore SQL Server,
+kiểm tra database, tự khởi động lại và các lệnh nghiệm thu.
+Để người khác truy cập qua Internet: xem [chia sẻ HTTPS và bảo vệ API key/IP gốc](docs/PUBLIC-ACCESS.md).
 
 ### 1. Clone dự án
 
@@ -91,10 +96,9 @@ cd MindSprint-AI-D-n
 
 ### 2. Cài đặt Database
 
-```sql
--- Kết nối PostgreSQL và tạo database:
-CREATE DATABASE mindsprint;
-```
+Mặc định dùng SQL Server tại `localhost`, database `mindsprint`, xác thực Windows.
+Tài khoản Windows chạy backend cần quyền tạo database trong lần khởi động đầu.
+Xem [hướng dẫn SQL Server](docs/SQL-SERVER.md) để dùng instance khác, SQL Login hoặc SSMS.
 
 > Backend sẽ **tự chạy EF Core Migrations** và **seed 1.814 từ Oxford** khi khởi động lần đầu.
 
@@ -104,7 +108,8 @@ Sửa `backend/MindSprint.Api/appsettings.json` hoặc dùng biến môi trườ
 
 | Biến | Bắt buộc | Mặc định | Mô tả |
 |------|:--------:|----------|-------|
-| `ConnectionStrings__Default` | ✅ | `Host=localhost;Database=mindsprint;...` | Chuỗi kết nối PostgreSQL |
+| `Database__Provider` | ❌ | `SqlServer` | `SqlServer` hoặc `PostgreSQL` (Render cũ) |
+| `ConnectionStrings__Default` | ✅ | `Server=localhost;Database=mindsprint;Integrated Security=True;Encrypt=True;TrustServerCertificate=True` | Chuỗi kết nối của provider đã chọn |
 | `Jwt__Key` | ✅ | *(placeholder)* | Khóa bí mật JWT, ≥ 32 ký tự |
 | `Gemini__ApiKey` | ✅ | — | API key từ [Google AI Studio](https://aistudio.google.com/apikey) |
 | `Cors__Origins` | ✅ | — | Origin của frontend, vd: `http://127.0.0.1:5500` |
@@ -118,7 +123,7 @@ Sửa `backend/MindSprint.Api/appsettings.json` hoặc dùng biến môi trườ
 cd backend/MindSprint.Api
 dotnet run          # Tự Migrate + Seed, Swagger tại /swagger
 ```
-Sửa cấu hình cục bộ: chuỗi kết nối PostgreSQL, `Jwt:Key` (>= 32 ký tự), `Gemini:ApiKey`, `Cors:Origins`. Giữ khóa API ngoài commit; có thể dùng biến môi trường `Gemini__ApiKey`.
+Sửa cấu hình cục bộ: chuỗi kết nối SQL Server, `Jwt:Key` (>= 32 ký tự), `Gemini:ApiKey`, `Cors:Origins`. Giữ khóa API ngoài commit; có thể dùng biến môi trường `Gemini__ApiKey`.
 
 Để bật tạo flashcard AI khi chạy local, dùng .NET User Secrets (không đặt key trong frontend hoặc commit vào Git):
 ```powershell
@@ -165,7 +170,7 @@ Tab **Công việc** dùng chung hệ thống auth (`MindSprintAuth`) và API (`
 - ➕ Thêm / ✏️ Sửa / 🗑️ Xóa công việc
 - 🖱️ Kéo thả hoặc nút chuyển cột
 - 🔍 Tìm kiếm, lọc ưu tiên và hạn hoàn thành
-- 💾 Lưu vào PostgreSQL theo tài khoản; khi lỗi kết nối, form giữ nguyên để thử lại
+- 💾 Lưu vào database theo tài khoản; khi lỗi kết nối, form giữ nguyên để thử lại
 - 📌 Thả ở nửa trên/dưới thẻ để chọn vị trí chèn; vạch màu đánh dấu vị trí đích
 
 ---

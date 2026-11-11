@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using MindSprint.Api;
 using MindSprint.Api.Controllers;
 using MindSprint.Api.Data;
@@ -34,7 +35,7 @@ var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Diction
 
 Check(SecurityConfiguration.GetConnectionString(configuration, true).StartsWith("Host=postgres.example", StringComparison.Ordinal), "production accepts configured remote database");
 configuration["ConnectionStrings:Default"] = "Host=localhost;Database=mindsprint";
-Rejects(() => SecurityConfiguration.GetConnectionString(configuration, true), "production PostgreSQL", "production rejects localhost database");
+Rejects(() => SecurityConfiguration.GetConnectionString(configuration, true), "production database", "production rejects localhost database");
 configuration["ConnectionStrings:Default"] = null;
 Rejects(() => SecurityConfiguration.GetConnectionString(configuration, true), "must be configured", "missing database configuration fails clearly");
 configuration["ConnectionStrings:Default"] = "Host=postgres.example;Database=mindsprint";
@@ -51,6 +52,12 @@ configuration["Cors:AllowedOrigins"] = "http://study.example";
 Rejects(() => SecurityConfiguration.GetCorsOrigins(configuration, true), "HTTPS", "production rejects HTTP CORS origin");
 configuration["Cors:AllowedOrigins"] = null;
 Rejects(() => SecurityConfiguration.GetCorsOrigins(configuration, true), "Cors__AllowedOrigins", "missing production CORS allowlist fails clearly");
+configuration["Hosting:ServeFrontend"] = "true";
+Check(SecurityConfiguration.GetCorsOrigins(configuration, true).Length == 0, "self-hosted frontend needs no cross-origin permission");
+configuration["Cors:AllowedOrigins"] = "http://study.example";
+Rejects(() => SecurityConfiguration.GetCorsOrigins(configuration, true), "HTTPS", "self-hosting still rejects insecure cross-origin permissions");
+configuration["Hosting:ServeFrontend"] = null;
+configuration["Cors:AllowedOrigins"] = null;
 configuration["Cors:Origins:0"] = "http://localhost:5500";
 Check(SecurityConfiguration.GetCorsOrigins(configuration, false).SequenceEqual(["http://localhost:5500"]), "development retains local HTTP CORS origin");
 
@@ -84,6 +91,26 @@ environment.EnvironmentName = Environments.Production;
 var legacyLogin = await Controller().Login(new LoginDto("demo", "not-the-demo-password"));
 Check(legacyLogin is UnauthorizedObjectResult, "production rejects fixed demo credentials through regular login");
 
+var secretConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+{
+    ["Gemini:ApiKey"] = "synthetic-key", ["Gemini:MaxRetries"] = "0"
+}).Build();
+var gemini = new GeminiService(new HttpClient(new SecretFailureHandler()), secretConfig,
+    new GeminiAvailability(secretConfig), NullLogger<GeminiService>.Instance, new Microsoft.AspNetCore.Http.HttpContextAccessor());
+var aiFailure = (ObjectResult)await new AiController(gemini).Flashcards(new GenerateDto("Synthetic study text", 1));
+Check(aiFailure.StatusCode == 502 && !JsonSerializer.Serialize(aiFailure.Value).Contains("private-key-sentinel"),
+    "AI failures never return upstream exception details to the browser");
+var secretFile = Path.GetTempFileName();
+try
+{
+    File.WriteAllText(secretFile, "  synthetic-file-key  \n");
+    secretConfig["Gemini:ApiKeyFile"] = secretFile;
+    Check(SecurityConfiguration.GetGeminiApiKey(secretConfig) == "synthetic-file-key", "mounted secret overrides environment key without exposing its value");
+    File.Delete(secretFile);
+    Rejects(() => SecurityConfiguration.GetGeminiApiKey(secretConfig), "Cannot read Gemini secret file", "missing secret file fails closed");
+}
+finally { File.Delete(secretFile); }
+
 Console.WriteLine($"Security checks: {passed} passed. SQLite in memory; no production data or provider calls.");
 
 sealed class TestEnvironment : IHostEnvironment
@@ -92,4 +119,10 @@ sealed class TestEnvironment : IHostEnvironment
     public string ApplicationName { get; set; } = "SecurityChecks";
     public string ContentRootPath { get; set; } = Directory.GetCurrentDirectory();
     public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+}
+
+sealed class SecretFailureHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+        throw new InvalidOperationException("private-key-sentinel at internal-server-sentinel");
 }

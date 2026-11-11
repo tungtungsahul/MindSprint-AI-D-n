@@ -13,6 +13,7 @@ Bộ tài liệu phục vụ yêu cầu kiến trúc [#40](https://github.com/tu
 | [Kế hoạch kiểm thử Sprint 4](sprint-4-test-plan.md) | Issue tương ứng, thứ tự thực hiện và điều kiện nghiệm thu |
 | [ADR-001](../decisions/0001-layered-monolith.md) | Backend theo tầng trong một ứng dụng |
 | [ADR-002](../decisions/0002-postgresql-and-deployment.md) | PostgreSQL và triển khai frontend/API riêng |
+| [ADR-006](../decisions/0006-sql-server-default.md) | SQL Server mặc định cho local/demo, migration tách biệt với PostgreSQL |
 | [ADR-003](../decisions/0003-identity-and-account-isolation.md) | JWT, refresh token và ranh giới tài khoản |
 | [ADR-004](../decisions/0004-ai-and-source-boundaries.md) | Cô lập Gemini và nguồn tài liệu ngoài |
 
