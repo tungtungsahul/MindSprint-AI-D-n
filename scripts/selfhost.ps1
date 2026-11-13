@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Start', 'Stop', 'Status')]
+    [ValidateSet('Start', 'Stop', 'Status', 'Configure')]
     [string]$Action = 'Start'
 )
 $ErrorActionPreference = 'Stop'
@@ -24,12 +24,14 @@ function Protect-SecretPath([string]$Path, [bool]$IsDirectory = $false) {
 }
 Push-Location $projectRoot
 try {
-    docker info --format '{{.ServerVersion}}' *> $null
-    if ($LASTEXITCODE -ne 0) { throw 'Hay mo Docker Desktop va cho Docker Engine san sang, roi chay lai.' }
+    if ($Action -ne 'Configure') {
+        docker info --format '{{.ServerVersion}}' *> $null
+        if ($LASTEXITCODE -ne 0) { throw 'Hay mo Docker Desktop va cho Docker Engine san sang, roi chay lai.' }
+    }
 
     $envPath = Join-Path $projectRoot '.env.selfhost'
     if (!(Test-Path -LiteralPath $envPath)) {
-        if ($Action -ne 'Start') { throw 'Chua co cau hinh demo. Hay chay lenh Start truoc.' }
+        if ($Action -notin 'Start', 'Configure') { throw 'Chua co cau hinh demo. Hay chay lenh Configure hoac Start truoc.' }
         $randomBytes = New-Object byte[] 32
         $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
         try {
@@ -49,7 +51,13 @@ try {
         if ($geminiKey -match 'YOUR_|^\s*$') { $geminiKey = '' }
         if ($geminiKey -match "['\r\n]") { throw 'GEMINI_API_KEY khong hop le.' }
         $lines = @("DB_PASSWORD=$dbPassword", "JWT_KEY=$jwtKey", "GEMINI_API_KEY='$geminiKey'", 'GOOGLE_CLIENT_ID=')
-        [System.IO.File]::WriteAllLines($envPath, $lines, (New-Object System.Text.UTF8Encoding($false)))
+        $stream = [System.IO.File]::Open($envPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
+        try {
+            $writer = [System.IO.StreamWriter]::new($stream)
+            try { foreach ($line in $lines) { $writer.WriteLine($line) } }
+            finally { $writer.Dispose() }
+        } finally { $stream.Dispose() }
+        Protect-SecretPath $envPath
         Write-Host 'Da tao .env.selfhost (cau hinh rieng, khong commit Git).'
     }
 
@@ -65,13 +73,29 @@ try {
         Write-Host 'Da tat web. Du lieu database van duoc giu.'
         return
     }
+    $configJson = & docker @composeArgs config --format json 2>$null
+    if ($LASTEXITCODE -ne 0) { throw '.env.selfhost hoac Compose khong hop le. Kiem tra DB_PASSWORD va JWT_KEY bat buoc.' }
+    $config = $configJson -join "`n" | ConvertFrom-Json
+    $databaseName = [string]$config.services.db.environment.MINDSPRINT_DATABASE
+    if ($databaseName -cnotmatch '^[A-Za-z][A-Za-z0-9_]{0,127}$') {
+        throw 'DATABASE_NAME chi duoc gom chu cai, chu so va dau gach duoi, bat dau bang chu cai.'
+    }
+    if ($config.services.db.environment.MSSQL_SA_PASSWORD -cnotmatch '^Ms1![A-Za-z0-9_-]{16,124}$') {
+        throw 'DB_PASSWORD can 16-124 ky tu, chi gom chu cai, chu so, dau gach ngang va gach duoi.'
+    }
+    if (([string]$config.services.web.environment.Jwt__Key).Trim().Length -lt 32 -or
+        $config.services.web.environment.Jwt__Key -match '^(replace|change[_-]?me|your|example|placeholder|doi[_-]?khoa)') {
+        throw 'JWT_KEY can it nhat 32 ky tu va khong duoc dung gia tri mau.'
+    }
+    if ($config.services.db.environment.MSSQL_SA_PASSWORD -match '^Ms1!(replace|change[_-]?me|your|example|placeholder)') {
+        throw 'DB_PASSWORD con gia tri mau. Hay dung mat khau ngau nhien.'
+    }
+    if ($Action -eq 'Configure') {
+        Write-Host 'Cau hinh .env.selfhost hop le.'
+        return
+    }
+
     if ($Action -eq 'Start') {
-        $configJson = & docker @composeArgs config --format json
-        if ($LASTEXITCODE -ne 0) { throw 'Cau hinh Docker khong hop le.' }
-        $databaseName = [string](($configJson -join "`n" | ConvertFrom-Json).services.db.environment.MINDSPRINT_DATABASE)
-        if ($databaseName -cnotmatch '^[A-Za-z][A-Za-z0-9_]{0,127}$') {
-            throw 'DATABASE_NAME chi duoc gom chu cai, chu so va dau gach duoi, bat dau bang chu cai.'
-        }
         $secretDirectory = Join-Path $projectRoot '.secrets.selfhost'
         $secretPath = Join-Path $secretDirectory 'gemini-api-key'
         $null = [System.IO.Directory]::CreateDirectory($secretDirectory)
@@ -89,7 +113,9 @@ try {
         }
         Protect-SecretPath $secretPath
         # Migrate the key out of .env only after its private secret file is written.
-        [System.IO.File]::WriteAllLines($envPath, @($envLines | Where-Object { $_ -notmatch '^GEMINI_API_KEY=' }), (New-Object System.Text.UTF8Encoding($false)))
+        if ($envLines -cmatch '^GEMINI_API_KEY=') {
+            [System.IO.File]::WriteAllLines($envPath, @($envLines | Where-Object { $_ -cnotmatch '^GEMINI_API_KEY=' }), (New-Object System.Text.UTF8Encoding($false)))
+        }
         Protect-SecretPath $envPath
         & docker @composeArgs up -d --build --wait --wait-timeout 240 db web
         if ($LASTEXITCODE -ne 0) { throw 'Khoi dong that bai. Kiem tra loi Docker phia tren.' }
