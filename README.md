@@ -126,15 +126,26 @@ Phần này dành cho môi trường riêng trên laptop, không dùng Developme
 bash ./scripts/setup-selfhost.sh
 ```
 
-Sau đó chỉnh sửa `.env.selfhost` và khởi động stack localhost với Docker:
+Script chỉ tạo file khi chưa có; nếu file đã tồn tại thì giữ nguyên. Sau đó, chỉnh sửa `.env.selfhost` để thay placeholder và đảm bảo các biến bắt buộc có giá trị hợp lệ:
+
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `ConnectionStrings__Default`
+- `Jwt__Key`
+- `Cors__AllowedOrigins`
+
+Khởi động stack localhost với Docker theo cách an toàn, chỉ bind trên localhost:
 
 ```bash
-docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up --build
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml config
+# hoặc
+# docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up --build
 ```
 
-URL mặc định: `http://127.0.0.1:8080` (frontend) và `http://127.0.0.1:5000` (API). Database PostgreSQL chạy trên cổng `5433` bằng volume Docker riêng `mindsprint_local_pgdata`.
+URL mặc định: `http://127.0.0.1:8080` (frontend) và `http://127.0.0.1:5000` (API). PostgreSQL chạy trên `127.0.0.1:5433` bằng volume Docker riêng `mindsprint_local_pgdata`.
 
-> `.env.selfhost` và các secret tương tự được ignore bởi Git/Docker, nên không bị ghi đè khi chạy lại hoặc bị commit vào repo.
+> `.env.selfhost` và các secret tương tự được ignore bởi Git/Docker, nên không bị ghi đè khi chạy lại hoặc bị commit vào repo. Compose cũng bắt buộc các giá trị cần thiết trước khi khởi động, không để mặc định yếu chạy ngầm.
 
 ### 4. Chạy backend
 

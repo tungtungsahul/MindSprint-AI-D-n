@@ -31,17 +31,22 @@ Keep the default values safe, local-only, and isolated from the production Rende
 ## 3. Run the local stack
 
 ```bash
-docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up --build
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml config
+# or
+# docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up --build
 ```
 
 Available endpoints:
 
 - Frontend: http://127.0.0.1:8080
 - API: http://127.0.0.1:5000
-- PostgreSQL: localhost:5433
+- PostgreSQL: 127.0.0.1:5433
+
+The compose file binds all published ports to localhost only, so they are not exposed on every network interface.
 
 ## 4. Secrets and cleanup
 
 - `.env.selfhost` is ignored by Git and Docker.
 - `docker-compose.selfhost.yml` uses a dedicated Docker volume: `mindsprint_local_pgdata`.
-- The app runs with `ASPNETCORE_ENVIRONMENT=SelfHost`, which loads `appsettings.SelfHost.json` without altering the shared development defaults.
+- Required values are enforced via `${VAR:?message}` so missing config fails fast instead of silently falling back to weak defaults.
+- The app is kept in the `SelfHost` environment without reloading an override file after environment variables are already set.

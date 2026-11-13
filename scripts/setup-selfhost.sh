@@ -15,3 +15,26 @@ if [ ! -f "$TARGET" ]; then
 else
   echo "$TARGET already exists. Leaving it unchanged."
 fi
+
+required_vars=(
+  "POSTGRES_DB"
+  "POSTGRES_USER"
+  "POSTGRES_PASSWORD"
+  "ConnectionStrings__Default"
+  "Jwt__Key"
+  "Cors__AllowedOrigins"
+)
+
+missing=()
+for key in "${required_vars[@]}"; do
+  if ! grep -Eq "^${key}=" "$TARGET"; then
+    missing+=("$key")
+  fi
+done
+
+if [ "${#missing[@]}" -gt 0 ]; then
+  echo "Missing required values in $TARGET: ${missing[*]}" >&2
+  exit 1
+fi
+
+echo "Validated required self-host settings in $TARGET."

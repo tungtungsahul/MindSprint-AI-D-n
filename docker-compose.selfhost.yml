@@ -8,16 +8,16 @@ services:
     env_file:
       - ./.env.selfhost
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-mindsprint}
-      POSTGRES_USER: ${POSTGRES_USER:-mindsprint}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_2026}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required in .env.selfhost}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required in .env.selfhost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in .env.selfhost}
       PGDATA: ${PGDATA:-/var/lib/postgresql/data/pgdata}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - mindsprint_local_pgdata:${PGDATA:-/var/lib/postgresql/data/pgdata}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mindsprint} -d ${POSTGRES_DB:-mindsprint}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,15 +37,15 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-SelfHost}
       ASPNETCORE_URLS: http://0.0.0.0:8080
-      ConnectionStrings__Default: Host=postgres;Database=${POSTGRES_DB:-mindsprint};Username=${POSTGRES_USER:-mindsprint};Password=${POSTGRES_PASSWORD:-ChangeMe_2026};Port=5432
-      Jwt__Key: ${Jwt__Key:-replace-with-a-long-random-secret-at-least-32-characters}
+      ConnectionStrings__Default: ${ConnectionStrings__Default:?ConnectionStrings__Default is required in .env.selfhost}
+      Jwt__Key: ${Jwt__Key:?Jwt__Key is required in .env.selfhost}
       Jwt__Issuer: ${Jwt__Issuer:-MindSprint-Local}
       Jwt__Audience: ${Jwt__Audience:-MindSprint-Local-Client}
-      Cors__AllowedOrigins: ${Cors__AllowedOrigins:-http://127.0.0.1:8080,http://localhost:8080}
+      Cors__AllowedOrigins: ${Cors__AllowedOrigins:?Cors__AllowedOrigins is required in .env.selfhost}
       Gemini__ApiKey: ${Gemini__ApiKey:-}
       Google__ClientId: ${Google__ClientId:-}
     ports:
-      - "${API_PORT:-5000}:8080"
+      - "127.0.0.1:${API_PORT:-5000}:8080"
     restart: unless-stopped
 
   frontend:
@@ -53,7 +53,7 @@ services:
     container_name: mindsprint-selfhost-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
 
