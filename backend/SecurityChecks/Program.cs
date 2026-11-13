@@ -70,6 +70,8 @@ configuration["Jwt:Key"] = new string('k', 40);
 Check(SecurityConfiguration.GetCorsOrigins(configuration, true).SequenceEqual(["https://study.example"]), "production uses explicit HTTPS CORS allowlist");
 configuration["Cors:AllowedOrigins"] = "http://study.example";
 Rejects(() => SecurityConfiguration.GetCorsOrigins(configuration, true), "HTTPS", "production rejects HTTP CORS origin");
+configuration["Cors:AllowedOrigins"] = "http://localhost:8080";
+Check(SecurityConfiguration.GetCorsOrigins(configuration, true).SequenceEqual(["http://localhost:8080"]), "production accepts localhost same-origin CORS for laptop deployment");
 configuration["Cors:AllowedOrigins"] = null;
 Rejects(() => SecurityConfiguration.GetCorsOrigins(configuration, true), "Cors__AllowedOrigins", "missing production CORS allowlist fails clearly");
 configuration["Cors:Origins:0"] = "http://localhost:5500";

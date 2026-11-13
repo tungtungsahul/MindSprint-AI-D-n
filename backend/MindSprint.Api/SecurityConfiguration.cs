@@ -7,8 +7,6 @@ public static class SecurityConfiguration
         var connectionString = configuration.GetConnectionString("Default");
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("ConnectionStrings:Default must be configured.");
-        if (isProduction && connectionString.Contains("localhost", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Set ConnectionStrings__Default to the production PostgreSQL URL or connection string.");
         return connectionString;
     }
 
@@ -21,6 +19,15 @@ public static class SecurityConfiguration
         return jwtKey;
     }
 
+    private static bool IsLoopbackOrigin(string origin)
+    {
+        return Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+               (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase) ||
+                uri.Host.Equals("[::1]", StringComparison.OrdinalIgnoreCase));
+    }
+
     public static string[] GetCorsOrigins(IConfiguration configuration, bool isProduction)
     {
         var defaults = isProduction ? Array.Empty<string>() : configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
@@ -30,10 +37,12 @@ public static class SecurityConfiguration
                 (uri.Scheme is "http" or "https") && uri.AbsolutePath == "/" && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        if (isProduction && origins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
-            throw new InvalidOperationException("Cors__AllowedOrigins must use HTTPS origins in Production.");
+
+        var nonLoopbackOrigins = origins.Where(origin => !IsLoopbackOrigin(origin)).ToArray();
+        if (isProduction && nonLoopbackOrigins.Any(origin => !Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
+            throw new InvalidOperationException("Cors__AllowedOrigins must use HTTPS origins in Production, except loopback localhost origins for the laptop same-origin deployment.");
         if (isProduction && origins.Length == 0)
-            throw new InvalidOperationException("Set Cors__AllowedOrigins to the public frontend origin(s), separated by commas.");
+            throw new InvalidOperationException("Set Cors__AllowedOrigins to the frontend origin(s), separated by commas.");
         return origins;
     }
 }
