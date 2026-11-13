@@ -55,7 +55,7 @@ var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Diction
 
 Check(SecurityConfiguration.GetConnectionString(configuration, true).StartsWith("Host=postgres.example", StringComparison.Ordinal), "production accepts configured remote database");
 configuration["ConnectionStrings:Default"] = "Host=localhost;Database=mindsprint";
-Rejects(() => SecurityConfiguration.GetConnectionString(configuration, true), "production PostgreSQL", "production rejects localhost database");
+Check(SecurityConfiguration.GetConnectionString(configuration, true).StartsWith("Host=localhost", StringComparison.Ordinal), "production accepts localhost database for the laptop same-origin deployment");
 configuration["ConnectionStrings:Default"] = null;
 Rejects(() => SecurityConfiguration.GetConnectionString(configuration, true), "must be configured", "missing database configuration fails clearly");
 configuration["ConnectionStrings:Default"] = "Host=postgres.example;Database=mindsprint";
