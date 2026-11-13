@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+if (builder.Environment.IsEnvironment("SelfHost"))
+    builder.Configuration.AddJsonFile("appsettings.SelfHost.json", optional: true, reloadOnChange: true);
+
 var cfg = builder.Configuration;
 var isProduction = builder.Environment.IsProduction();
 

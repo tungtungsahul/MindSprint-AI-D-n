@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mindsprint-selfhost-db
+    restart: unless-stopped
+    env_file:
+      - ./.env.selfhost
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mindsprint}
+      POSTGRES_USER: ${POSTGRES_USER:-mindsprint}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe_2026}
+      PGDATA: ${PGDATA:-/var/lib/postgresql/data/pgdata}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - mindsprint_local_pgdata:${PGDATA:-/var/lib/postgresql/data/pgdata}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mindsprint} -d ${POSTGRES_DB:-mindsprint}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  api:
+    build:
+      context: ./backend/MindSprint.Api
+      dockerfile: Dockerfile
+    image: mindsprint-selfhost-api:latest
+    container_name: mindsprint-selfhost-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./.env.selfhost
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-SelfHost}
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__Default: Host=postgres;Database=${POSTGRES_DB:-mindsprint};Username=${POSTGRES_USER:-mindsprint};Password=${POSTGRES_PASSWORD:-ChangeMe_2026};Port=5432
+      Jwt__Key: ${Jwt__Key:-replace-with-a-long-random-secret-at-least-32-characters}
+      Jwt__Issuer: ${Jwt__Issuer:-MindSprint-Local}
+      Jwt__Audience: ${Jwt__Audience:-MindSprint-Local-Client}
+      Cors__AllowedOrigins: ${Cors__AllowedOrigins:-http://127.0.0.1:8080,http://localhost:8080}
+      Gemini__ApiKey: ${Gemini__ApiKey:-}
+      Google__ClientId: ${Google__ClientId:-}
+    ports:
+      - "${API_PORT:-5000}:8080"
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: mindsprint-selfhost-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+
+volumes:
+  mindsprint_local_pgdata:

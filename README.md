@@ -112,6 +112,30 @@ Sửa `backend/MindSprint.Api/appsettings.json` hoặc dùng biến môi trườ
 
 > ⚠️ **Không commit khóa bí mật.** Dùng biến môi trường (vd: `Gemini__ApiKey`) hoặc User Secrets.
 
+### 3a. Cấu hình self-host cho laptop localhost
+
+Phần này dành cho môi trường riêng trên laptop, không dùng Development/Render. Tạo file `.env.selfhost` từ template và giữ nguyên khi chạy lại:
+
+```powershell
+# Windows PowerShell
+./scripts/setup-selfhost.ps1
+```
+
+```bash
+# Linux/macOS
+bash ./scripts/setup-selfhost.sh
+```
+
+Sau đó chỉnh sửa `.env.selfhost` và khởi động stack localhost với Docker:
+
+```bash
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up --build
+```
+
+URL mặc định: `http://127.0.0.1:8080` (frontend) và `http://127.0.0.1:5000` (API). Database PostgreSQL chạy trên cổng `5433` bằng volume Docker riêng `mindsprint_local_pgdata`.
+
+> `.env.selfhost` và các secret tương tự được ignore bởi Git/Docker, nên không bị ghi đè khi chạy lại hoặc bị commit vào repo.
+
 ### 4. Chạy backend
 
 ```bash

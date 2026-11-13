@@ -26,6 +26,21 @@ void Rejects(Action action, string message, string label)
     { Check(true, label); return; }
     Check(false, label);
 }
+var repoRoot = AppContext.BaseDirectory;
+for (var i = 0; i < 20; i++)
+{
+    if (File.Exists(Path.Combine(repoRoot, ".env.selfhost.example")) || File.Exists(Path.Combine(repoRoot, "docker-compose.selfhost.yml")))
+        break;
+    var parent = Directory.GetParent(repoRoot);
+    if (parent is null)
+        break;
+    repoRoot = parent.FullName;
+}
+var selfHostEnvExample = Path.Combine(repoRoot, ".env.selfhost.example");
+var selfHostCompose = Path.Combine(repoRoot, "docker-compose.selfhost.yml");
+Check(File.Exists(selfHostEnvExample), "self-host template exists at repo root");
+Check(File.Exists(selfHostCompose), "self-host docker compose file exists at repo root");
+
 var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
     ["ConnectionStrings:Default"] = "Host=postgres.example;Database=mindsprint;Username=test",
     ["Jwt:Key"] = new string('k', 40),

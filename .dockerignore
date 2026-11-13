@@ -1,0 +1,34 @@
+# Git metadata and project files
+.git
+.gitignore
+.github/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.selfhost.example
+
+# Build outputs
+**/bin/
+**/obj/
+**/.vs/
+**/.pytest_cache/
+**/TestResults/
+**/node_modules/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.pem
+**/*.key
+**/logs/
+**/local-data/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Doc/test artifacts that are not needed in the image
+**/artifacts/
+**/release/
+**/dist/
