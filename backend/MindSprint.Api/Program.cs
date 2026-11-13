@@ -18,7 +18,7 @@ var connectionString = SecurityConfiguration.GetConnectionString(cfg, isProducti
 var jwtKey = SecurityConfiguration.GetJwtKey(cfg, isProduction);
 var corsOrigins = SecurityConfiguration.GetCorsOrigins(cfg, isProduction);
 
-builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(PostgresConnectionString.Normalize(connectionString)));
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

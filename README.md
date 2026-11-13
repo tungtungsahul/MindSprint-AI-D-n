@@ -114,7 +114,7 @@ Sửa `backend/MindSprint.Api/appsettings.json` hoặc dùng biến môi trườ
 
 ### 3a. Cấu hình self-host cho laptop localhost
 
-Phần này dành cho môi trường riêng trên laptop, không dùng Development/Render. Tạo file `.env.selfhost` từ template và giữ nguyên khi chạy lại:
+Phần này dành cho môi trường riêng trên laptop, theo baseline SQL Server Express 2022 đang dùng trên main. Tạo file `.env.selfhost` từ template và giữ nguyên khi chạy lại:
 
 ```powershell
 # Windows PowerShell
@@ -128,9 +128,7 @@ bash ./scripts/setup-selfhost.sh
 
 Script chỉ tạo file khi chưa có; nếu file đã tồn tại thì giữ nguyên. Sau đó, chỉnh sửa `.env.selfhost` để thay placeholder và đảm bảo các biến bắt buộc có giá trị hợp lệ:
 
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
+- `MSSQL_SA_PASSWORD`
 - `ConnectionStrings__Default`
 - `Jwt__Key`
 - `Cors__AllowedOrigins`
@@ -143,7 +141,7 @@ docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml config
 # docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up --build
 ```
 
-URL mặc định: `http://127.0.0.1:8080` (frontend) và `http://127.0.0.1:5000` (API). PostgreSQL chạy trên `127.0.0.1:5433` bằng volume Docker riêng `mindsprint_local_pgdata`.
+URL mặc định: `http://127.0.0.1:8080` (frontend) và `http://127.0.0.1:5000` (API). SQL Server chạy trên `127.0.0.1:1433` bằng volume Docker riêng `mindsprint_local_mssqldata`.
 
 > `.env.selfhost` và các secret tương tự được ignore bởi Git/Docker, nên không bị ghi đè khi chạy lại hoặc bị commit vào repo. Compose cũng bắt buộc các giá trị cần thiết trước khi khởi động, không để mặc định yếu chạy ngầm.
 

@@ -40,6 +40,12 @@ var selfHostEnvExample = Path.Combine(repoRoot, ".env.selfhost.example");
 var selfHostCompose = Path.Combine(repoRoot, "docker-compose.selfhost.yml");
 Check(File.Exists(selfHostEnvExample), "self-host template exists at repo root");
 Check(File.Exists(selfHostCompose), "self-host docker compose file exists at repo root");
+var selfHostEnvText = File.ReadAllText(selfHostEnvExample);
+var selfHostComposeText = File.ReadAllText(selfHostCompose);
+Check(selfHostEnvText.Contains("MSSQL_SA_PASSWORD", StringComparison.Ordinal), "self-host template uses SQL Server credentials");
+Check(selfHostComposeText.Contains("mcr.microsoft.com/mssql/server:2022-latest", StringComparison.Ordinal), "self-host compose uses SQL Server Express image");
+Check(selfHostComposeText.Contains("127.0.0.1:1433", StringComparison.Ordinal) && selfHostComposeText.Contains("127.0.0.1:5000", StringComparison.Ordinal) && selfHostComposeText.Contains("127.0.0.1:8080", StringComparison.Ordinal), "self-host compose binds API, frontend, and SQL Server to localhost");
+Check(!selfHostComposeText.Contains("postgres:16-alpine", StringComparison.Ordinal), "self-host compose no longer uses PostgreSQL image");
 
 var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
     ["ConnectionStrings:Default"] = "Host=postgres.example;Database=mindsprint;Username=test",

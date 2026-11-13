@@ -17,9 +17,7 @@ else
 fi
 
 required_vars=(
-  "POSTGRES_DB"
-  "POSTGRES_USER"
-  "POSTGRES_PASSWORD"
+  "MSSQL_SA_PASSWORD"
   "ConnectionStrings__Default"
   "Jwt__Key"
   "Cors__AllowedOrigins"
