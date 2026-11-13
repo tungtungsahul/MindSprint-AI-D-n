@@ -22,9 +22,16 @@ sites/mindsprint-gateway/
 backups/
 *.bak
 appsettings.Development.json
+.env
+.env.*
+!.env.example
+!.env.selfhost.example
 *.db
 *.db-shm
 *.db-wal
+local-data/
+docker-data/
+logs/
 
 # OS / IDE
 .DS_Store

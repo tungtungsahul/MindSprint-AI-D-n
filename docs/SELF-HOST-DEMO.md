@@ -10,6 +10,28 @@ Tên Compose `mindsprint-demo` được giữ để tiếp tục dùng đúng vo
 
 ## Bật và tắt
 
+### Chuẩn bị cấu hình localhost
+
+Từ thư mục gốc, có thể tạo và kiểm tra cấu hình trước khi bật Docker Engine:
+
+```powershell
+.\scripts\selfhost.ps1 -Action Configure
+```
+
+[Mẫu cấu hình](../.env.selfhost.example) liệt kê các biến của stack. `Configure`
+tạo `.env.selfhost` với mật khẩu DB và khóa JWT ngẫu nhiên nếu file chưa tồn tại.
+Chạy lại chỉ kiểm tra file hiện có. Giữ nguyên `DB_PASSWORD` khi dùng lại volume cũ.
+`DATABASE_NAME` mặc định là `mindsprint`. SQL Server Express nằm trong mạng Compose,
+frontend và API dùng chung `http://127.0.0.1:8080`.
+
+Để kiểm tra riêng cú pháp và biến bắt buộc của Compose mà không in cấu hình đã nội suy:
+
+```powershell
+docker compose --env-file .env.selfhost -f compose.selfhost.yaml config --quiet
+```
+
+### Khởi động dịch vụ
+
 Mở Docker Desktop, đợi Engine sẵn sàng. Tại thư mục gốc dự án, chạy PowerShell:
 
 ```powershell
