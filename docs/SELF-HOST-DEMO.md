@@ -2,6 +2,7 @@
 
 Máy Windows chạy Docker Desktop là máy chủ cho giao diện, API và SQL Server Express 2022.
 Mặc định web mở trên máy chủ tại `http://localhost:8080`.
+Baseline laptop hiện hành là SQL Server Express 2022 theo issue #105/PR #122; phần PostgreSQL trong mô tả issue #119 là nội dung cũ.
 Theo yêu cầu ngày 11/11/2026, có thể chia sẻ HTTPS qua Cloudflare Tunnel bằng
 `scripts/share.ps1`; xem [truy cập Internet và bảo vệ khóa](PUBLIC-ACCESS.md).
 Không mở cổng router hoặc công khai SQL Server.
@@ -47,6 +48,17 @@ script dùng lại key đó cho bản demo; không in key ra terminal.
 - Tạo tài khoản bằng email/mật khẩu để dùng; đăng nhập Demo bị tắt trong Production.
 - Kết thúc buổi kiểm tra: `.\scripts\selfhost.ps1 -Action Stop`.
 - Xem trạng thái: `.\scripts\selfhost.ps1 -Action Status`.
+- Khởi động lại web sau khi đổi cấu hình hoặc cần làm mới tiến trình:
+
+```powershell
+$compose = @('compose', '--env-file', '.env.selfhost', '-f', 'compose.selfhost.yaml')
+docker @compose restart web
+docker @compose up -d --wait --wait-timeout 240 db web
+Invoke-RestMethod 'http://127.0.0.1:8080/readyz' -TimeoutSec 6
+```
+
+Lệnh restart giữ nguyên volume. Nếu vừa sửa source code, dùng Start thay vì restart:
+Start build lại image từ checkout hiện tại rồi chờ web/database healthy.
 
 Start chờ cả database và web báo healthy, tối đa 240 giây sau khi build.
 Yêu cầu Docker Compose v2 có `up --wait` và `--wait-timeout`.
@@ -63,6 +75,49 @@ Lệnh Stop dừng web và database, giữ dữ liệu trong Docker volume `mind
 Không dùng `docker compose down -v` vì tùy chọn `-v` xóa volume và dữ liệu demo.
 Ở chế độ mặc định, web chỉ phục vụ trên máy chủ; muốn truy cập từ xa phải bật Share.
 Share Stop tắt đường dẫn Internet mà không dừng web/database.
+
+## Cập nhật phiên bản
+
+Thực hiện từ checkout sạch đã được nhóm duyệt; không cập nhật đè lên file source
+đang sửa dở. Nếu checkout hiện tại có thay đổi, giữ nguyên chúng và dùng thư mục
+checkout riêng. Trước khi cập nhật, ghi SHA/image đang chạy và tạo backup đã xác minh:
+
+```powershell
+git status --short
+git rev-parse HEAD
+$compose = @('compose', '--env-file', '.env.selfhost', '-f', 'compose.selfhost.yaml')
+docker @compose images web
+$backup = .\scripts\selfhost-db.ps1 -Action Backup
+.\scripts\selfhost-db.ps1 -Action VerifyRestore -BackupFile $backup.BackupFile
+```
+
+Sau khi xác nhận checkout sạch và chọn đúng revision đã duyệt, cập nhật source
+bằng fast-forward, rồi build/restart dịch vụ bằng script hiện có:
+
+```powershell
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git rev-parse HEAD
+.\scripts\selfhost.ps1 -Action Start
+python tests/selfhost-smoke.py
+```
+
+Start giữ nguyên `.env.selfhost`, secret Gemini và volume DB, đồng thời build image
+từ source đang checkout. Không dùng `git reset --hard`, `docker compose down -v`
+hoặc xóa volume để cập nhật. Sau update, kiểm tra `/readyz` và smoke trước khi dùng
+cho buổi trình bày. Ghi lại SHA mới và Image ID từ `docker @compose images web`.
+
+Nếu bản mới không khởi động, giữ nguyên DB hiện hành và log đã che secret. Có thể
+quay lại source SHA trước bằng checkout riêng hoặc `git switch --detach <SHA-cu>`;
+chỉ kết nối code cũ với DB đã migrate nếu migration được xác nhận tương thích.
+Nếu cần quay lại dữ liệu, dùng `Restore` để tạo database tên mới, kiểm tra kết quả,
+đổi `DATABASE_NAME` sang DB khôi phục rồi Start. Restore không tự đổi DB hoạt động
+và không rollback migration trong DB cũ. Giữ backup cho đến khi bản mới được chấp nhận.
+
+Không thể dùng riêng lệnh đổi image để khôi phục schema. Nếu bản mới đã migrate DB,
+khôi phục code cũ trên DB mới/đã kiểm chứng; không dùng `WITH REPLACE` và không xóa
+DB gốc trong quá trình xử lý.
 
 ## Dữ liệu và AI
 
@@ -158,9 +213,102 @@ docker compose --env-file .env.selfhost -f compose.selfhost.yaml ps
 docker compose --env-file .env.selfhost -f compose.selfhost.yaml logs --tail 80 web
 ```
 
-Nếu cổng 8080 đang được ứng dụng khác sử dụng, dừng ứng dụng đó trước khi chạy demo.
-`/healthz` xác nhận tiến trình web hoạt động (HTTP 200, `status=ok`).
-`/readyz` thực hiện `SELECT 1` vào database: HTTP 200 với `status=ready`, hoặc
+### Docker Desktop chưa chạy hoặc Compose lỗi
+
+Kiểm tra Docker Engine trước khi start:
+
+```powershell
+docker info --format '{{.ServerVersion}}'
+docker compose version
+```
+
+Nếu `docker info` báo không kết nối được daemon, mở Docker Desktop, đợi Engine
+ready rồi thử lại. Không xóa hay cài lại Docker data để xử lý lỗi khởi động thông
+thường. Xem log Compose bằng lệnh ở trên; trước khi chia sẻ, rà soát và che mọi
+đường dẫn cá nhân, email hoặc dữ liệu học tập.
+
+### Cổng 8080 đang bận
+
+Tìm tiến trình đang listen; không dừng PID lạ cho tới khi xác định ứng dụng đó:
+
+```powershell
+Get-NetTCPConnection -LocalPort 8080 -State Listen |
+	Select-Object LocalAddress, LocalPort, OwningProcess
+Get-NetTCPConnection -LocalPort 8080 -State Listen |
+	ForEach-Object { Get-Process -Id $_.OwningProcess } |
+	Select-Object Id, ProcessName
+```
+
+Dừng ứng dụng đã xác định bằng cách bình thường của ứng dụng đó rồi chạy lại Start.
+Không đổi port mặc định nếu chưa cập nhật URL, origin OAuth và hướng dẫn tương ứng.
+
+### Database chưa sẵn sàng
+
+Start chờ tối đa 240 giây. Xem trạng thái và log dịch vụ:
+
+```powershell
+docker compose --env-file .env.selfhost -f compose.selfhost.yaml ps --all
+docker compose --env-file .env.selfhost -f compose.selfhost.yaml logs --tail 100 db web
+Invoke-RestMethod 'http://127.0.0.1:8080/healthz' -TimeoutSec 6
+Invoke-RestMethod 'http://127.0.0.1:8080/readyz' -TimeoutSec 6
+```
+
+`/healthz` chỉ xác nhận tiến trình web; `/readyz` xác nhận truy vấn DB. Nếu DB
+unhealthy, không xóa volume và không chạy Restore vào DB đang dùng. Kiểm tra Docker
+disk, giữ `.env.selfhost` cũ nếu đang dùng volume hiện có, rồi thử Start lại sau khi
+đọc log. Không đăng raw log/config lên issue; log SQL có thể chứa thông tin nội bộ.
+
+### Gemini key hoặc Internet không khả dụng
+
+Web và các chức năng không gọi AI vẫn có thể chạy local; thao tác cần Gemini sẽ báo
+lỗi/quota nếu thiếu key, mất Internet hoặc hết quota. Kiểm tra chỉ trạng thái có/không
+của file secret, không in nội dung:
+
+```powershell
+$keyFile = '.secrets.selfhost/gemini-api-key'
+Test-Path $keyFile
+if (Test-Path $keyFile) { [bool]((Get-Content $keyFile -Raw).Trim()) }
+Test-NetConnection generativelanguage.googleapis.com -Port 443
+```
+
+Nếu thiếu key, mở file local bằng editor để nhập key rồi chạy Start. Không đưa key
+vào lệnh, screenshot, terminal output, log, issue, chat hoặc commit. Không yêu cầu
+người dùng gửi secret để chẩn đoán.
+
+### Thiếu dung lượng Docker hoặc ổ đĩa
+
+Kiểm tra dung lượng trước khi build/backup:
+
+```powershell
+Get-PSDrive -PSProvider FileSystem
+docker system df
+```
+
+Giải phóng dung lượng bằng Windows/Docker Desktop theo chính sách của chủ máy. Chỉ
+xóa build cache không dùng khi đã xác nhận ảnh hưởng chấp nhận được; không chạy
+`docker system prune --volumes`, không xóa volume `sqlserver-data`, `.env.selfhost`,
+secret hoặc backup để lấy dung lượng. Copy backup cần đủ dung lượng cho cả file tạm
+và file đích; nếu thiếu, chọn ổ đĩa khác bằng `-Directory`.
+
+### Khôi phục sau lỗi cập nhật
+
+Giữ nguyên DB hiện hành, ghi lại SHA/image và chẩn đoán đã che dữ liệu. Trước khi
+đổi database, xác minh backup vào DB thử riêng:
+
+```powershell
+$backup = Get-ChildItem .\backups\*.bak | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+.\scripts\selfhost-db.ps1 -Action VerifyRestore -BackupFile $backup.FullName
+$restored = .\scripts\selfhost-db.ps1 -Action Restore -BackupFile $backup.FullName
+$restored
+```
+
+Chỉ sau khi `Verified` là `True`, đặt `DATABASE_NAME` trong `.env.selfhost` đúng
+theo `Database` trả về rồi chạy Start. Để quay lại DB hiện hành trước đó, đặt lại
+`DATABASE_NAME=mindsprint` (hoặc tên DB đã ghi trước cập nhật). Không ghi đè database
+đang hoạt động trong lúc xử lý sự cố.
+
+/healthz xác nhận tiến trình web hoạt động (HTTP 200, `status=ok`).
+/readyz thực hiện `SELECT 1` vào database: HTTP 200 với `status=ready`, hoặc
 HTTP 503 với `status=unavailable`. Kết nối SQL Server của probe có timeout 2 giây
 và tắt retry kết nối; middleware có timeout 3 giây. Phản hồi không chứa chuỗi kết nối
 hay chi tiết lỗi SQL. Docker health check của web gọi `/readyz` mỗi 10 giây.
