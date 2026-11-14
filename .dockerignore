@@ -11,6 +11,11 @@
 **/dist/
 **/.env*
 .secrets.selfhost/
-**/appsettings.Development.json
+**/appsettings.*.json
+**/logs/
+**/backups/
+**/output/
+**/*.log
+**/*.bak
 frontend/design-reference/
 frontend/.vercel/
