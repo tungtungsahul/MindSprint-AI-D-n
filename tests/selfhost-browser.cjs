@@ -9,6 +9,7 @@ const { chromium } = require(path.join(__dirname, '../backend/MindSprint.Api/bin
     const browser = await launchBrowser(chromium);
     const context = await browser.newContext({ serviceWorkers: 'block' });
     const base = process.env.MINDSPRINT_BROWSER_URL || 'http://localhost:8080';
+    const origin = new URL(base).origin;
     const email = `hosting-browser-${crypto.randomBytes(8).toString('hex')}@example.com`;
     const password = crypto.randomBytes(12).toString('hex');
     try {
@@ -17,10 +18,16 @@ const { chromium } = require(path.join(__dirname, '../backend/MindSprint.Api/bin
         });
         assert.equal(registration.status(), 200);
         const page = await context.newPage();
+        await page.addInitScript(() => localStorage.setItem('api-base', 'http://localhost:5000'));
         const errors = [];
         const serverFailures = [];
+        const foreignApiOrigins = new Set();
         const apiResponses = new Map();
         page.on('pageerror', error => errors.push(error.message));
+        page.on('request', request => {
+            const url = new URL(request.url());
+            if (url.pathname.startsWith('/api/') && url.origin !== origin) foreignApiOrigins.add(url.origin);
+        });
         page.on('response', response => {
             if (response.url().startsWith(base + '/api/'))
                 apiResponses.set(new URL(response.url()).pathname, response.status());
@@ -51,7 +58,8 @@ const { chromium } = require(path.join(__dirname, '../backend/MindSprint.Api/bin
         assert.equal((await logout).status(), 200);
         assert.deepEqual(errors, []);
         assert.deepEqual(serverFailures, []);
-        console.log('PASS: real-browser email login, reload, Kanban/notebook API access and logout; no application errors.');
+        assert.deepEqual([...foreignApiOrigins], []);
+        console.log('PASS: real-browser login, reload, Kanban/notebook and logout on the page origin despite a stale API base.');
         console.log('One isolated hosting-browser account was created. Google account consent remains a manual check.');
     } finally {
         await context.close();

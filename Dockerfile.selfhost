@@ -1,7 +1,7 @@
 FROM node:22-alpine AS frontend
 WORKDIR /src/frontend
 COPY frontend/ ./
-RUN node build.mjs && printf '%s\n' 'window.MINDSPRINT_CONFIG = Object.freeze({ apiBase: window.location.origin });' > dist/runtime-config.js
+RUN node build.mjs && printf '%s\n' 'window.MINDSPRINT_CONFIG = Object.freeze({ apiBase: window.location.origin, sameOrigin: true });' > dist/runtime-config.js
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
