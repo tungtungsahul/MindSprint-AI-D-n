@@ -1,10 +1,12 @@
 // MindSprint API client - nối frontend (HTML/CSS/JS) với backend ASP.NET Core.
 // Tự động thử luân chuyển cổng 5000 và 5100 nếu một trong hai đang lắng nghe.
 (function () {
-    const configuredApiBase = window.MINDSPRINT_CONFIG?.apiBase?.trim();
+    const runtimeConfig = window.MINDSPRINT_CONFIG;
+    const configuredApiBase = runtimeConfig?.apiBase?.trim();
+    const sameOriginApi = runtimeConfig?.sameOrigin === true;
     const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location?.hostname ?? 'localhost');
     const DEFAULT_API_BASE = configuredApiBase || (isLocal ? 'http://localhost:5000' : '');
-    let API_BASE = localStorage.getItem('api-base') || DEFAULT_API_BASE;
+    let API_BASE = sameOriginApi ? '' : localStorage.getItem('api-base') || DEFAULT_API_BASE;
     const TOKEN_KEY = 'ms-token';
     const USER_KEY = 'ms-user';
     const REFRESH_TOKEN_KEY = 'ms-refresh-token';
@@ -31,7 +33,7 @@
     };
 
     async function fetchWithFallback(path, options) {
-        if (!API_BASE) throw new Error('Backend API is not configured. Set API_BASE for this deployment.');
+        if (!API_BASE && !sameOriginApi) throw new Error('Backend API is not configured. Set API_BASE for this deployment.');
         try {
             return await fetch(API_BASE + path, options);
         } catch {
