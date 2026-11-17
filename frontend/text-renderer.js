@@ -14,15 +14,13 @@
         const tokens = [];
         // Protect multiline formulas and code before handling paragraphs or citations.
         const text = String(source ?? '').replace(
-            /^(?<fence>`{3,})[^\r\n]*\r?\n[\s\S]*?^\k<fence>[ \t]*(?=\r?$)|`[^`\n]+`|(?<!\\)\$\$[\s\S]+?(?<!\\)\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<![\\$])\$(?![\s$])[^$\n]+?(?<!\\)\$/gm,
+            /```[\s\S]*?```|`[^`\n]+`|(?<!\\)\$\$[\s\S]+?(?<!\\)\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(?<![\\$])\$(?![\s$])[^$\n]+?(?<!\\)\$/g,
             match => {
                 let html;
                 let block = false;
                 if (match.startsWith('```')) {
                     block = true;
-                    const fence = match.match(/^`+/)[0];
-                    const code = match.slice(match.indexOf('\n') + 1, match.lastIndexOf(fence)).replace(/\r?\n$/, '');
-                    html = '<pre><code>' + escapeHTML(code) + '</code></pre>';
+                    html = '<pre><code>' + escapeHTML(match.slice(3, -3).replace(/^[\w+-]*\n/, '')) + '</code></pre>';
                 } else if (match.startsWith('`')) {
                     html = '<code>' + escapeHTML(match.slice(1, -1)) + '</code>';
                 } else {
@@ -108,6 +106,6 @@
         observer.observe(document.body, { childList: true, characterData: true, subtree: true });
     }
 
-    window.MindSprintText = { markdown, renderMath, escapeHTML };
+    window.MindSprintText = { markdown, renderMath };
     document.addEventListener('DOMContentLoaded', watchContent);
 })();

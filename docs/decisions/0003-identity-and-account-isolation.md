@@ -1,6 +1,6 @@
 # ADR-003: JWT, refresh token và ranh giới tài khoản
 
-**Trạng thái:** Ghi nhận cơ chế hiện có tại main/9ba7acd; các yêu cầu bảo mật cần nghiệm thu. **Ngày:** 12/10/2026.
+**Trạng thái:** Ghi nhận cơ chế hiện có tại main/b890dcc; các yêu cầu bảo mật cần nghiệm thu. **Ngày:** 14/10/2026.
 
 ## Bối cảnh
 
@@ -22,4 +22,4 @@ localStorage không bảo vệ token trước XSS. Revoke refresh không vô hi�
 
 Kiểm chứng NFR-03/04/05/07/11/13; đo ClockSkew thực khi test hết hạn. Production demo endpoint và log auth cần kiểm thử riêng.
 
-**Nguồn:** [TokenService](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/TokenService.cs), [Google sign-in](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/GOOGLE_SIGN_IN.md), [api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/api.js), [auth.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/auth.js).
+**Nguồn:** [TokenService](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/TokenService.cs), [Google sign-in](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/GOOGLE_SIGN_IN.md), [api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/api.js), [auth.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/auth.js).

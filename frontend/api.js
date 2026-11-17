@@ -1,12 +1,10 @@
 // MindSprint API client - nối frontend (HTML/CSS/JS) với backend ASP.NET Core.
 // Tự động thử luân chuyển cổng 5000 và 5100 nếu một trong hai đang lắng nghe.
 (function () {
-    const runtimeConfig = window.MINDSPRINT_CONFIG;
-    const configuredApiBase = runtimeConfig?.apiBase?.trim();
-    const sameOriginApi = runtimeConfig?.sameOrigin === true;
+    const configuredApiBase = window.MINDSPRINT_CONFIG?.apiBase?.trim();
     const isLocal = ['localhost', '127.0.0.1', '::1'].includes(window.location?.hostname ?? 'localhost');
     const DEFAULT_API_BASE = configuredApiBase || (isLocal ? 'http://localhost:5000' : '');
-    let API_BASE = sameOriginApi ? '' : localStorage.getItem('api-base') || DEFAULT_API_BASE;
+    let API_BASE = configuredApiBase || localStorage.getItem('api-base') || DEFAULT_API_BASE;
     const TOKEN_KEY = 'ms-token';
     const USER_KEY = 'ms-user';
     const REFRESH_TOKEN_KEY = 'ms-refresh-token';
@@ -33,7 +31,7 @@
     };
 
     async function fetchWithFallback(path, options) {
-        if (!API_BASE && !sameOriginApi) throw new Error('Backend API is not configured. Set API_BASE for this deployment.');
+        if (!API_BASE) throw new Error('Backend API is not configured. Set API_BASE for this deployment.');
         try {
             return await fetch(API_BASE + path, options);
         } catch {
@@ -164,7 +162,7 @@
         getApiBase: () => API_BASE,
         login: (email, password) => authenticate('/api/auth/login', { email, password }),
         googleConfig: () => request('/api/auth/google/config', { auth: false }),
-        googleChallenge: () => request('/api/auth/google/challenge', { method: 'POST', auth: false }),
+        googleChallenge: () => request('/api/auth/google/challenge', { auth: false }),
         googleLogin: (credential, nonce, existingPassword) => authenticate('/api/auth/google', { credential, nonce, existingPassword }),
         demoLogin: () => authenticate('/api/auth/demo', {}),
         register: (email, password, displayName) => authenticate('/api/auth/register', { email, password, displayName }),
@@ -213,7 +211,6 @@
         // Gemini
         aiFlashcards: (text, count = 10) => request('/api/ai/flashcards', { method: 'POST', body: { text, count } }),
         aiQuiz: (text, count = 10) => request('/api/ai/quiz', { method: 'POST', body: { text, count } }),
-        aiExtractFile: (file) => { const f = new FormData(); f.append('file', file); return upload('/api/ai/extract-file', f); },
 
         // Study Stats (Issue #14)
         studyGetDays: (from, to) => {

@@ -100,7 +100,6 @@ namespace MindSprint.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Version")
-                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -312,7 +311,6 @@ namespace MindSprint.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsRevoked")
-                        .IsConcurrencyToken()
                         .HasColumnType("boolean");
 
                     b.Property<string>("Token")

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mindsprintai-cache-v78';
+const CACHE_NAME = 'mindsprintai-cache-v59';
 const MATH_FONTS = [
   'AMS-Regular', 'Caligraphic-Bold', 'Caligraphic-Regular', 'Fraktur-Bold', 'Fraktur-Regular',
   'Main-Bold', 'Main-BoldItalic', 'Main-Italic', 'Main-Regular', 'Math-BoldItalic', 'Math-Italic',
@@ -9,22 +9,17 @@ const ASSETS = [
   './',
   './index.html',
   './tokens.css?v=39',
-  './style.css?v=64',
-  './cockpit.css?v=65',
-  './cockpit.js?v=66',
-  './assets/mindsprint-avatar-site.png',
-  './ui-refresh.css?v=10',
-  './script.js?v=68',
+  './style.css?v=59',
+  './script.js?v=50',
   './ui.js?v=59',
   './vocab_data.js?v=24',
-  './api.js?v=57',
+  './api.js?v=56',
   './kanban.js?v=54',
   './kanban.css?v=54',
-  './auth.js?v=44',
+  './auth.js?v=43',
   './dialogs.js?v=45',
-  './voice.js?v=64',
-  './notebook.js?v=64',
-  './text-renderer.js?v=33',
+  './notebook.js?v=59',
+  './text-renderer.js?v=31',
   './vendor/katex/katex.min.css',
   './vendor/katex/katex.min.js',
   './vendor/katex/contrib/auto-render.min.js',
@@ -32,7 +27,7 @@ const ASSETS = [
   './manifest.json',
   './icon-192.jpg',
   './icon-512.jpg',
-  'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 

@@ -8,9 +8,19 @@ from typing import Optional, List, Dict, Union
 import re
 from pydantic import BaseModel, Field, validator
 
-# Compatibility helper for Pydantic v2
+try:
+    from pydantic import ConfigDict
+except ImportError:  # pragma: no cover - Pydantic v1
+    ConfigDict = None
+
+# Dual compatibility helper for Pydantic v1 & v2
 class BaseSchema(BaseModel):
-    model_config = {"from_attributes": True}
+    if ConfigDict is not None:
+        model_config = ConfigDict(from_attributes=True)
+    else:
+        class Config:
+            orm_mode = True
+            from_attributes = True
 
 
 # ==========================================

@@ -1,12 +1,12 @@
 # Yêu cầu phi chức năng — MindSprintAI
 
-Ngày lập: **12/10/2026**; rà schema: **16/10/2026** (Asia/Saigon). Nguồn kiến trúc nền: nhánh `main`, commit `9ba7acd2de05bf017ad5c2711644c9ee98bd6542`; phạm vi dữ liệu hiện hành gồm các migration PostgreSQL tiếp theo cho cache notebook, file nguồn và điểm yếu cá nhân. Các ngưỡng NFR vẫn là mục tiêu đề xuất, chưa nghiệm thu.
+Ngày lập: **14/10/2026** (Asia/Saigon). Nguồn kiến trúc: nhánh `main`, commit `b890dccbd502f5158a5a9fe46188b091e5211857`.
 
 ## Quy ước và phạm vi
 
-Các mục dưới đây là **mục tiêu nghiệm thu đề xuất cho Sprint 4**, không phải cam kết hệ thống đã đạt. Theo [phân công giữa kỳ được điều chỉnh ngày 14/10/2026](../../tasks/plan.md), toàn bộ nhiệm vụ Test, gồm 14 NFR, ở Sprint 4; các nhiệm vụ tính năng/giao diện/tài liệu ở Sprint 3. Ngưỡng do tài liệu này đề xuất cần được nhóm chốt tại sprint planning và ghi phiên bản trước khi đo; không giảm ngưỡng để hợp thức hóa kết quả thất bại. Các giới hạn ghi “hiện có” được đọc từ mã nguồn, chưa thay cho kiểm thử runtime.
+Các mục dưới đây là **mục tiêu nghiệm thu đề xuất cho Sprint 4**, không phải cam kết hệ thống đã đạt. Ngưỡng do tài liệu này đề xuất cần được nhóm chốt tại sprint planning và ghi phiên bản trước khi đo; không giảm ngưỡng để hợp thức hóa kết quả thất bại. Các giới hạn ghi “hiện có” được đọc từ mã nguồn, chưa thay cho kiểm thử runtime.
 
-Phạm vi: giao diện chính + ASP.NET Core/PostgreSQL trên `main`; FastAPI/SQLite độc lập không nằm trong kết quả nghiệm thu này. P0 là rủi ro bảo mật/toàn vẹn chặn nghiệm thu; P1 là chất lượng/vận hành cần xác nhận. Mọi yêu cầu đều có một issue kiểm thử riêng ở Sprint 4; người chủ trì nằm trong [kế hoạch kiểm thử Sprint 4](sprint-4-test-plan.md).
+Phạm vi: giao diện chính + ASP.NET Core/PostgreSQL trên `main`; FastAPI/SQLite độc lập không nằm trong kết quả nghiệm thu này. P0 là rủi ro bảo mật/toàn vẹn chặn nghiệm thu; P1 là chất lượng/vận hành cần xác nhận. Mọi yêu cầu đều có một issue kiểm thử riêng trong milestone Sprint 4.
 
 Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên bản image/.NET/PostgreSQL và network RTT; 50 tài khoản test, 1.814 thẻ hệ thống theo seed hiện có và mỗi tài khoản 500 thẻ riêng, 100 task, 10 notebook × 5 nguồn × 5.000 ký tự. Dữ liệu này là fixture cần tạo, không phải dữ liệu thực đã thống kê. Mỗi VU giữ tài khoản riêng, think time 1 giây; request mix 35% GET flashcards, 25% GET tasks, 20% GET notebooks, 10% POST task và 10% PATCH move task đã tạo. Tối thiểu 100 mẫu cho mỗi route mỗi lần chạy; báo p95 riêng từng route. Kiểm tra assert body/ownership, không tính response sai nội dung là thành công. Loại AI/upload/Google provider thật khỏi benchmark CRUD và đo riêng. Lỗi ngoài dự kiến gồm timeout, network error, assertion fail và status không thuộc hợp đồng; 429/quota chỉ được loại ở các bài cố ý gây lỗi provider.
 
@@ -35,7 +35,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 ## NFR-01: Hiệu năng phản hồi
 
-**Ưu tiên:** P1. **Trạng thái:** Đã nghiệm thu ✅. **Thành phần:** API CRUD, frontend, EF Core.
+**Ưu tiên:** P1. **Trạng thái:** Đề xuất / chưa nghiệm thu. **Thành phần:** API CRUD, frontend, EF Core.
 
 **Hiện trạng:** API đọc toàn bộ danh sách thẻ/công việc; chưa có báo cáo tải hoặc phân trang.
 
@@ -51,7 +51,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Báo cáo tải JSON/HTML, trace trình duyệt, p50/p95/p99, số request và tỷ lệ lỗi.
 
-**Nguồn mã:** [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/api.js), [backend/MindSprint.Api/Controllers/FlashcardsController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/FlashcardsController.cs), [backend/MindSprint.Api/Controllers/TasksController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/TasksController.cs).
+**Nguồn mã:** [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/api.js), [backend/MindSprint.Api/Controllers/FlashcardsController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/FlashcardsController.cs), [backend/MindSprint.Api/Controllers/TasksController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/TasksController.cs).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -76,7 +76,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Biểu đồ tài nguyên, bộ đếm concurrency, lỗi/timeout, cấu hình test.
 
-**Nguồn mã:** [backend/MindSprint.Api/Services/GeminiAvailability.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/GeminiAvailability.cs), [backend/MindSprint.Api/Services/NotebookPageRenderer.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/NotebookPageRenderer.cs).
+**Nguồn mã:** [backend/MindSprint.Api/Services/GeminiAvailability.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/GeminiAvailability.cs), [backend/MindSprint.Api/Services/NotebookPageRenderer.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/NotebookPageRenderer.cs).
 
 **Phụ thuộc kiểm thử:** NFR-01.
 
@@ -84,7 +84,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 ## NFR-03: Xác thực, phân quyền và cô lập tài khoản
 
-**Ưu tiên:** P0. **Trạng thái:** Đã kiểm thử và nghiệm thu (Sprint 4 — Issue #44, commit 2cf980c). **Thành phần:** JWT, TokenService, GoogleSignInService, controllers gồm /api/weak-areas, phiên frontend.
+**Ưu tiên:** P0. **Trạng thái:** Đề xuất / chưa nghiệm thu. **Thành phần:** JWT, TokenService, GoogleSignInService, controllers, phiên frontend.
 
 **Hiện trạng:** JWT kiểm tra issuer/audience/signature/lifetime; refresh rotation/revoke; lọc UserId/OwnerId. Token đang lưu localStorage.
 
@@ -97,23 +97,13 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Cách kiểm thử:**
 
-1. Tạo A/B riêng; chạy ma trận endpoint CRUD, review, study, notebook, tutor, `/api/weak-areas` (GET/analyze) và nested resources.
+1. Tạo A/B riêng; chạy ma trận endpoint CRUD, review, study, notebook, tutor và nested resources.
 2. Kiểm tra rotation/revoke tuần tự và 2 request refresh đồng thời; nếu cùng token cấp hai phiên mới thì ghi lỗi, không coi single-flight trong một tab là bảo đảm server.
 3. Chạy các ca Google giả lập và chuyển tài khoản khi API đang chờ.
 
-**Bằng chứng:** Ma trận endpoint/status ([ISSUE-44-REPORT.md](../../ISSUE-44-REPORT.md)), test harness C# [backend/AuthIsolationChecks](../../backend/AuthIsolationChecks), test session và Google frontend đạt 118/118 tests.
+**Bằng chứng:** Ma trận endpoint/status, response đã che token, test session và ảnh chuyển tài khoản.
 
-| Trường | Nội dung nghiệm thu Sprint 4 |
-| --- | --- |
-| **NFR / test case** | NFR-03: JWT verification, Anti-IDOR matrix (Tasks, Flashcards, Notebooks, Study, Tutor), Refresh concurrency & Google sign-in |
-| **Baseline** | Commit `2cf980c`, .NET 8.0, PostgreSQL 17.11 (`mindsprint`), Node.js v20 |
-| **Kỳ vọng** | Mọi API từ chối unauthorized 401/404; Anti-IDOR 100%; Concurrency 10 luồng xoay vòng cùng token chỉ đúng 1 thành công |
-| **Thực tế** | JWT tampering 401; Anti-IDOR 404 trên toàn bộ endpoints User A vs B; Concurrency: 1 succeeded, 9 rejected |
-| **Bằng chứng** | `ISSUE-44-REPORT.md`, `SPEC-issue44.md`, `backend/AuthIsolationChecks/Program.cs` |
-| **Kết luận** | **Pass (118/118 tests đạt 100%)**, người chạy: `phandien665-prog` (28/10/2026) |
-| **Theo dõi** | Đã sửa race condition `TokenService.RotateAsync` qua atomic `ExecuteUpdateAsync`, PR branch `dien/issue-44-nfr03-auth-isolation` |
-
-**Nguồn mã:** [backend/MindSprint.Api/Services/TokenService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/TokenService.cs), [backend/MindSprint.Api/Services/GoogleSignInService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/GoogleSignInService.cs), [frontend/auth.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/auth.js), [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/api.js).
+**Nguồn mã:** [backend/MindSprint.Api/Services/TokenService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/TokenService.cs), [backend/MindSprint.Api/Services/GoogleSignInService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/GoogleSignInService.cs), [frontend/auth.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/auth.js), [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/api.js).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -139,7 +129,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Danh sách payload đã che dữ liệu nhạy cảm, log kết nối đích, ảnh UI và kết quả DB.
 
-**Nguồn mã:** [backend/URL_IMPORT.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/URL_IMPORT.md), [backend/MindSprint.Api/Services/NotebookUrlReader.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/NotebookUrlReader.cs), [backend/MindSprint.Api/Controllers/NotebooksController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/NotebooksController.cs), [frontend/text-renderer.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/text-renderer.js).
+**Nguồn mã:** [backend/URL_IMPORT.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/URL_IMPORT.md), [backend/MindSprint.Api/Services/NotebookUrlReader.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/NotebookUrlReader.cs), [backend/MindSprint.Api/Controllers/NotebooksController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/NotebooksController.cs), [frontend/text-renderer.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/text-renderer.js).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -166,7 +156,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Network HAR đã che bí mật, kiểm tra artifact/log, cấu hình đã ẩn giá trị, ảnh thông báo AI.
 
-**Nguồn mã:** [backend/MindSprint.Api/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Program.cs), [backend/MindSprint.Api/Controllers/AuthController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/AuthController.cs), [frontend/build.mjs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/build.mjs), [CI-CD-SETUP.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/CI-CD-SETUP.md).
+**Nguồn mã:** [backend/MindSprint.Api/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Program.cs), [backend/MindSprint.Api/Controllers/AuthController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/AuthController.cs), [frontend/build.mjs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/build.mjs), [CI-CD-SETUP.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/CI-CD-SETUP.md).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -193,7 +183,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Timeline request, số retry/fallback, test UI và đối chiếu dữ liệu sau lỗi.
 
-**Nguồn mã:** [backend/MindSprint.Api/Services/GeminiService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/GeminiService.cs), [tests/GeminiReliability/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/tests/GeminiReliability/Program.cs), [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/api.js), [frontend/js/kanban.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/js/kanban.js).
+**Nguồn mã:** [backend/MindSprint.Api/Services/GeminiService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/GeminiService.cs), [tests/GeminiReliability/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/tests/GeminiReliability/Program.cs), [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/api.js), [frontend/js/kanban.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/js/kanban.js).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -203,24 +193,23 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Ưu tiên:** P0. **Trạng thái:** Đề xuất / chưa nghiệm thu. **Thành phần:** EF Core, PostgreSQL, Flashcards/Tasks/Study controllers.
 
-**Hiện trạng:** Có unique indexes cho progress/ngày học/cache notebook/điểm yếu và Version của thẻ; kiểm tra Version là optional, chưa cấu hình EF concurrency token. Kanban sắp vị trí trong SaveChanges nhưng chưa bảo đảm giữa request đồng thời.
+**Hiện trạng:** Có unique indexes và Version của thẻ; kiểm tra Version là optional, chưa cấu hình EF concurrency token. Kanban sắp vị trí trong SaveChanges nhưng chưa bảo đảm giữa request đồng thời.
 
 **Tiêu chí đạt:**
 
 - Hai client sửa thẻ cùng Version: chỉ một cập nhật thắng; bản còn lại nhận 409 và không ghi đè âm thầm. Test cả request cùng thời điểm và request thiếu Version.
 - Hai thao tác move/create/delete Kanban đồng thời không mất task hoặc để Position trùng/hổng sau khi hoàn tất; mỗi cột có thứ tự 0..n-1.
 - Review/ngày học lặp hoặc đồng thời không tạo hàng trùng theo unique key, không mất dữ liệu đã xác nhận; lỗi ghi một phần được rollback.
-- Phân tích đồng thời không tạo trùng `WeakAreas` theo UserId/Category/Topic; cache tạo nội dung không trùng theo NotebookId/Type/RequestHash/SourcesHash và không được dùng chéo notebook.
 - Ngày học/streak giữ đúng ngày Asia/Saigon qua biên 23:59/00:00 và restart; UTC timestamp không được dùng thay ngày học địa phương.
 
 **Cách kiểm thử:**
 
 1. Dùng barrier gửi request đồng thời tới PostgreSQL thật, tối thiểu 20 vòng mỗi ca; không thay bằng SQLite/in-memory.
-2. Đọc DB/GET sau mỗi vòng, kiểm tra version/count/order/foreign key, unique key cache/điểm yếu và dấu mốc thời gian.
+2. Đọc DB/GET sau mỗi vòng, kiểm tra version/count/order/foreign key và dấu mốc thời gian.
 
 **Bằng chứng:** Timeline request/response, truy vấn invariants đã che dữ liệu, kết quả race test.
 
-**Nguồn mã:** [backend/MindSprint.Api/Controllers/FlashcardsController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/FlashcardsController.cs), [backend/MindSprint.Api/Controllers/TasksController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/TasksController.cs), [backend/MindSprint.Api/Controllers/StudyStatsController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers/StudyStatsController.cs), [backend/MindSprint.Api/Data/AppDbContext.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Data/AppDbContext.cs).
+**Nguồn mã:** [backend/MindSprint.Api/Controllers/FlashcardsController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/FlashcardsController.cs), [backend/MindSprint.Api/Controllers/TasksController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/TasksController.cs), [backend/MindSprint.Api/Controllers/StudyStatsController.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/StudyStatsController.cs), [backend/MindSprint.Api/Data/AppDbContext.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Data/AppDbContext.cs).
 
 **Phụ thuộc kiểm thử:** NFR-03.
 
@@ -245,7 +234,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** CSV probe, tỷ lệ thành công, sự kiện cảnh báo và lịch fault injection.
 
-**Nguồn mã:** [backend/MindSprint.Api/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Program.cs), [render.yaml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/render.yaml).
+**Nguồn mã:** [backend/MindSprint.Api/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Program.cs), [render.yaml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/render.yaml).
 
 **Phụ thuộc kiểm thử:** NFR-12.
 
@@ -270,7 +259,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Runbook, lịch backup, log restore đã ẩn bí mật, checksum/count và thời gian khôi phục.
 
-**Nguồn mã:** [CI-CD-SETUP.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/CI-CD-SETUP.md), [backend/MindSprint.Api/Data/AppDbContext.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Data/AppDbContext.cs).
+**Nguồn mã:** [CI-CD-SETUP.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/CI-CD-SETUP.md), [backend/MindSprint.Api/Data/AppDbContext.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Data/AppDbContext.cs).
 
 **Phụ thuộc kiểm thử:** NFR-12.
 
@@ -295,7 +284,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Ảnh viewport/zoom, báo cáo accessibility, checklist bàn phím và screen reader.
 
-**Nguồn mã:** [frontend/index.html](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/index.html), [frontend/dialogs.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/dialogs.js), [frontend/js/kanban.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/js/kanban.js), [frontend/style.css](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/style.css).
+**Nguồn mã:** [frontend/index.html](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/index.html), [frontend/dialogs.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/dialogs.js), [frontend/js/kanban.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/js/kanban.js), [frontend/style.css](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/style.css).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -303,7 +292,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 ## NFR-11: Tương thích trình duyệt và chế độ offline
 
-**Ưu tiên:** P1. **Trạng thái:** Đã nghiệm thu ✅. **Thành phần:** Service worker, localStorage, account-scoped state.
+**Ưu tiên:** P1. **Trạng thái:** Đề xuất / chưa nghiệm thu. **Thành phần:** Service worker, localStorage, account-scoped state.
 
 **Hiện trạng:** PWA cache app, API luôn gọi mạng; thư viện/lịch có lưu cục bộ và queue, Kanban/notebook online. Asset CDN ảnh hưởng lần cài cache đầu.
 
@@ -321,7 +310,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Ma trận browser/version/device, ảnh offline, trạng thái cache/queue và số request replay.
 
-**Nguồn mã:** [frontend/sw.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/sw.js), [frontend/script.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/script.js), [frontend/manifest.json](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/manifest.json), [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/api.js).
+**Nguồn mã:** [frontend/sw.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/sw.js), [frontend/script.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/script.js), [frontend/manifest.json](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/manifest.json), [frontend/api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/api.js).
 
 **Phụ thuộc kiểm thử:** NFR-03.
 
@@ -347,7 +336,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Link CI, build logs, image/commit ID, migration/smoke/rollback report.
 
-**Nguồn mã:** [.github/workflows/ci-cd.yml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/.github/workflows/ci-cd.yml), [frontend/build.mjs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/build.mjs), [backend/MindSprint.Api/Dockerfile](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Dockerfile), [backend/MindSprint.Api/Migrations/20261006104859_InitialCreate_PostgreSQL.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Migrations/20261006104859_InitialCreate_PostgreSQL.cs).
+**Nguồn mã:** [.github/workflows/ci-cd.yml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/.github/workflows/ci-cd.yml), [frontend/build.mjs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/build.mjs), [backend/MindSprint.Api/Dockerfile](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Dockerfile), [backend/MindSprint.Api/Migrations/20261006104859_InitialCreate_PostgreSQL.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Migrations/20261006104859_InitialCreate_PostgreSQL.cs).
 
 **Phụ thuộc kiểm thử:** Không có.
 
@@ -372,7 +361,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Log mẫu đã che dữ liệu, biểu đồ hoặc báo cáo metrics, thời gian truy vết lỗi.
 
-**Nguồn mã:** [backend/MindSprint.Api/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Program.cs), [backend/MindSprint.Api/Services/GeminiService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/GeminiService.cs).
+**Nguồn mã:** [backend/MindSprint.Api/Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Program.cs), [backend/MindSprint.Api/Services/GeminiService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/GeminiService.cs).
 
 **Phụ thuộc kiểm thử:** NFR-05.
 
@@ -399,7 +388,7 @@ Hồ sơ tải chuẩn (NFR-01/02): staging riêng, ghi CPU/RAM, region, phiên 
 
 **Bằng chứng:** Fixture/đáp án/rubric, bảng chấm 90 output, kết quả schema/citation/injection đã che dữ liệu.
 
-**Nguồn mã:** [backend/MindSprint.Api/Services/NotebookAi.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/NotebookAi.cs), [backend/MindSprint.Api/Services/TutorService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/TutorService.cs), [backend/TutorChecks/SPRINT2.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/TutorChecks/SPRINT2.md).
+**Nguồn mã:** [backend/MindSprint.Api/Services/NotebookAi.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/NotebookAi.cs), [backend/MindSprint.Api/Services/TutorService.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/TutorService.cs), [backend/TutorChecks/SPRINT2.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/TutorChecks/SPRINT2.md).
 
 **Phụ thuộc kiểm thử:** NFR-04, NFR-06.
 

@@ -44,9 +44,10 @@ public class TokenService(IConfiguration cfg, AppDbContext db)
     {
         // Xoá các token hết hạn (dọn dẹp nhẹ)
         var expiredCutoff = DateTime.UtcNow;
-        await db.RefreshTokens
+        var expired = await db.RefreshTokens
             .Where(r => r.UserId == u.Id && (r.IsRevoked || r.ExpiresAt < expiredCutoff))
-            .ExecuteDeleteAsync();
+            .ToListAsync();
+        db.RefreshTokens.RemoveRange(expired);
 
         var rt = new RefreshToken
         {
@@ -88,14 +89,7 @@ public class TokenService(IConfiguration cfg, AppDbContext db)
             DeviceHint = deviceHint ?? rt.DeviceHint
         };
         db.RefreshTokens.Add(newRt);
-        try { await db.SaveChangesAsync(); }
-        catch (DbUpdateConcurrencyException)
-        {
-            // SaveChanges rolls back both the failed claim and its replacement token.
-            db.Entry(newRt).State = EntityState.Detached;
-            await db.Entry(rt).ReloadAsync();
-            return null;
-        }
+        await db.SaveChangesAsync();
         return newRt;
     }
 
@@ -105,12 +99,7 @@ public class TokenService(IConfiguration cfg, AppDbContext db)
         var rt = await db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token && r.UserId == userId);
         if (rt is null) return false;
         rt.IsRevoked = true;
-        try { await db.SaveChangesAsync(); }
-        catch (DbUpdateConcurrencyException)
-        {
-            await db.Entry(rt).ReloadAsync();
-            return db.Entry(rt).State != EntityState.Detached && rt.IsRevoked;
-        }
+        await db.SaveChangesAsync();
         return true;
     }
 

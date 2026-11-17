@@ -13,7 +13,7 @@ test('notebook UI discloses Gemini data transfer', () => {
     assert.match(source, /Tránh gửi thông tin nhạy cảm/i);
 });
 
-test('frontend build artifact excludes demo credentials and local auth client', () => {
+test('frontend build artifact excludes demo credentials and local auth client', t => {
     const legacyAuth = fs.readFileSync(path.join(root, 'frontend/js/auth.js'), 'utf8');
     assert.doesNotMatch(legacyAuth, /MindSprint\d{3}!/);
     assert.doesNotMatch(legacyAuth, /handleDemoLogin|demoPass/);

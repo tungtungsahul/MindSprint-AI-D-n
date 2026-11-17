@@ -18,8 +18,6 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
-      - key: Database__Provider
-        value: PostgreSQL
       - key: ConnectionStrings__Default
         fromDatabase:
           name: mindsprint-db

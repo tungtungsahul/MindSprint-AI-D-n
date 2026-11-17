@@ -1,13 +1,10 @@
 # ADR-002: PostgreSQL và triển khai frontend/API riêng
 
-**Trạng thái:** Ghi nhận cấu hình hiện có tại main/9ba7acd, chưa xác nhận production. **Ngày:** 12/10/2026.
-
-**Cập nhật 09/11/2026:** cấu hình mặc định/local chuyển sang SQL Server theo
-[ADR-006](0006-sql-server-default.md); Render hiện có vẫn chọn PostgreSQL rõ ràng.
+**Trạng thái:** Ghi nhận cấu hình hiện có tại main/b890dcc, chưa xác nhận production. **Ngày:** 14/10/2026.
 
 ## Bối cảnh
 
-main dùng Npgsql và migration InitialCreate_PostgreSQL. Render Blueprint khai báo PostgreSQL + Docker API; Vercel phục vụ frontend tĩnh. Workspace c5e1400 còn provider/migrations SQL Server. FastAPI mặc định SQLite chạy riêng.
+main dùng Npgsql và migration InitialCreate_PostgreSQL. Render Blueprint khai báo PostgreSQL + Docker API; Vercel phục vụ frontend tĩnh. FastAPI/SQLite app là một ứng dụng riêng biệt, không liên quan đến ASP.NET Core/PostgreSQL API.
 
 ## Quyết định
 
@@ -25,4 +22,4 @@ Migration provider mới không tự chuyển dữ liệu SQL Server cũ; nếu 
 
 Kiểm chứng NFR-05/07/08/09/12. Backup/restore và retention hosting là yêu cầu chưa được chứng minh. /healthz hiện chỉ là liveness.
 
-**Nguồn:** [csproj](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/MindSprint.Api.csproj), [PostgresConnectionString](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/PostgresConnectionString.cs), [render.yaml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/render.yaml), [hướng dẫn deploy](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/CI-CD-SETUP.md).
+**Nguồn:** [csproj](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/MindSprint.Api.csproj), [PostgresConnectionString](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/PostgresConnectionString.cs), [render.yaml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/render.yaml), [hướng dẫn deploy](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/CI-CD-SETUP.md).

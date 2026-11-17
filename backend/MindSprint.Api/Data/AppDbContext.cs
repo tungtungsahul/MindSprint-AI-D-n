@@ -3,11 +3,8 @@ using MindSprint.Api.Models;
 
 namespace MindSprint.Api.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-    protected AppDbContext(DbContextOptions options) : base(options) { }
-
     public DbSet<User> Users => Set<User>();
     public DbSet<Flashcard> Flashcards => Set<Flashcard>();
     public DbSet<CardProgress> CardProgresses => Set<CardProgress>();
@@ -33,7 +30,6 @@ public class AppDbContext : DbContext
         b.Entity<User>().Property(u => u.GoogleSubject).HasMaxLength(255);
         b.Entity<User>().HasIndex(u => u.GoogleSubject).IsUnique().HasFilter("\"GoogleSubject\" IS NOT NULL");
         b.Entity<Flashcard>().HasIndex(f => f.ExternalId).IsUnique();
-        b.Entity<Flashcard>().Property(f => f.Version).IsConcurrencyToken();
         b.Entity<Flashcard>().HasOne(f => f.Owner).WithMany().HasForeignKey(f => f.OwnerId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<CardProgress>().HasIndex(p => new { p.UserId, p.FlashcardId }).IsUnique();
         b.Entity<CardProgress>().HasOne(p => p.Flashcard).WithMany().HasForeignKey(p => p.FlashcardId).OnDelete(DeleteBehavior.Cascade);
@@ -50,7 +46,6 @@ public class AppDbContext : DbContext
 
         // #5 – Refresh token: unique index để lookup nhanh và thu hồi
         b.Entity<RefreshToken>().HasIndex(r => r.Token).IsUnique();
-        b.Entity<RefreshToken>().Property(r => r.IsRevoked).IsConcurrencyToken();
         b.Entity<RefreshToken>().HasOne(r => r.User).WithMany()
             .HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
 
@@ -58,10 +53,8 @@ public class AppDbContext : DbContext
         b.Entity<UserStudyDay>().HasIndex(d => new { d.UserId, d.StudyDate }).IsUnique();
         b.Entity<StudySchedule>().HasIndex(s => new { s.UserId, s.DayOfWeek });
 
-        // Configure concurrency token for Flashcard.Version (optimistic concurrency)
-        b.Entity<Flashcard>().Property(f => f.Version).IsConcurrencyToken();
-        b.Entity<Flashcard>().Property(f => f.UpdatedAt).IsConcurrencyToken();
-        // Kanban task position integrity
-        b.Entity<KanbanTask>().Property(t => t.Position).IsConcurrencyToken();
+        // #35 – Điểm yếu: unique per user per topic, index cho truy vấn
+        b.Entity<WeakArea>().HasIndex(w => new { w.UserId, w.Category, w.Topic }).IsUnique();
+        b.Entity<WeakArea>().HasIndex(w => new { w.UserId, w.AnalyzedAt });
     }
 }

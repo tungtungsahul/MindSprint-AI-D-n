@@ -10,7 +10,10 @@ RUN dotnet publish MindSprint.Api.csproj --configuration Release --no-restore --
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=10000
-ENV Database__Provider=PostgreSQL
 EXPOSE 10000
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends curl \
+	&& rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish ./
 ENTRYPOINT ["dotnet", "MindSprint.Api.dll"]
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 CMD curl --fail --silent http://127.0.0.1:10000/healthz || exit 1

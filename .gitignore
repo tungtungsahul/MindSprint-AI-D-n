@@ -14,24 +14,11 @@ packages/
 TestResults/
 
 # Local DB / app settings
-.env.selfhost
-.secrets.selfhost/
-.public.selfhost.json
-.public.alias.selfhost.json
-sites/mindsprint-gateway/
-backups/
-*.bak
-appsettings.Development.json
 .env
-.env.*
-!.env.example
-!.env.selfhost.example
+appsettings.Development.json
 *.db
 *.db-shm
 *.db-wal
-local-data/
-docker-data/
-logs/
 
 # OS / IDE
 .DS_Store
@@ -42,20 +29,8 @@ node_modules/
 frontend/dist/
 frontend/.vercel/
 frontend/.env*
-# Python
-__pycache__/
-*.pyc
-.pytest_cache/
-test_results.json
-
 .playwright-mcp/
-
-dist/
-release/
 
 # Local worktrees and design exploration
 .worktrees/
 .taste-skill/
-
-# Goi chan doan (scripts/collect-diagnostics.ps1, issue #115) - co the chua du lieu may, khong commit
-diagnostics/

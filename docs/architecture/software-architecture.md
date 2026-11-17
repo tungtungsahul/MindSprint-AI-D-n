@@ -1,6 +1,6 @@
 # Kiến trúc phần mềm MindSprintAI
 
-Ngày cập nhật: **16/10/2026**. Mốc kiến trúc nền: [main / 9ba7acd](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/9ba7acd2de05bf017ad5c2711644c9ee98bd6542); mô hình dữ liệu được cập nhật theo các migration PostgreSQL hiện có trên main sau mốc này. Liên quan [#40](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/40).
+Cập nhật: **14/10/2026**. Mốc đối chiếu: [main / b890dcc](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/b890dccbd502f5158a5a9fe46188b091e5211857). Liên quan [#40](https://github.com/tungtungsahul/MindSprint-AI-D-n/issues/40).
 
 ## 1. Bối cảnh và phạm vi
 
@@ -8,7 +8,7 @@ MindSprintAI hỗ trợ học bằng flashcard và spaced repetition, sổ tay t
 
 Bản chính trên main dùng ASP.NET Core 8, PostgreSQL/Npgsql và EF Core Code First. Thư mục `backend/app` + `frontend/standalone.html` là bản FastAPI với SQLite mặc định, chạy độc lập qua `run_server.py` ở cổng 8000. Hai bản không chia sẻ database/token và không phải hai microservice hợp tác.
 
-Checkout `c5e1400` trong workspace còn dùng SQL Server, CORS mở và listener localhost 5000/5100. Những mô tả production ở đây lấy từ main, không khẳng định checkout cũ đã có các thay đổi đó.
+Các mô tả triển khai là cấu hình trong repository tại mốc trên, không phải bằng chứng service production đang chạy đúng cấu hình.
 
 ## 2. Sơ đồ bối cảnh
 
@@ -34,8 +34,8 @@ flowchart TB
     UI["index.html / script.js / notebook.js / Kanban / dialogs"]
     C["MindSprintApi + MindSprintAuth"]
     MW["CORS / JWT / Authorization / rate limiter"]
-    CTRL["Controllers: Auth, Cards, Review, Tasks, Study, WeakAreas, Notebook, Tutor, AI"]
-    SVC["Services: Token, Google, SRS, WeakArea, Tutor, NotebookAI/cache, Gemini, URL import"]
+    CTRL["Controllers: Auth, Cards, Review, Tasks, Study, Notebook, Tutor, AI"]
+    SVC["Services: Token, Google, SRS, Tutor, NotebookAI, Gemini, URL import, WeakArea"]
     DB["AppDbContext + EF Core migrations"]
     EXT["Gemini / Google / HTTP sources / Chromium"]
     UI --> C --> MW --> CTRL
@@ -47,28 +47,33 @@ flowchart TB
 
 | Nhóm | Trách nhiệm | Điểm mã nguồn |
 | --- | --- | --- |
-| Giao diện chính | Điều hướng, học tập, sổ tay, bảng công việc và thông báo lỗi | [frontend](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/index.html), [script.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/script.js), [notebook.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/notebook.js) |
-| API/phiên phía client | Bearer token, refresh single-flight trong tab, loại response từ phiên cũ | [api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/api.js), [auth.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/frontend/auth.js) |
-| API HTTP | DTO/validation, authorization, chuyển kết quả/lỗi sang HTTP; API điểm yếu cá nhân | [Controllers](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/main/backend/MindSprint.Api/Controllers) |
-| Học và AI | SRS, phân tích điểm yếu, context từ nguồn, cache sinh nội dung, gia sư/check/hints, gọi Gemini | [Services](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/main/backend/MindSprint.Api/Services) |
-| Nguồn ngoài | Kiểm tra URL/DNS/socket/redirect, đọc tài liệu, renderer JS hạn chế tài nguyên | [URL_IMPORT.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/URL_IMPORT.md) |
-| Dữ liệu | Entity, truy vấn, index, migration và seed | [AppDbContext](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Data/AppDbContext.cs), [Entities](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Models/Entities.cs) |
-| Vận hành | DI, JWT/CORS, provider, startup migration, health endpoint | [Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Program.cs) |
+| Giao diện chính | Điều hướng, học tập, sổ tay, bảng công việc và thông báo lỗi | [frontend](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/index.html), [script.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/script.js), [notebook.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/notebook.js) |
+| API/phiên phía client | Bearer token, refresh single-flight trong tab, loại response từ phiên cũ | [api.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/api.js), [auth.js](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/frontend/auth.js) |
+| API HTTP | DTO/validation, authorization, chuyển kết quả/lỗi sang HTTP | [Controllers](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers) |
+| Học và AI | SRS, context từ nguồn, gia sư/check/hints, gọi Gemini | [Services](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services) |
+| Phân tích điểm yếu | Lưu kết quả theo tài khoản/chủ đề; unique theo user, category và topic | [WeakAreasController](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers/WeakAreasController.cs), [WeakAreaService](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/WeakAreaService.cs), [AppDbContext](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Data/AppDbContext.cs) |
+| Nguồn ngoài | Kiểm tra URL/DNS/socket/redirect, đọc tài liệu, renderer JS hạn chế tài nguyên | [URL_IMPORT.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/URL_IMPORT.md) |
+| Dữ liệu | Entity, truy vấn, index, migration và seed | [AppDbContext](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Data/AppDbContext.cs), [Entities](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Models/Entities.cs) |
+| Vận hành | DI, JWT/CORS, provider, startup migration, health endpoint | [Program.cs](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Program.cs) |
 
 Không bổ sung message broker, Redis hay vector DB trong kiến trúc hiện tại. Chỉ cân nhắc khi số đo thực tế cho thấy cần thiết.
 
 ## 4. Mô hình dữ liệu và ranh giới tài khoản
 
-Xem [ERD đầy đủ](erd.md) với 12 bảng, 91 cột và cardinality; model có cache tạo nội dung gắn với notebook, file nguồn tùy chọn và dữ liệu điểm yếu gắn với user. Quan hệ cascade/index được đối chiếu theo migration, không suy ra chỉ từ navigation property. [Mermaid source](erd.mmd) là bản hiện hành; ảnh PNG/SVG cũ chưa được tái sinh. Sơ đồ phân biệt 7 FK thực với 5 tham chiếu nghiệp vụ chưa có FK.
+Xem [ERD đầy đủ](erd.md) với 12 bảng, 91 cột và cardinality; có [ảnh PNG](erd.png),
+[vector SVG](erd.svg) và [Mermaid](erd.mmd). Sơ đồ phân biệt 7 FK thực với 5 tham chiếu nghiệp vụ chưa có FK.
 
 | Dữ liệu | Quy tắc và lưu ý |
 | --- | --- |
 | User / RefreshToken | Email unique; GoogleSubject unique khi khác null; refresh token gắn tài khoản, có hết hạn/thu hồi |
 | Flashcard / CardProgress | OwnerId=null là thẻ hệ thống; thẻ riêng lọc theo owner; progress unique theo UserId + FlashcardId |
 | KanbanTask | UserId, Status, Position; index theo ba trường; thứ tự phải được kiểm tra khi cập nhật đồng thời |
-| Notebook / Source / Note / GenerationCache | Notebook thuộc user; nguồn, ghi chú và cache thuộc notebook; xóa notebook cascade các hàng liên quan. Nguồn có thể lưu byte file và media type nullable |
+| Notebook / Source / Note | Notebook thuộc user; nguồn/ghi chú thuộc notebook; xóa notebook cascade nguồn/ghi chú |
+| NotebookGenerationCache | Cache sinh nội dung theo notebook, loại, hash yêu cầu và hash nguồn; xóa notebook cascade cache |
+| WeakArea | Điểm yếu gắn UserId bằng FK cascade; unique theo UserId + Category + Topic |
 | UserStudyDay / StudySchedule | Ngày học unique theo UserId + StudyDate; lịch theo user/ngày tuần; xử lý ngày học UTC+7 |
-| WeakArea | Phân tích điểm yếu theo user/category/topic; unique theo bộ ba và cascade khi xóa user |
+
+NotebookSources lưu thêm `FileBytes` (`bytea`, nullable) và `FileMediaType` (nullable) cho nguồn tệp/ảnh. Schema ở mốc đối chiếu có 12 bảng, 91 cột, 7 FK thực và 5 tham chiếu nghiệp vụ chưa có FK. Đây là mô tả migration, không phải xác nhận schema production đã cập nhật.
 
 Đây là quan hệ nghiệp vụ; không giả định mọi trường UserId đều có foreign key nếu AppDbContext không cấu hình. PostgreSQL là nguồn dữ liệu server. localStorage chứa token, cài đặt, dữ liệu học cục bộ và queue hỗ trợ offline; backup DB không khôi phục các thao tác chưa sync.
 
@@ -108,7 +113,13 @@ sequenceDiagram
     Note over UI,API: Lưu ghi chú/thẻ là thao tác ghi riêng
 ```
 
-Context notebook cắt nội dung mỗi nguồn để tổng nội dung nguồn khoảng 300.000 ký tự; header/history/question có thể làm prompt dài hơn, đây không phải token budget chính xác. Hỏi theo nguồn yêu cầu trích dẫn và chỉ dùng nguồn; Gia sư có thể giải bằng kiến thức mô hình. Hội thoại tutor giữ trong bộ nhớ trang, chỉ ghi chú được lưu bền khi người dùng yêu cầu. Chi tiết [Tutor](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/TutorChecks/README.md) và [Sprint 2](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/TutorChecks/SPRINT2.md).
+Context notebook cắt nội dung mỗi nguồn để tổng nội dung nguồn khoảng 300.000 ký tự; header/history/question có thể làm prompt dài hơn, đây không phải token budget chính xác. Hỏi theo nguồn yêu cầu trích dẫn và chỉ dùng nguồn; Gia sư có thể giải bằng kiến thức mô hình. Hội thoại tutor giữ trong bộ nhớ trang, chỉ ghi chú được lưu bền khi người dùng yêu cầu. Chi tiết [Tutor](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/TutorChecks/README.md) và [Sprint 2](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/TutorChecks/SPRINT2.md).
+
+NotebookAi kiểm tra cache chat và một số loại nội dung tạo sẵn bằng `NotebookId`, `Type`, `RequestHash` và `SourcesHash`; cache miss mới gọi Gemini và kết quả được lưu ở `NotebookGenerationCaches`. `summary`, `studyguide`, `mindmap` được cache trong luồng Generate; các loại khác đi qua xử lý không cache. API trả JSON hoàn chỉnh, không stream token qua SSE. Đây là hành vi đọc từ code, chưa phải kết quả đo độ trễ hoặc chất lượng.
+
+### Phân tích điểm yếu
+
+`GET /api/weak-areas` và `POST /api/weak-areas/analyze` yêu cầu JWT và dùng UserId từ claim. WeakAreaService gom CardProgress theo chủ đề, cần tối thiểu 3 lượt thử và lưu chủ đề có độ chính xác dưới 70%; dữ liệu được cô lập theo UserId và liên kết FK cascade tới Users. Đây là hành vi đã quan sát trong code, chưa phải xác nhận thuật toán phân loại hay gợi ý đã được nghiệm thu.
 
 ### URL/file và dữ liệu cục bộ
 
@@ -129,7 +140,7 @@ flowchart LR
     RE --> GA["Gemini / Google / nguồn URL"]
 ```
 
-[render.yaml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/render.yaml) và [CI-CD-SETUP.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/CI-CD-SETUP.md) mô tả cấu hình, chưa chứng minh service đã deploy thành công. Vercel build riêng với API_BASE; GitHub Actions build cả hai và trigger Render sau push main nếu có secrets. Backend đọc PORT và bind 0.0.0.0; TLS ở edge của hosting, Kestrel nội bộ HTTP. URL kết nối PostgreSQL được chuyển qua PostgresConnectionString (SSL Require cho URL).
+[render.yaml](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/render.yaml) và [CI-CD-SETUP.md](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/CI-CD-SETUP.md) mô tả cấu hình, chưa chứng minh service đã deploy thành công. Vercel build riêng với API_BASE; GitHub Actions build cả hai và trigger Render sau push main nếu có secrets. Backend đọc PORT và bind 0.0.0.0; TLS ở edge của hosting, Kestrel nội bộ HTTP. URL kết nối PostgreSQL được chuyển qua PostgresConnectionString (SSL Require cho URL).
 
 | Cấu hình | Vai trò |
 | --- | --- |

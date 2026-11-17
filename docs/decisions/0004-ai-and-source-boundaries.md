@@ -1,6 +1,6 @@
 # ADR-004: Cô lập Gemini và nguồn tài liệu ngoài
 
-**Trạng thái:** Ghi nhận hiện trạng tại main/9ba7acd; mục tiêu chất lượng được đề xuất. **Ngày:** 12/10/2026.
+**Trạng thái:** Ghi nhận hiện trạng tại main/b890dcc; mục tiêu chất lượng được đề xuất. **Ngày:** 14/10/2026.
 
 ## Bối cảnh
 
@@ -24,4 +24,4 @@ Cần thông báo luồng dữ liệu sang Gemini, fixture chấm điểm và gi
 
 Kiểm chứng NFR-02/04/05/06/12/14.
 
-**Nguồn:** [GeminiService](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/GeminiService.cs), [NotebookAi](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services/NotebookAi.cs), [URL_IMPORT](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/URL_IMPORT.md), [Tutor](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/TutorChecks/SPRINT2.md).
+**Nguồn:** [GeminiService](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/GeminiService.cs), [NotebookAi](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services/NotebookAi.cs), [URL_IMPORT](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/URL_IMPORT.md), [Tutor](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/TutorChecks/SPRINT2.md).

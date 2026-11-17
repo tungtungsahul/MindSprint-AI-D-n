@@ -1,6 +1,6 @@
 # ADR-001: Backend theo tầng trong một ứng dụng
 
-**Trạng thái:** Ghi nhận hiện trạng tại main/9ba7acd; đề xuất duy trì trong Sprint 4. **Ngày:** 12/10/2026.
+**Trạng thái:** Ghi nhận hiện trạng tại main/b890dcc; đề xuất duy trì trong Sprint 4. **Ngày:** 14/10/2026.
 
 ## Bối cảnh
 
@@ -22,4 +22,4 @@ Mô tả và giữ một ASP.NET Core API với controllers, services và EF Cor
 
 Dễ build/deploy một artifact nhưng deploy và giới hạn slot gắn theo tiến trình. Không thêm broker/cache chỉ để đạt hình thức kiến trúc. Đo NFR-01/02/12/13; thay đổi cấu trúc chỉ sau khi có bottleneck hoặc nhu cầu module rõ ràng.
 
-**Nguồn:** [Program](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Program.cs), [Controllers](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Controllers), [Services](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/9ba7acd2de05bf017ad5c2711644c9ee98bd6542/backend/MindSprint.Api/Services).
+**Nguồn:** [Program](https://github.com/tungtungsahul/MindSprint-AI-D-n/blob/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Program.cs), [Controllers](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Controllers), [Services](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/b890dccbd502f5158a5a9fe46188b091e5211857/backend/MindSprint.Api/Services).

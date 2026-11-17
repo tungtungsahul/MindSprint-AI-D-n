@@ -33,61 +33,26 @@ public static class DataSeeder
         var cards = JsonSerializer.Deserialize<List<SeedCard>>(await File.ReadAllTextAsync(path),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
 
-        // Get all existing system cards (OwnerId == null)
-        var existingSystemCards = await db.Flashcards
+        var existingById = await db.Flashcards
             .Where(f => f.OwnerId == null)
             .ToDictionaryAsync(f => f.ExternalId, f => f);
 
-        // Get all new seed ExternalIds for quick lookup
-        var newSeedExternalIds = cards.Select(c => c.ExternalId).ToHashSet();
-
-        // Retire old system cards that are NOT in new seed data (Oxford 3000 legacy)
-        // These are old cards with ExternalId not matching new v2- hash pattern
-        var cardsToRetire = existingSystemCards.Values
-            .Where(f => !newSeedExternalIds.Contains(f.ExternalId))
-            .ToList();
-
-        foreach (var oldCard in cardsToRetire)
+        foreach (var c in cards)
         {
-            // Soft-delete: mark as retired by setting OwnerId to -1 (special marker)
-            // Or hard-delete if no CardProgress references exist
-            var hasProgress = await db.CardProgresses.AnyAsync(cp => cp.FlashcardId == oldCard.Id);
-            if (!hasProgress)
+            if (existingById.TryGetValue(c.ExternalId, out var existing))
             {
-                db.Flashcards.Remove(oldCard);
-            }
-            else
-            {
-                // Keep but mark as retired system card (hide from UI)
-                oldCard.OwnerId = -1; // Special marker for retired system cards
-            }
-        }
-
-        // Upsert new seed cards
-        foreach (var c in cards.DistinctBy(card => card.ExternalId))
-        {
-            if (existingSystemCards.TryGetValue(c.ExternalId, out var existing))
-            {
-                // Update existing system card
                 existing.Category = c.Category;
                 existing.SubCategory = c.SubCategory;
                 existing.Question = c.Question;
                 existing.Answer = c.Answer;
                 existing.Example = c.Example;
-                existing.OwnerId = null; // Ensure it's a system card
             }
             else
             {
-                // Add new system card
                 db.Flashcards.Add(new Flashcard
                 {
-                    ExternalId = c.ExternalId,
-                    Category = c.Category,
-                    SubCategory = c.SubCategory,
-                    Question = c.Question,
-                    Answer = c.Answer,
-                    Example = c.Example,
-                    OwnerId = null
+                    ExternalId = c.ExternalId, Category = c.Category, SubCategory = c.SubCategory,
+                    Question = c.Question, Answer = c.Answer, Example = c.Example
                 });
             }
         }
