@@ -50,7 +50,7 @@ try {
         }
         if ($geminiKey -match 'YOUR_|^\s*$') { $geminiKey = '' }
         if ($geminiKey -match "['\r\n]") { throw 'GEMINI_API_KEY khong hop le.' }
-        $lines = @("DB_PASSWORD=$dbPassword", "JWT_KEY=$jwtKey", "GEMINI_API_KEY='$geminiKey'", 'GOOGLE_CLIENT_ID=')
+        $lines = @("DB_PASSWORD=$dbPassword", "JWT_KEY=$jwtKey", 'DATABASE_NAME=mindsprint', 'SELFHOST_PORT=8080', "GEMINI_API_KEY='$geminiKey'", 'GOOGLE_CLIENT_ID=')
         $stream = [System.IO.File]::Open($envPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
         try {
             $writer = [System.IO.StreamWriter]::new($stream)
@@ -90,12 +90,45 @@ try {
     if ($config.services.db.environment.MSSQL_SA_PASSWORD -match '^Ms1!(replace|change[_-]?me|your|example|placeholder)') {
         throw 'DB_PASSWORD con gia tri mau. Hay dung mat khau ngau nhien.'
     }
+    $webPortBinding = @($config.services.web.ports)[0]
+    $webPort = 0
+    if (!$webPortBinding -or $webPortBinding.host_ip -ne '127.0.0.1' -or
+        [int]$webPortBinding.target -ne 8080 -or
+        ![int]::TryParse([string]$webPortBinding.published, [ref]$webPort) -or
+        $webPort -lt 1 -or $webPort -gt 65535) {
+        throw 'Self-host phai publish web tren 127.0.0.1:<SELFHOST_PORT>:8080; khong bind ra LAN/Internet.'
+    }
+    if (@($config.services.db.ports).Count -gt 0) {
+        throw 'SQL Server khong duoc publish cong tren host; chi web duoc truy cap qua loopback.'
+    }
     if ($Action -eq 'Configure') {
         Write-Host 'Cau hinh .env.selfhost hop le.'
         return
     }
 
     if ($Action -eq 'Start') {
+        $existingWebPort = (& docker @composeArgs port web 8080 2>$null) -join ''
+        $thisStackOwnsPort = $LASTEXITCODE -eq 0 -and $existingWebPort.Trim() -eq "127.0.0.1:$webPort"
+        if (!$thisStackOwnsPort) {
+            $probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse('127.0.0.1'), $webPort)
+            try {
+                $probe.Start()
+            } catch [System.Net.Sockets.SocketException] {
+                $ownerDetails = @()
+                if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
+                    $processIds = @(Get-NetTCPConnection -LocalPort $webPort -State Listen -ErrorAction SilentlyContinue |
+                        Select-Object -ExpandProperty OwningProcess -Unique)
+                    foreach ($processId in $processIds) {
+                        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+                        if ($process) { $ownerDetails += "$($process.ProcessName) (PID $processId)" }
+                    }
+                }
+                $ownerText = if ($ownerDetails.Count) { " Tien trinh: $($ownerDetails -join ',')." } else { '' }
+                throw "Cong localhost $webPort dang duoc su dung.$ownerText Sua SELFHOST_PORT trong .env.selfhost (vi du 8081), sau do chay lai .\scripts\selfhost.ps1 Start. Ung dung van chi bind 127.0.0.1; khong mo firewall/router/tunnel."
+            } finally {
+                if ($probe.Server.IsBound) { $probe.Stop() }
+            }
+        }
         $secretDirectory = Join-Path $projectRoot '.secrets.selfhost'
         $secretPath = Join-Path $secretDirectory 'gemini-api-key'
         $null = [System.IO.Directory]::CreateDirectory($secretDirectory)
@@ -118,11 +151,13 @@ try {
         }
         Protect-SecretPath $envPath
         & docker @composeArgs up -d --build --wait --wait-timeout 240 db web
-        if ($LASTEXITCODE -ne 0) { throw 'Khoi dong that bai. Kiem tra loi Docker phia tren.' }
-        $health = Invoke-RestMethod 'http://127.0.0.1:8080/readyz' -TimeoutSec 6
+        if ($LASTEXITCODE -ne 0) {
+            throw "Khoi dong Docker Compose that bai. Neu cong $webPort vua bi tien trinh khac chiem, sua SELFHOST_PORT trong .env.selfhost sang cong trong (vi du 8081) va chay lai. Chi dung URL loopback; khong mo firewall/router/tunnel."
+        }
+        $health = Invoke-RestMethod "http://127.0.0.1:$webPort/readyz" -TimeoutSec 6
         if ($health.status -ne 'ready') { throw 'Web/database chua san sang.' }
-        Write-Host 'Web local: http://localhost:8080'
-        Write-Host 'Cong Docker chi mo tren localhost. Chia se HTTPS: .\scripts\share.ps1'
+        Write-Host "Web local: http://127.0.0.1:$webPort"
+        Write-Host 'Web chi mo tren loopback; SQL Server chi nam trong mang Docker.'
     }
     Write-Host 'Tat sau buoi demo: .\scripts\selfhost.ps1 -Action Stop'
 } finally { Pop-Location }

@@ -1,7 +1,7 @@
 # Vận hành MindSprint trên máy cá nhân
 
 Máy Windows chạy Docker Desktop là máy chủ cho giao diện, API và SQL Server Express 2022.
-Mặc định web mở trên máy chủ tại `http://localhost:8080`.
+Mặc định web mở trên chính máy chủ tại `http://127.0.0.1:8080`.
 Theo yêu cầu ngày 11/11/2026, có thể chia sẻ HTTPS qua Cloudflare Tunnel bằng
 `scripts/share.ps1`; xem [truy cập Internet và bảo vệ khóa](PUBLIC-ACCESS.md).
 Không mở cổng router hoặc công khai SQL Server.
@@ -22,7 +22,10 @@ Từ thư mục gốc, có thể tạo và kiểm tra cấu hình trước khi b
 tạo `.env.selfhost` với mật khẩu DB và khóa JWT ngẫu nhiên nếu file chưa tồn tại.
 Chạy lại chỉ kiểm tra file hiện có. Giữ nguyên `DB_PASSWORD` khi dùng lại volume cũ.
 `DATABASE_NAME` mặc định là `mindsprint`. SQL Server Express nằm trong mạng Compose,
-frontend và API dùng chung `http://127.0.0.1:8080`.
+frontend và API dùng chung origin `http://127.0.0.1:<SELFHOST_PORT>`. Mặc định
+`SELFHOST_PORT=8080`. Nếu cổng này bận, thêm hoặc sửa `SELFHOST_PORT=8081` trong
+`.env.selfhost` rồi chạy lại `Start`. Script báo cổng bận và PID/tên tiến trình nếu có;
+Docker vẫn chỉ bind `127.0.0.1`, không mở cổng ra LAN/Internet. Mở URL được script in ra.
 
 Để kiểm tra riêng cú pháp và biến bắt buộc của Compose mà không in cấu hình đã nội suy:
 
@@ -43,7 +46,7 @@ database và khóa JWT ngẫu nhiên; file này được Git bỏ qua và không
 Nếu có Gemini API key trong biến `GEMINI_API_KEY` hoặc cấu hình Development cục bộ,
 script dùng lại key đó cho bản demo; không in key ra terminal.
 
-- Trên máy chủ: mở `http://localhost:8080`.
+- Trên máy chủ: mở `http://127.0.0.1:8080` (hoặc đúng port `SELFHOST_PORT` đã cấu hình).
 - Tạo tài khoản bằng email/mật khẩu để dùng; đăng nhập Demo bị tắt trong Production.
 - Kết thúc buổi kiểm tra: `.\scripts\selfhost.ps1 -Action Stop`.
 - Xem trạng thái: `.\scripts\selfhost.ps1 -Action Status`.
@@ -74,7 +77,8 @@ Volume PostgreSQL cũ `mindsprint-demo_demo-data` được giữ nguyên nếu �
 SQL Server dùng volume mới; việc chuyển provider không tự chuyển dữ liệu cũ.
 Nếu đang chạy bộ PostgreSQL từ [checkout cũ](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/6422790942ce959494ee9aecbc245706c3ca65a0),
 dùng checkout đó để dừng stack và lưu riêng `.env.selfhost` của PostgreSQL.
-Bản SQL Server dùng cấu hình và volume riêng, cùng cổng `127.0.0.1:8080`.
+Bản SQL Server dùng cấu hình và volume riêng. Host port có thể đổi bằng `SELFHOST_PORT`;
+cổng container vẫn là 8080 và SQL Server không được publish ra host.
 
 ## Sao lưu và khôi phục SQL Server
 
@@ -131,9 +135,11 @@ Trên Windows, script giới hạn quyền đọc file secret và `.env.selfhost
 đang chạy script và SYSTEM. Người quản trị máy/Docker vẫn có khả năng truy cập secret.
 
 Để đăng nhập Google, tạo OAuth client loại Web application trong Google Cloud Console,
-thêm `http://localhost` và `http://localhost:8080` vào Authorized JavaScript origins.
+thêm `http://127.0.0.1` và đúng origin `http://127.0.0.1:<SELFHOST_PORT>` vào Authorized
+JavaScript origins.
 Điền Client ID vào dòng `GOOGLE_CLIENT_ID=` trong `.env.selfhost`, rồi chạy lại script Start.
-Mở đúng `http://localhost:8080` để khớp origin Google và danh sách cho phép của backend.
+Mở đúng origin `http://127.0.0.1:<SELFHOST_PORT>` để khớp cấu hình Google Identity.
+Compose cập nhật origin Google theo port; frontend vẫn gọi API cùng origin.
 Luồng popup dùng JavaScript callback nên không cần Authorized redirect URI hoặc Client Secret.
 Khi chia sẻ Internet, Authorized JavaScript origins trên Google cũng cần thêm đúng
 origin HTTPS hiện tại. Client ID là định danh công khai, không phải Gemini API key.
@@ -147,9 +153,10 @@ Trình bày trực tiếp trên máy chủ, giữ máy bật và tránh chế đ
 Chức năng Gemini cần Internet và gửi nội dung yêu cầu tới dịch vụ AI.
 Chia sẻ web ra Internet chỉ được bật qua script Share theo hướng dẫn riêng.
 
-Web chỉ công bố cổng `8080` trên loopback của máy chủ. SQL Server chỉ có trong mạng
-Docker. Giao diện gọi API cùng origin; chế độ `Hosting:ServeFrontend` không cấp quyền
-CORS cho website khác. Cấu hình Vercel/Render cũ không thay đổi.
+Web chỉ công bố `127.0.0.1:<SELFHOST_PORT>` trên loopback của máy chủ. SQL Server chỉ có
+trong mạng Docker. Giao diện gọi API cùng origin; chế độ `Hosting:ServeFrontend` không
+cấp quyền CORS cho website khác. Cấu hình Vercel/Render cũ không thay đổi. Kiểm chứng
+localhost không yêu cầu HTTPS công khai, firewall/router, tunnel hay SLO công khai.
 
 ## Phục hồi sau Sleep, Reboot và Mất kết nối Internet (Issue #116, #117)
 
@@ -186,7 +193,10 @@ docker compose --env-file .env.selfhost -f compose.selfhost.yaml ps
 docker compose --env-file .env.selfhost -f compose.selfhost.yaml logs --tail 80 web
 ```
 
-Nếu cổng 8080 đang được ứng dụng khác sử dụng, dừng ứng dụng đó trước khi chạy demo.
+Nếu cổng được chọn đang bận, không cần dừng một tiến trình lạ. Đặt `SELFHOST_PORT` thành
+một cổng trống, ví dụ 8081, trong `.env.selfhost` rồi chạy lại `Start`. Frontend và API
+tiếp tục dùng cùng origin; SQL Server vẫn không có cổng host. Không mở firewall/router
+hay tunnel trong kịch bản localhost này.
 `/healthz` xác nhận tiến trình web hoạt động (HTTP 200, `status=ok`).
 `/readyz` thực hiện `SELECT 1` vào database: HTTP 200 với `status=ready`, hoặc
 HTTP 503 với `status=unavailable`. Kết nối SQL Server của probe có timeout 2 giây

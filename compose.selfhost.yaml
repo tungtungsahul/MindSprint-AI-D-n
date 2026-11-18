@@ -23,7 +23,7 @@ services:
       context: .
       dockerfile: Dockerfile.selfhost
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${SELFHOST_PORT:-8080}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Hosting__ServeFrontend: "true"
@@ -32,7 +32,7 @@ services:
       Jwt__Key: ${JWT_KEY:?Run scripts/selfhost.ps1 first}
       Gemini__ApiKeyFile: /run/secrets/gemini_api_key
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}
-      Google__AllowedOrigins__0: "http://localhost:8080"
+      Google__AllowedOrigins__0: "http://127.0.0.1:${SELFHOST_PORT:-8080}"
       Google__AllowedOrigins__1: ${PUBLIC_ORIGIN:-http://localhost:8080}
       Google__AllowedOrigins__2: ${PUBLIC_ALIAS_ORIGIN:-http://localhost:8080}
     secrets:
