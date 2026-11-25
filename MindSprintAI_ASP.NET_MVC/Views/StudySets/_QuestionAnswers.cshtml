@@ -1,0 +1,21 @@
+@model Question
+<ul class="c-answer-grid">
+@foreach (var option in Model.Options.OrderBy(o => o.OrderIndex))
+{
+    <li data-correct-answer="@option.IsCorrect.ToString().ToLowerInvariant()">
+        @if (option.IsCorrect) { <icon name="check" class="c-correct-marker" /><span class="visually-hidden c-correct-marker">Đáp án đúng:</span> }
+        <span>@option.Text</span>
+    </li>
+}
+@if (Model.Type == QuestionType.TextInput)
+{
+    @foreach (var blank in Model.Blanks.OrderBy(b => b.BlankIndex))
+    {
+        <li data-correct-answer="true"><icon name="check" class="c-correct-marker" /><span class="c-correct-text">Ô @(blank.BlankIndex + 1): @string.Join(" / ", blank.Answers.OrderBy(a => a.OrderIndex).Select(a => a.Text))</span><span class="c-hidden-answer">Đã ẩn đáp án</span></li>
+    }
+}
+@if (Model.Type == QuestionType.NumberInput)
+{
+    <li data-correct-answer="true"><icon name="check" class="c-correct-marker" /><span class="c-correct-text">@Model.NumberAnswer (dung sai @Model.NumberTolerance)</span><span class="c-hidden-answer">Đã ẩn đáp án</span></li>
+}
+</ul>

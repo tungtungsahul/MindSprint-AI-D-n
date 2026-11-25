@@ -1,0 +1,22 @@
+@model List<UnhideRequest>
+@{ ViewData["Title"] = "Xin bỏ ẩn bộ học"; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Quản trị hệ thống</a>
+<header class="section-head mt-3"><h1 class="h3">Xin bỏ ẩn bộ học</h1></header>
+@if (Model.Count == 0)
+{
+    <div class="empty-state">Không có yêu cầu nào đang chờ.</div>
+}
+else
+{
+    <div class="list-group">
+    @foreach (var r in Model)
+    {
+        <article class="list-group-item">
+            <h2 class="h5">@r.StudySet.Title</h2>
+            <p>@r.Requester.DisplayName · @r.Requester.Email · @VnTime.Format(r.CreatedAt)</p>
+            <p style="white-space:pre-wrap">@(r.Message.Length > 120 ? r.Message[..120] + "…" : r.Message)</p>
+            <a class="btn btn-outline-primary" asp-action="UnhideRequest" asp-route-id="@r.Id">Xem</a>
+        </article>
+    }
+    </div>
+}

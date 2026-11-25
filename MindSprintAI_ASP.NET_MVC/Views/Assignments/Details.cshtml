@@ -1,0 +1,457 @@
+@model AssignmentDetailsModel
+@{
+    var a = Model.Assignment;
+    ViewData["Title"] = a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ";
+    var closed = a.Status == AssignmentStatus.Closed;
+}
+<div class="b-assignment">
+@if (a.ClassroomId != null)
+{
+    <a class="btn btn-sm b-back" asp-controller="Classrooms" asp-action="Details" asp-route-id="@a.ClassroomId"><icon name="chevron-right" class="b-back-icon" />Quay lại @DisplayText.ClassName(a.Classroom?.Name)</a>
+}
+else
+{
+    <a class="btn btn-sm b-back" asp-controller="Classrooms" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại danh sách lớp</a>
+}
+
+<header class="b-scoreboard">
+    <div class="b-scoreboard-title">
+        <h1 class="mindsprint-title mb-2">@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</h1>
+        <div class="b-actions"><span class="badge bg-info">@DisplayText.Of(a.Mode)</span><span>@DisplayText.Of(a.Form)</span>
+            @if (closed) { <span class="badge bg-body-tertiary">Đã đóng lúc @VnTime.Format(a.ClosedAt)</span> }
+        </div>
+    </div>
+    <div class="b-scoreboard-time">
+        @if (a.Mode == AssignmentMode.Test)
+        {
+            <span><icon name="timer" /> Thời lượng</span>
+            <strong class="font-monospace">@a.DurationMinutes <small>phút</small></strong>
+            <span>@(a.TestEndsAt == null ? "Chờ giảng viên bắt đầu" : "Kết thúc " + VnTime.Format(a.TestEndsAt))</span>
+        }
+        else
+        {
+            <span><icon name="calendar" /> Hạn làm bài</span>
+            <strong>@(a.DueAt == null ? "Không có hạn" : VnTime.Format(a.DueAt))</strong>
+            <span>Tính điểm theo: @DisplayText.Of(a.ScoreSelection)</span>
+        }
+    </div>
+</header>
+<div class="b-actions b-report-actions">
+    @if (Model.CanDeleteReport)
+    {
+        <form method="post" asp-action="DeleteReport" data-confirm="Gỡ bài giao này khỏi trang Báo cáo của giảng viên? Học viên vẫn giữ lịch sử và vẫn xem lại bài được. Bạn có thể khôi phục lại trong Thùng rác.">
+            <input type="hidden" name="id" value="@a.Id" />
+            <button class="btn btn-outline-danger">Gỡ khỏi trang Báo cáo</button>
+        </form>
+    }
+</div>
+
+@if (a.CloseReason == CloseReason.HiddenByAdmin) { <p class="alert alert-warning" role="status">Đã đóng vì quản trị viên ẩn nội dung: @Model.HiddenContentReason</p> }
+
+@{ var paper = a.Form == AssignmentForm.Document; }
+@if (paper)
+{
+    @* Bài làm theo đề tài liệu: đề + lối vào trang chấm; đổi đề chỉ trước khi bấm Bắt đầu. *@
+    <section class="flat-section mb-3" aria-labelledby="paper-panel-title">
+        <h2 class="section-head" id="paper-panel-title"><span class="section-icon"><icon name="file-text" /></span>Đề bài và bài nộp</h2>
+        <p>Đề: <a asp-controller="Papers" asp-action="Exam" asp-route-id="@a.Id" target="_blank" rel="noopener">@a.PaperFileName</a> · tải lên @VnTime.Format(a.PaperUploadedAt)</p>
+        <a class="btn btn-primary" asp-controller="Papers" asp-action="Submissions" asp-route-id="@a.Id"><icon name="check" />Xem bài nộp và chấm điểm</a>
+        @if (a.TestStartedAt == null)
+        {
+            <form method="post" asp-controller="Papers" asp-action="Replace" asp-route-id="@a.Id" enctype="multipart/form-data" class="mt-3"
+                  data-confirm="Thay đề bằng tệp mới? Đề cũ bị xóa.">
+                <label class="form-label" for="replace-paper">Đổi đề (PDF hoặc Word, tối đa 20 MB)</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <input class="form-control" style="max-width: 24rem" id="replace-paper" name="paper" type="file" required accept=".pdf,.docx" data-max-bytes="@PaperFileStore.MaxBytes" />
+                    <button class="btn btn-outline-secondary">Đổi đề</button>
+                </div>
+            </form>
+        }
+    </section>
+}
+<div class="row g-3 mb-4 b-entry-panels">
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <h2 class="h5">Mã vào bài</h2>
+            <p class="small text-muted mb-2">Nhập mã này là vào thẳng bài này. Khác với mã vào lớp ở trang lớp.</p>
+            <div class="b-code-layout"><div class="b-code-details">
+            <div class="join-code b-assignment-code">@Model.Code</div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <a hidden id="assignment-qr-fallback" class="btn btn-outline-primary" asp-action="Qr" asp-route-id="@a.Id" target="_blank" rel="noopener"><icon name="qr-code" />Mã QR <span class="visually-hidden">(mở trang trình chiếu mới)</span></a>
+                <form method="post" asp-action="ChangeCode" asp-route-id="@a.Id" data-confirm="Đổi mã? Mã cũ hết hiệu lực ngay."><button class="btn btn-outline-secondary"><icon name="repeat-2" />Đổi mã</button></form>
+                @if (Model.UndoCodeUntil is { } undoUntil)
+                {
+                    <form method="post" asp-action="ChangeCode" asp-route-id="@a.Id" data-confirm="Khôi phục mã ngay trước? Người đã tham gia vẫn giữ nguyên.">
+                        <input type="hidden" name="undo" value="true" /><button class="btn btn-outline-secondary">Dùng lại mã cũ</button>
+                        <span class="small">Đến @VnTime.Format(undoUntil)</span>
+                    </form>
+                }
+            </div>
+            </div>
+            <div class="b-qr-preview" hidden>
+                <button type="button" class="b-qr-small" id="assignment-qr" aria-label="Phóng to mã QR" data-bs-toggle="modal" data-bs-target="#assignment-qr-modal" data-join-url="@Url.Action("Join", "Classrooms", new { code = Model.Code }, Context.Request.Scheme)" data-code="@Model.Code"></button>
+                <button type="button" class="btn btn-sm b-qr-enlarge" data-bs-toggle="modal" data-bs-target="#assignment-qr-modal">Phóng to mã QR</button>
+            </div></div>
+            <div class="small text-muted">Học viên trong lớp nhập mã ở trang "Tham gia bằng mã".</div>
+        </div></div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100"><div class="card-body small">
+            <h2 class="h5">Lịch và cách tham gia</h2>
+            <div>Mở lúc: <b>@(a.OpensAt == null ? "ngay khi giao" : VnTime.Format(a.OpensAt))</b>
+                @if (a.Mode == AssignmentMode.Practice) { <span> · Hạn: <b>@(a.DueAt == null ? "không có" : VnTime.Format(a.DueAt))</b></span> }
+            </div>
+            @if (a.Mode == AssignmentMode.Test)
+            {
+                <div>Thời lượng: <b>@a.DurationMinutes phút</b> · Bắt đầu: @VnTime.Format(a.TestStartedAt) · Kết thúc: @VnTime.Format(a.TestEndsAt)</div>
+                <div>Lượt đầu và tối đa 1 lượt làm lại được duyệt.</div>
+            }
+            else
+            {
+                <div>Số lượt tối đa: <b>@(a.MaxAttempts?.ToString() ?? "không giới hạn")</b> · @DisplayText.Of(a.ScoreSelection)</div>
+            }
+            <div>@DisplayText.Of(a.ScoreScale) · @DisplayText.Of(a.Rounding)</div>
+            <div>@DisplayText.Of(a.AudiencePolicy)</div>
+            <details class="b-entry-edit">
+            <summary><icon name="settings-2" />Điều chỉnh lịch và cách tham gia</summary>
+            <form method="post" asp-action="ChangeStrangerPolicy" asp-route-id="@a.Id" class="mt-3" data-autosave>
+                <partial name="_StrangerPolicy" model="a.StrangerPolicy" />
+                <button class="btn btn-outline-primary"><icon name="check" />Lưu chính sách người ngoài lớp</button>
+            </form>
+            @if (!closed)
+            {
+                @if (a.Mode == AssignmentMode.Practice)
+                {
+                <form method="post" asp-action="ChangeDue" asp-route-id="@a.Id" class="row g-2 mt-2">
+                    <div class="col-sm-5"><label for="assignment-due" class="form-label">Hạn mới (giờ Việt Nam)</label><input id="assignment-due" class="form-control" name="dueAt" type="datetime-local" value="@VnTime.ToInput(a.DueAt)" aria-label="Hạn mới (giờ Việt Nam)" /></div>
+                    <div class="col-sm-4"><label for="assignment-due-reason" class="form-label">Lý do đổi hạn (tùy chọn)</label><input id="assignment-due-reason" class="form-control" name="reason" placeholder="Lý do (tùy chọn)" aria-label="Lý do đổi hạn" /></div>
+                    <div class="col-sm-3 d-flex align-items-end"><button class="btn btn-outline-primary w-100"><icon name="calendar" />Đổi hạn</button></div>
+                    <div class="col-12 text-muted">Rút ngắn hạn phải cách hiện tại ít nhất 15 phút; để trống = bỏ hạn.</div>
+                </form>
+                }
+                <form method="post" asp-action="Close" asp-route-id="@a.Id" class="mt-2" data-close-popup data-confirm="Đóng bài giao này? Học viên sẽ không vào làm bài được nữa. Nếu còn người đang làm, bạn sẽ được chọn đóng ngay hoặc sau 15 phút.">
+                    <button class="btn btn-outline-danger"><icon name="lock" />Đóng bài giao</button>
+                </form>
+            }
+            @if (Model.CanReopenPractice)
+            {
+                <form method="post" asp-action="ReopenPractice" asp-route-id="@a.Id" class="d-reopen mt-3" data-confirm="Mở lại bài ôn tập này cho cả lớp? Mã vào bài giữ nguyên.">
+                    <h3 class="h6">Mở lại bài ôn tập</h3>
+                    <label for="reopen-due" class="form-label">Hạn mới (giờ Việt Nam)</label>
+                    <input id="reopen-due" name="dueAt" type="datetime-local" class="form-control" aria-describedby="reopen-help" />
+                    <p id="reopen-help" class="small text-muted">Để trống = không có hạn. Hạn mới phải cách hiện tại ít nhất 15 phút.</p>
+                    <label for="reopen-reason" class="form-label">Lý do (tùy chọn)</label>
+                    <input id="reopen-reason" name="reason" maxlength="500" class="form-control mb-2" />
+                    <button class="btn btn-primary"><icon name="repeat-2" />Mở lại bài</button>
+                </form>
+            }
+            </details>
+        </div></div>
+    </div>
+</div>
+
+@if (!Model.Ungraded && Model.Matrix?.Mastery is { } mastery)
+{
+    <section class="b-mastery-overview" aria-label="Tiến bộ làm chủ">
+        <h2 class="h5">Độ chính xác: @mastery.FirstPercent% → @mastery.CurrentPercent%</h2>
+        <p>@mastery.Reached/@mastery.Total học viên đạt mức làm chủ</p>
+        <progress max="100" value="@mastery.CurrentPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="Độ chính xác hiện tại">@mastery.CurrentPercent%</progress>
+        <p class="small">Lần trả lời đầu ở lượt đầu → mức làm chủ tốt nhất hiện tại. Chấm lại điểm không đổi mốc làm chủ đã đạt.</p>
+    </section>
+}
+<ul class="nav b-tabs" role="tablist" aria-label="Chi tiết bài giao">
+    <li role="presentation"><button class="nav-link active" id="tab-theo-doi" data-bs-toggle="tab" data-bs-target="#pane-theo-doi" type="button" role="tab" aria-controls="pane-theo-doi" aria-selected="true"><icon name="chart-column" />Theo dõi &amp; bảng điểm</button></li>
+    <li role="presentation"><button class="nav-link" id="tab-cau-hoi" data-bs-toggle="tab" data-bs-target="#pane-cau-hoi" type="button" role="tab" aria-controls="pane-cau-hoi" aria-selected="false"><icon name="circle-help" />Câu hỏi</button></li>
+    <li role="presentation"><button class="nav-link" id="tab-chong-gian-lan" data-bs-toggle="tab" data-bs-target="#pane-chong-gian-lan" type="button" role="tab" aria-controls="pane-chong-gian-lan" aria-selected="false"><icon name="shield-check" />Giám sát làm bài <span class="b-count" id="assignment-warning-count">@Model.Rows.Count(GradebookService.NeedsAttention)</span></button></li>
+    <li role="presentation"><button class="nav-link" id="tab-cai-dat" data-bs-toggle="tab" data-bs-target="#pane-cai-dat" type="button" role="tab" aria-controls="pane-cai-dat" aria-selected="false"><icon name="settings-2" />Cài đặt bài giao</button></li>
+    <li role="presentation"><button class="nav-link" id="tab-cham-lai" data-bs-toggle="tab" data-bs-target="#pane-cham-lai" type="button" role="tab" aria-controls="pane-cham-lai" aria-selected="false"><icon name="check" />Chấm lại &amp; công bố @if (Model.RetakeRequests.Count > 0) { <span class="b-count">@Model.RetakeRequests.Count<span class="visually-hidden"> yêu cầu làm lại</span></span> }</button></li>
+</ul>
+<div class="tab-content">
+<div class="tab-pane show active" id="pane-theo-doi" role="tabpanel" aria-labelledby="tab-theo-doi" tabindex="0">
+<section class="b-page-section" aria-labelledby="assignment-tracking-title">
+<div class="b-section-toolbar">
+    <h2 class="h4 m-0" id="assignment-tracking-title">Theo dõi bài làm</h2>
+<p id="assignment-live-status" class="small text-muted">Đang kết nối…</p>
+</div>
+<p id="assignment-live-summary" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
+<div id="gradebook-tools" class="b-grade-tools" hidden>
+    <div class="b-grade-groups" role="group" aria-label="Nhóm học viên">
+        <button type="button" class="btn" data-grade-group="0" aria-pressed="true">Trong lớp</button>
+        <button type="button" class="btn" data-grade-group="1" aria-pressed="false">Người ngoài lớp</button>
+    </div>
+    <div class="b-grade-controls">
+        <label for="gradebook-search">Tìm theo tên<input type="search" class="form-control" id="gradebook-search" autocomplete="off" /></label>
+        <button type="button" class="btn" id="gradebook-attention" aria-pressed="false">Cần chú ý (0)</button>
+        <label for="gradebook-size">Số dòng mỗi trang<select class="form-select" id="gradebook-size"><option>10</option><option>25</option><option>50</option><option value="all">Tất cả</option></select></label>
+    </div>
+</div>
+<div id="assignment-live" data-assignment="@a.Id" data-hub-url="@Url.Content("~/hubs/learn")" data-live-url="@Url.Action("Live", new { id = a.Id })">
+    <partial name="_LiveTable" model="Model" />
+</div>
+<div id="gradebook-pages" class="b-grade-pages" hidden></div>
+</section>
+
+@if (Model.ForgottenCards.Count > 0)
+{
+    <h2 class="h5 mt-3">Thẻ bị nhiều người đánh giá "Chưa nhớ"</h2>
+    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Mặt trước</th><th>Số học viên chưa nhớ</th></tr></thead><tbody>@foreach (var card in Model.ForgottenCards) { <tr><td class="b-preserve-lines">@card.Front</td><td>@card.Count</td></tr> }</tbody></table></div>
+}
+
+@if (ViewData["Ranking"] is Leaderboard ranking) { <partial name="_Leaderboard" model="@((ranking, "Xếp hạng bài này", false))" /> }
+</div>
+<div class="tab-pane" id="pane-cau-hoi" role="tabpanel" aria-labelledby="tab-cau-hoi" tabindex="0"><partial name="_QuestionMatrix" model="Model" /></div>
+<div class="tab-pane" id="pane-chong-gian-lan" role="tabpanel" aria-labelledby="tab-chong-gian-lan" tabindex="0"><partial name="_Warnings" model="Model" /></div>
+<div class="tab-pane" id="pane-cai-dat" role="tabpanel" aria-labelledby="tab-cai-dat" tabindex="0">
+    <div class="b-settings-body">
+@if (a.Mode == AssignmentMode.Practice && a.Form != AssignmentForm.QuizOnly)
+{
+    <form asp-fragment="cai-dat" method="post" asp-action="ChangeOfflineCards" asp-route-id="@a.Id" class="flat-section mb-3" data-autosave>
+        <h2 class="section-head"><span class="section-icon"><icon name="layers" /></span>Ôn thẻ khi mất mạng</h2>
+        <p class="small text-muted">Mặc định học viên chỉ chuyển sang thẻ sau khi đánh giá đã lưu. Bật thì khi mất mạng học viên vẫn ôn tiếp; đánh giá lưu tạm trên máy và tự gửi khi có mạng lại. Hạn nộp vẫn tính theo lúc gửi tới.</p>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="allow-offline-cards" name="allowOfflineCards" value="true" checked="@a.AllowOfflineCards" />
+            <input type="hidden" name="allowOfflineCards" value="false" />
+            <label class="form-check-label" for="allow-offline-cards">Cho học viên ôn thẻ tiếp khi mất mạng</label>
+        </div>
+        <button class="btn btn-outline-primary">Lưu</button>
+    </form>
+}
+@if (a.Mode == AssignmentMode.Practice)
+{
+    <form asp-fragment="cai-dat" method="post" asp-action="ChangeSelfReviewSettings" asp-route-id="@a.Id" class="flat-section mb-3" data-autosave>
+        <input type="hidden" name="id" value="@a.Id" />
+        <h2 class="section-head"><span class="section-icon"><icon name="repeat-2" /></span>Ôn lại sau hạn</h2>
+        <p class="small text-muted">Khi bật, học viên vẫn ôn lại được sau khi bài hết hạn hoặc đã đóng. Lượt ôn này không tính điểm và không đổi trạng thái của bài.</p>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="allow-quiz-self-review" name="allowQuizSelfReview" value="true" checked="@a.AllowQuizSelfReview" />
+            <input type="hidden" name="allowQuizSelfReview" value="false" />
+            <label class="form-check-label" for="allow-quiz-self-review">Cho học viên tự ôn lại quiz sau hạn (không tính điểm)</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="allow-card-self-review" name="allowCardSelfReview" value="true" checked="@a.AllowCardSelfReview" />
+            <input type="hidden" name="allowCardSelfReview" value="false" />
+            <label class="form-check-label" for="allow-card-self-review">Cho học viên tự ôn lại thẻ sau hạn (không tính tiến độ)</label>
+        </div>
+        <button class="btn btn-outline-primary">Lưu quyền ôn lại sau hạn</button>
+    </form>
+}
+@if (Model.RegradeQuestions.Count > 0)
+{
+    <form asp-fragment="cai-dat" method="post" asp-action="ChangeCriticalSettings" class="flat-section mb-3">
+        <input type="hidden" name="id" value="@a.Id" />
+        <h2 class="section-head"><span class="section-icon"><icon name="triangle-alert" /></span>Câu điểm liệt</h2>
+        <partial name="_CriticalSettings" model="@(new CriticalSettingsView(new(a.CriticalThreshold != null, a.CriticalThreshold, a.CriticalQuestionsEnabled, CriticalScoreRules.QuestionIds(a)), new() { [a.QuizId ?? 0] = Model.RegradeQuestions.Select(q => new CriticalQuestionOption(q.Id, q.Number, q.Prompt)).ToList() }))" />
+        <button class="btn btn-outline-primary align-self-start mt-2">Lưu và tính lại nhãn điểm liệt</button>
+    </form>
+}
+<form asp-fragment="cai-dat" method="post" asp-action="ChangeDeviceSettings" asp-route-id="@a.Id" class="flat-section mb-3">
+    <input type="hidden" name="id" value="@a.Id" />
+    <h2 class="section-head"><span class="section-icon"><icon name="monitor-smartphone" /></span>Thiết bị và giám sát</h2>
+    <partial name="_DeviceSettings" model="@(new AssignmentInput { DeviceLock = a.DeviceLock, MonitorScreen = a.MonitorScreen, AutoSubmitLeaves = a.AutoSubmitLeaves })" />
+    <p class="small text-muted">Thay đổi khóa thiết bị áp dụng cho những lần xin chuyển thiết bị tiếp theo. Thay đổi giám sát và tự nộp áp dụng cho lượt bắt đầu sau khi lưu.</p>
+    <button class="btn btn-outline-primary align-self-start">Lưu cài đặt thiết bị làm bài</button>
+</form>
+@if (CardCompletion.HasCards(a))
+{
+    <form asp-fragment="cai-dat" method="post" asp-action="ChangeFlashcardMode" class="flat-section mb-3" data-autosave>
+        <input type="hidden" name="id" value="@a.Id" />
+        <h2 class="section-head"><span class="section-icon"><icon name="layers" /></span>Thẻ ghi nhớ</h2>
+        <partial name="_FlashcardMode" model="a.FlashcardMode" />
+        <button class="btn btn-outline-primary align-self-start mt-2">Lưu chế độ thẻ ghi nhớ</button>
+    </form>
+}
+@if (!paper)
+{
+<section class="flat-section mb-3" aria-labelledby="ai-setting-title">
+    <h2 class="section-head" id="ai-setting-title"><span class="section-icon"><icon name="sparkles" /></span>Trợ lý AI</h2>
+    <form asp-fragment="cai-dat" method="post" asp-controller="Ai" asp-action="Settings" data-autosave>
+        <input type="hidden" name="id" value="@a.Id" />
+        <div class="form-check mb-2"><input type="checkbox" name="allowAiAssistant" value="true" class="form-check-input" id="allow-ai" checked="@a.AllowAiAssistant" /><label class="form-check-label" for="allow-ai">Cho dùng trợ lý AI trong Ôn tập</label></div>
+        <div class="form-check mb-2"><input type="checkbox" name="allowAiAfterTest" value="true" class="form-check-input" id="allow-ai-after-test" checked="@a.AllowAiAfterTest" /><label class="form-check-label" for="allow-ai-after-test">Cho dùng trợ lý sau Kiểm tra (mọi lượt đã kết thúc và đáp án đã công bố)</label></div>
+        <button class="btn btn-outline-primary">Lưu quyền dùng trợ lý</button>
+    </form>
+    <h3 class="h6 mt-3">Trợ lý AI — số lượt hỏi theo câu</h3>
+    <p class="small text-muted">Chỉ có số lượt hỏi; không hiển thị tên hoặc nội dung hội thoại.</p>
+    @if (ViewData["AiStats"] is List<AiQuestionStat> stats && stats.Count > 0)
+    {
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th scope="col">Câu hỏi</th><th scope="col">Số lượt hỏi</th></tr></thead><tbody>@foreach (var stat in stats) { <tr><td>@stat.Label</td><td>@stat.Count</td></tr> }</tbody></table></div>
+    }
+    else { <p class="small mb-0">Chưa có lượt hỏi.</p> }
+</section>
+}
+
+@if (a.Mode == AssignmentMode.Practice && a.Form != AssignmentForm.FlashcardOnly)
+{
+    <form asp-fragment="cai-dat" method="post" asp-action="ChangeMaxAttempts" asp-route-id="@a.Id" class="flat-section mb-3">
+        <h2 class="section-head"><span class="section-icon"><icon name="repeat-2" /></span>Số lượt Ôn tập cả lớp</h2>
+        <label for="max-attempts" class="form-label">Số lượt tối đa mới (tính cả lượt đầu, tối đa 100)</label>
+        <input id="max-attempts" name="maxAttempts" type="number" min="1" max="100" value="@a.MaxAttempts" class="form-control mb-2" required />
+        <label for="attempts-reason" class="form-label">Lý do bắt buộc</label>
+        <input id="attempts-reason" name="reason" maxlength="500" class="form-control mb-2" required />
+        <button class="btn btn-outline-primary align-self-start">Đổi số lượt tối đa</button>
+    </form>
+    <form asp-fragment="cai-dat" method="post" asp-action="ChangeMastery" asp-route-id="@a.Id" class="flat-section mb-3">
+        <h2 class="section-head"><span class="section-icon"><icon name="check" /></span>Cài đặt làm chủ</h2>
+        @if (!Model.CanEditMastery) { <p class="text-muted">Đã có người bắt đầu lượt nên ba cài đặt này bị khóa.</p> }
+        <fieldset disabled="@(!Model.CanEditMastery)">
+            <partial name="_MasterySettings" model="@(new MasterySettings(a.MasteryThreshold, a.AnswersPerQuestion, a.ScoreRetries))" />
+            <button class="btn btn-outline-primary mt-2">Lưu cài đặt</button>
+        </fieldset>
+    </form>
+}
+@if (!paper)
+{
+<form asp-fragment="cai-dat" method="post" asp-action="ChangeQuestionTimers" asp-route-id="@a.Id" class="flat-section mb-3" data-autosave>
+    <h2 class="section-head"><span class="section-icon"><icon name="clock" /></span>Giờ riêng từng câu</h2>
+    <p data-autosave-summary>Hiện tại: @(a.IgnoreQuestionTimers ? "Bỏ giờ riêng từng câu" : "Dùng giờ riêng của câu hỏi").</p>
+    @{ var timersLocked = a.Mode == AssignmentMode.Test && !Model.CanEditMastery; }
+    @if (timersLocked) { <p class="text-muted">Bài Kiểm tra đã có người bắt đầu lượt nên cài đặt thời gian từng câu bị khóa.</p> }
+    else if (!Model.CanEditMastery) { <p class="text-muted">Đổi cài đặt chỉ áp cho lượt bắt đầu sau khi lưu; lượt đang làm và lượt cũ giữ luật cũ.</p> }
+    <fieldset disabled="@timersLocked">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="IgnoreQuestionTimers" name="ignoreQuestionTimers" value="true" checked="@a.IgnoreQuestionTimers" />
+            <input type="hidden" name="ignoreQuestionTimers" value="false" />
+            <label class="form-check-label" for="IgnoreQuestionTimers">Bỏ giờ riêng từng câu trong bài giao này</label>
+        </div>
+        <button class="btn btn-outline-primary mt-2">Lưu giờ riêng</button>
+    </fieldset>
+</form>
+}
+@if (a.Form == AssignmentForm.Combined && !closed)
+{
+    <form asp-fragment="cai-dat" method="get" asp-action="ChangeParts" asp-route-id="@a.Id" class="d-flex flex-wrap gap-2 mb-3">
+        <h2 class="section-head"><span class="section-icon"><icon name="layers" /></span>Phần bắt buộc</h2>
+        <label for="parts" class="form-label">Phần bắt buộc hiện tại: @DisplayText.Of(a.RequiredParts)</label>
+        <select class="form-select w-auto" name="parts" id="parts">@foreach (var part in Enum.GetValues<RequiredParts>()) { <option value="@((int)part)" selected="@(part == a.RequiredParts)">@DisplayText.Of(part)</option> }</select>
+        <button class="btn btn-outline-primary">Xem trước thay đổi</button>
+    </form>
+}
+
+    </div>
+</div>
+<div class="tab-pane" id="pane-cham-lai" role="tabpanel" aria-labelledby="tab-cham-lai" tabindex="0">
+@if (a.Mode == AssignmentMode.Test)
+{
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        @if (a.ScoresPublishedAt == null)
+        {
+            <form asp-fragment="cham-lai" method="post" asp-action="PublishScores" asp-route-id="@a.Id" data-confirm="Công bố điểm cho học viên? Mỗi học viên sẽ thấy điểm của mình. Đã công bố thì không rút lại được.">
+                <button class="btn btn-outline-primary">Công bố điểm</button>
+            </form>
+        }
+        else { <span>Đã công bố điểm lúc @VnTime.Format(a.ScoresPublishedAt)</span> }
+        @if (paper) { }
+        else if (a.AnswersPublishedAt == null)
+        {
+            <form asp-fragment="cham-lai" method="post" asp-action="PublishAnswers" asp-route-id="@a.Id"
+                  data-confirm="@((Model.HasUnusedRetakes ? "Còn học viên được duyệt làm lại mà chưa làm. " : "") + "Công bố đáp án và giải thích? Học viên sẽ xem được đáp án đúng, nên sau đó bạn không cộng giờ riêng cho ai được nữa. Đã công bố thì không rút lại được.")">
+                <input type="hidden" name="confirmed" value="true" />
+                <button class="btn btn-outline-secondary">Công bố đáp án và giải thích</button>
+            </form>
+        }
+        else { <span>Đã công bố đáp án lúc @VnTime.Format(a.AnswersPublishedAt)</span> }
+    </div>
+    @if (Model.RetakeRequests.Count > 0) { <h2 class="h5">Yêu cầu làm lại</h2> }
+    @foreach (var r in Model.RetakeRequests)
+    {
+        <div class="flat-section mb-2">
+            <h3 class="h6">@r.Participant.User?.DisplayName · @DisplayText.Of(r.Status)</h3>
+            <p class="mb-1">@r.Reason</p>
+            @if (r.WindowStartsAt != null)
+            {
+                <p class="small">Khung: @VnTime.Format(r.WindowStartsAt) → @VnTime.Format(r.WindowEndsAt)</p>
+            }
+            @if (r.Status == RetakeRequestStatus.Pending)
+            {
+                @if (a.AnswersPublishedAt != null)
+                {
+                    <p class="text-warning">Đáp án đã công bố, học viên có thể đã xem đáp án</p>
+                }
+                <form asp-fragment="cham-lai" method="post" asp-action="DecideRetake" asp-route-id="@r.Id" class="d-flex flex-wrap align-items-end gap-2"
+                      data-confirm="@(a.AnswersPublishedAt != null ? "Đáp án đã công bố, học viên có thể đã xem đáp án. Vẫn duyệt?" : "Duyệt khung làm lại này?")">
+                    <input type="hidden" name="approve" value="true" />
+                    <div>
+                        <label class="form-label" for="window-@r.Id">Làm lại đến (giờ Việt Nam)</label>
+                        <input class="form-control" id="window-@r.Id" name="windowEndsAt" type="datetime-local" required />
+                    </div>
+                    <button class="btn btn-primary"><icon name="check" />Duyệt</button>
+                </form>
+                <form asp-fragment="cham-lai" method="post" asp-action="DecideRetake" asp-route-id="@r.Id" class="mt-2"
+                      data-confirm="Từ chối yêu cầu làm lại của @r.Participant.User?.DisplayName?">
+                    <input type="hidden" name="approve" value="false" />
+                    <button class="btn btn-outline-danger"><icon name="x" />Từ chối</button>
+                </form>
+            }
+        </div>
+    }
+}
+
+
+@if (Model.RegradeQuestions.Count > 0)
+{
+    <div class="flat-section mt-3"><h2 class="h5">Chấm lại trong bài giao này</h2>
+    @foreach (var q in Model.RegradeQuestions)
+    {
+        <div class="border-bottom py-2"><b>Câu @q.Number.</b> @q.Prompt
+            <partial name="_RegradeForm" model="@(new RegradeFormModel(a.Id, q))" />
+        </div>
+    }
+    </div>
+}
+
+@if (Model.Surveys is { Questions.Count: > 0 } surveys)
+{
+    <div class="flat-section mt-3">
+        <h2 class="h5">Kết quả khảo sát</h2>
+        <form asp-fragment="cham-lai" method="post" asp-action="PublishSurvey" asp-route-id="@a.Id" data-confirm="Đổi trạng thái công khai kết quả khảo sát?">
+            <input type="hidden" name="publish" value="@(surveys.PublishedAt == null ? "true" : "false")" />
+            <button class="btn btn-outline-primary">@(surveys.PublishedAt == null ? "Công khai kết quả khảo sát" : "Thu hồi công khai")</button>
+        </form>
+        @if (surveys.PublishedAt != null) { <p class="small text-muted">Công khai lúc @VnTime.Format(surveys.PublishedAt)</p> }
+        @foreach (var q in surveys.Questions)
+        {
+            <h3 class="h6 mt-3 b-preserve-lines">@q.Prompt</h3>
+            <p>@q.Respondents người trả lời</p>
+            <ul>@foreach (var o in q.Options) { <li>@o.Text: @o.Count người (@o.Percent.ToString("0.##")%)</li> }</ul>
+            @foreach (var opinion in q.Opinions)
+            {
+                <div class="flat-section mb-2">
+                    <h4 class="h6">@opinion.DisplayName</h4><p class="b-preserve-lines">@opinion.Text</p>
+                    <form asp-fragment="cham-lai" method="post" asp-action="PublishOpinion" asp-route-id="@a.Id" data-confirm="Đổi trạng thái công khai ý kiến này? Người khác có thể đọc ý kiến khi công khai.">
+                        <input type="hidden" name="submissionId" value="@opinion.SubmissionId" />
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="publish" value="true" checked="@opinion.Published" id="opinion-@opinion.SubmissionId" /><label class="form-check-label" for="opinion-@opinion.SubmissionId">Công khai ý kiến (ẩn tên)</label></div>
+                        <button class="btn btn-outline-secondary mt-1">Lưu công khai</button>
+                    </form>
+                </div>
+            }
+        }
+    </div>
+}
+
+@if (a.Mode != AssignmentMode.Test && Model.RetakeRequests.Count == 0 && Model.RegradeQuestions.Count == 0 && Model.Surveys is not { Questions.Count: > 0 })
+{
+    <div class="empty-state"><span class="section-icon"><icon name="check" /></span><p>Chưa có việc cần chấm lại hay công bố.</p></div>
+}
+
+
+
+</div>
+</div>
+</div>
+
+<partial name="_QrPopup" model="@(new QrPopupModel("assignment-qr-modal", "Mã QR vào bài",
+    new JoinQrModel(Model.Code, Url.Action("Join", "Classrooms", new { code = Model.Code }, Context.Request.Scheme)!, Url.Action("Join", "Classrooms", null, Context.Request.Scheme)!),
+    Url.Action("Qr", new { id = a.Id })!))" />
+@section Scripts {
+    <script src="~/js/mastery-settings.js" asp-append-version="true"></script>
+    <script src="~/js/setting-presets.js" asp-append-version="true"></script>
+    <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+    <script src="~/js/assignment-live.js" asp-append-version="true"></script>
+    <script src="~/lib/qrcode-generator/qrcode.js"></script>
+    <script src="~/js/qr-popup.js" asp-append-version="true"></script>
+    <script src="~/js/assignment-insights.js" asp-append-version="true"></script>
+    <script src="~/js/gradebook-pager.js" asp-append-version="true"></script>
+    <script src="~/js/assignment-tabs.js" asp-append-version="true"></script>
+    <script src="~/js/close-choice.js" asp-append-version="true"></script>
+    <script src="~/js/gradebook-rows.js" asp-append-version="true"></script>
+}

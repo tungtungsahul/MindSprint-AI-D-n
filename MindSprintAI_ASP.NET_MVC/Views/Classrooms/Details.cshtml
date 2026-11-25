@@ -1,0 +1,304 @@
+@model Classroom
+@{
+    ViewData["Title"] = Model.Name;
+    var assignments = (List<Assignment>)ViewData["Assignments"]!;
+    var pending = Model.Members.Where(m => m.Status == ClassMemberStatus.PendingApproval).ToList();
+    var students = Model.Members.Where(m => m.Role == ClassRole.Student && m.Status == ClassMemberStatus.Active).OrderBy(m => m.User.DisplayName).ToList();
+    var memberPage = ViewData["MemberPage"] as int? ?? 1;
+    var memberPageSize = ViewData["MemberPageSize"] as int? ?? 20;
+    var memberTotalPages = Math.Max(1, (int)Math.Ceiling(students.Count / (double)memberPageSize));
+    var memberFrom = (memberPage - 1) * memberPageSize;
+    var isMain = ViewData["MainLecturer"] is true;
+    var work = ViewData["AssignmentWork"] as IReadOnlyDictionary<int, AssignmentWork> ?? new Dictionary<int, AssignmentWork>();
+    ReviewWork WorkOf(Assignment a) => work.GetValueOrDefault(a.Id)?.Work ?? new ReviewWork();
+    var needing = assignments.Where(a => WorkOf(a).Total > 0).OrderByDescending(a => a.CreatedAt).ToList();
+    // Tìm học viên (góp ý 18/11): lọc trên toàn bộ học viên rồi mới chia trang; không phân biệt dấu ("huong" tìm được "Hương").
+    var allStudents = students;
+    var memberQuery = Context.Request.Query["q"].ToString().Trim();
+    static string Fold(string? text) => new string((text ?? "").Normalize(System.Text.NormalizationForm.FormD)
+        .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray())
+        .Replace('đ', 'd').Replace('Đ', 'D').ToLowerInvariant();
+    if (memberQuery.Length > 0) students = students.Where(m => Fold(m.User.DisplayName).Contains(Fold(memberQuery)) || Fold(m.User.Email).Contains(Fold(memberQuery))).ToList();
+    memberTotalPages = Math.Max(1, (int)Math.Ceiling(students.Count / (double)memberPageSize));
+    memberPage = Math.Min(memberPage, memberTotalPages);
+    memberFrom = (memberPage - 1) * memberPageSize;
+    var membersOpen = memberQuery.Length > 0 || Context.Request.Query.ContainsKey("page") || memberPage > 1;
+}
+<div class="b-classroom">
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Lớp tôi dạy</a>
+<header class="learn-head">
+    <div>
+        <h1 class="mindsprint-title mb-2">@Model.Name</h1>
+        <p class="learn-summary mb-0">@allStudents.Count học viên · @assignments.Count bài đã giao</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" asp-controller="Assignments" asp-action="Create" asp-route-classroomId="@Model.Id"><icon name="send" />Giao bài từ bộ học</a>
+        <a class="btn btn-secondary" asp-controller="Papers" asp-action="Create" asp-route-classroomId="@Model.Id"><icon name="file-text" />Giao bài theo đề (tải tài liệu)</a>
+    </div>
+</header>
+
+@if (pending.Count > 0 || needing.Count > 0)
+{
+    @* Trang Tổng quan dẫn "N việc chờ" tới đây: liệt kê từng việc và đường tới chỗ xử lý. *@
+    <section class="b-attention" aria-labelledby="class-attention-title">
+        <h2 class="h5" id="class-attention-title"><icon name="circle-alert" /> Cần xem</h2>
+        <ul>
+            @if (pending.Count > 0) { <li><a href="#class-pending">@pending.Count học viên xin vào lớp</a> · duyệt ở mục Thành viên bên dưới</li> }
+            @foreach (var a in needing)
+            {
+                @* Ghi kèm hạn để phân biệt các bài trùng tên; mỗi việc dẫn thẳng tới thẻ xử lý trong trang bài giao. *@
+                var end = a.Mode == AssignmentMode.Test ? a.TestEndsAt : a.DueAt;
+                <li><b>@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</b> <span class="text-muted">(@DisplayText.Of(a.Mode)@(end is { } e ? $", hạn {VnTime.Format(e)}" : ""))</span>:
+                    @foreach (var (part, i) in WorkOf(a).Parts().Select((p, i) => (p, i)))
+                    {
+                        @(i > 0 ? " · " : "")<a asp-controller="Assignments" asp-action="Details" asp-route-id="@a.Id" asp-fragment="@part.Fragment">@part.Text</a>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@* Góp ý 18/11: mã vào lớp và mọi cài đặt của lớp ở cùng khối đầu trang, không phải kéo xuống cuối trang. *@
+<section class="b-class-top" aria-label="Mã vào lớp và cài đặt lớp">
+    <div class="b-class-panel">
+        <h2 class="h5 mt-0 mb-2" id="class-code-title"><icon name="ticket" /> Mã vào lớp</h2>
+        <p class="text-muted mb-2">@(Model.JoinPolicy == ClassJoinPolicy.Immediate ? "Học viên nhập mã là vào lớp ngay." : "Học viên nhập mã, rồi chờ bạn duyệt vào lớp.") Mã này dùng để vào lớp; mỗi bài giao có mã riêng để vào thẳng bài đó.</p>
+        <div class="join-code b-join-code" id="class-join-code">@ViewData["Code"]</div>
+        <div class="b-actions">
+            <button class="btn btn-outline-primary" type="button" id="copy-class-code"><icon name="copy" />Sao chép mã</button>
+            @if (ViewData["Code"] is string) { <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#class-qr-popup"><icon name="qr-code" />Mã QR</button> }
+        </div>
+        <p class="b-copy-status small mb-0" id="class-copy-status" role="status" aria-live="polite"></p>
+        <div class="b-code-change">
+        <form method="post" asp-action="ChangeCode" asp-route-id="@Model.Id" data-confirm="Đổi mã? Mã cũ hết hiệu lực ngay.">
+            <button class="btn btn-outline-secondary mt-2"><icon name="repeat-2" />Đổi mã</button>
+        </form>
+        @if (ViewData["UndoCodeUntil"] is DateTime undoUntil)
+        {
+            <form method="post" asp-action="ChangeCode" asp-route-id="@Model.Id" class="mt-2" data-confirm="Khôi phục mã ngay trước? Mã đang dùng hết hiệu lực, người đã vào vẫn giữ nguyên.">
+                <input type="hidden" name="undo" value="true" />
+                <button class="btn btn-outline-secondary"><icon name="rotate-ccw" />Dùng lại mã cũ</button>
+                <span class="small">Đến @VnTime.Format(undoUntil)</span>
+            </form>
+        }
+        </div>
+        <form method="post" asp-action="JoinPolicy" asp-route-id="@Model.Id" class="d-flex flex-wrap gap-2 align-items-end mb-2">
+            <div>
+                <label for="class-join-policy" class="form-label">Cách vào lớp bằng mã</label>
+                <select id="class-join-policy" name="policy" class="form-select" aria-describedby="class-join-policy-help">
+                    <option value="@((int)ClassJoinPolicy.Immediate)" selected="@(Model.JoinPolicy == ClassJoinPolicy.Immediate)">Vào ngay bằng mã</option>
+                    <option value="@((int)ClassJoinPolicy.RequireApproval)" selected="@(Model.JoinPolicy == ClassJoinPolicy.RequireApproval)">Chờ giảng viên duyệt</option>
+                </select>
+            </div>
+            <button class="btn btn-outline-secondary">Lưu cách vào lớp</button>
+        </form>
+        <p class="small text-muted mb-2" id="class-join-policy-help">Người đang chờ duyệt vẫn cần bạn duyệt. Học viên từng bị bạn xóa khỏi lớp luôn phải chờ duyệt khi vào lại.</p>
+    </div>
+    <div class="b-class-panel" aria-labelledby="class-settings-title">
+        <h2 class="h5 mt-0 mb-2" id="class-settings-title"><icon name="settings-2" /> Cài đặt lớp</h2>
+        <form method="post" asp-action="Leaderboard" asp-route-id="@Model.Id" class="d-flex flex-wrap align-items-center gap-2" data-autosave>
+            <h3 class="visually-hidden" id="class-rank-toggle-title">Bảng xếp hạng cho học viên</h3>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="leaderboard-enabled" name="enabled" value="true" checked="@Model.LeaderboardEnabled" />
+                <label class="form-check-label" for="leaderboard-enabled">Cho học viên xem xếp hạng (top 10 và hạng của chính mình)</label>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary">Lưu</button>
+        </form>
+        <div class="b-class-settings-body">
+<h3 class="h5 mt-0"><icon name="graduation-cap" /> Giảng viên</h3>
+<ul class="list-group mb-3">
+@foreach (var m in Model.Members.Where(m => m.Role != ClassRole.Student && m.Status == ClassMemberStatus.Active))
+{
+    <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+        <span class="me-auto">@m.User.DisplayName · @(m.Role == ClassRole.MainLecturer ? "Giảng viên chính" : "Giảng viên phụ")</span>
+        @if (isMain && m.Role == ClassRole.AssistantLecturer)
+        {
+            <form method="post" asp-action="RemoveAssistant" asp-route-id="@Model.Id" data-confirm="Gỡ giảng viên phụ này?">
+                <input type="hidden" name="memberId" value="@m.Id" /><button class="btn btn-sm btn-outline-danger"><icon name="user-x" />Gỡ giảng viên phụ</button>
+            </form>
+        }
+    </li>
+}
+</ul>
+@if (isMain)
+{
+    <form method="post" asp-action="AddAssistant" asp-route-id="@Model.Id" class="row g-2 mb-4">
+        <div class="col-md-8"><label for="assistant-email" class="form-label">Email người được mời làm giảng viên phụ (chưa có tài khoản cũng được)</label><input id="assistant-email" name="email" type="email" class="form-control" required /></div>
+        <div class="col-md-4 d-flex align-items-end"><button class="btn btn-outline-primary"><icon name="mail" />Gửi lời mời giảng viên phụ</button></div>
+    </form>
+    <details class="mb-4"><summary>Chuyển lớp / Xóa lớp</summary>
+        <h3 class="h6 mt-3">Chuyển lớp cho giảng viên khác</h3>
+        <p class="small text-muted mb-2">Khi người nhận bấm "Nhận lớp": họ thành giảng viên chính; các bộ học dùng trong lớp được nhân bản sang tài khoản của họ; bài giao, bài đang thi và điểm giữ nguyên. Chưa nhận thì lớp vẫn của bạn.</p>
+        <form method="post" asp-controller="ClassTransfers" asp-action="Offer" data-confirm="Gửi đề nghị chuyển lớp này? Người nhận sẽ thành giảng viên chính khi bấm Nhận lớp.">
+            <input type="hidden" name="classroomId" value="@Model.Id" />
+            <label for="transfer-email" class="form-label">Email người nhận lớp</label><input id="transfer-email" type="email" name="email" class="form-control mb-2" required />
+            <label for="transfer-stay" class="form-label">Sau khi người nhận nhận lớp, bạn sẽ</label>
+            <select id="transfer-stay" name="fromUserStays" class="form-select mb-2"><option value="true">Ở lại lớp làm giảng viên phụ</option><option value="false">Rời hẳn lớp (không quản lý lớp này nữa)</option></select>
+            <button class="btn btn-primary">Gửi đề nghị chuyển lớp</button>
+        </form>
+        @* Tách hẳn khỏi phần chuyển lớp; câu hỏi lại nói đúng hậu quả của ClassroomLecturers.DeleteAsync. *@
+        <h3 class="h6 mt-4 pt-3 border-top">Xóa lớp</h3>
+        <p class="small text-muted mb-2">Chỉ xóa được khi lớp không còn bài đang mở.</p>
+        <form method="post" asp-action="Delete" asp-route-id="@Model.Id" data-confirm="Xóa lớp @Model.Name? Lớp biến mất khỏi danh sách của bạn, giảng viên phụ và học viên; mã vào lớp không dùng được nữa; lời mời và đề nghị chuyển lớp đang chờ bị hủy. Kết quả làm bài vẫn được lưu, nhưng bạn không tự khôi phục lớp được."><button class="btn btn-outline-danger"><icon name="trash-2" />Xóa lớp</button></form>
+    </details>
+}
+
+
+            <a asp-controller="Invitations" asp-action="Index"><icon name="mail" /> Lời mời đã gửi / Thu hồi lời mời</a>
+        </div>
+    </div>
+</section>
+
+<section class="b-page-section" aria-labelledby="class-work-title">
+    <h2 class="section-head" id="class-work-title"><span class="section-icon"><icon name="notebook-pen" /></span>Bài đã giao <span class="b-count">@assignments.Count</span></h2>
+    @if (assignments.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="section-icon"><icon name="book-open-text" /></span>
+            <h3>Bắt đầu bằng một bài học</h3>
+            <p>Bấm Giao bài, chọn nội dung rồi đặt hạn ôn tập hoặc giờ kiểm tra cho lớp.</p>
+        </div>
+    }
+    else
+    {
+        <div class="learn-grid b-class-work">
+        @* Bài cần xem lên trước để không bị khuất sau 8 bài mới nhất. *@
+        @foreach (var a in assignments.OrderByDescending(x => WorkOf(x).Total > 0).ThenByDescending(x => x.CreatedAt).Take(8))
+        {
+            <a class="learn-card b-class-assignment @(a.Mode == AssignmentMode.Test ? "is-test" : "")" asp-controller="Assignments" asp-action="Details" asp-route-id="@a.Id">
+                <span class="learn-card-top"><span class="learn-mode">@DisplayText.Of(a.Mode)</span>@{ var expired = a.Status != AssignmentStatus.Closed && (a.Mode == AssignmentMode.Test ? a.TestEndsAt : a.DueAt) is { } end && end <= DateTime.UtcNow; }<span class="badge @(a.Status == AssignmentStatus.Closed || expired ? "bg-body-tertiary" : "bg-primary")">@(a.Status == AssignmentStatus.Closed ? "Đã đóng" : expired ? "Đã hết hạn" : "Đang mở")</span></span>
+                <span class="learn-card-title">@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</span>
+                <span class="learn-card-class">@DisplayText.Of(a.Form)</span>
+                <span class="learn-card-when"><icon name="clock" /> @(a.Mode == AssignmentMode.Test
+                    ? (a.TestEndsAt == null ? "Chờ giảng viên bắt đầu" : "Kết thúc lúc " + VnTime.Format(a.TestEndsAt))
+                    : a.DueAt == null ? "Không có hạn" : "Hạn " + VnTime.Format(a.DueAt))</span>
+                @if (WorkOf(a).Total > 0) { <span class="b-card-attention">Cần xem: @string.Join(" · ", WorkOf(a).Describe())</span> }
+                <span class="b-work-link">Theo dõi bài <icon name="chevron-right" /></span>
+            </a>
+        }
+        </div>
+        @if (assignments.Count > 8)
+        {
+            @* Lớp có nhiều bài: chỉ hiện 8 bài mới nhất để phần Thành viên không bị đẩy xuống quá xa. *@
+            <p class="mt-3"><a class="btn btn-outline-secondary" asp-controller="Reports" asp-action="Index" asp-route-classId="@Model.Id"><icon name="chart-column" />Xem tất cả @assignments.Count bài trong Báo cáo</a></p>
+        }
+    }
+</section>
+
+@if (ViewData["Ranking"] is Leaderboard classRanking)
+{
+    <section class="b-page-section" aria-labelledby="class-rank-title">
+        <partial name="_Leaderboard" model="@((classRanking, "Xếp hạng lớp", true))" />
+        <p class="small text-muted mt-1">Giảng viên luôn thấy cả bảng; bật/tắt bảng cho học viên ở mục Cài đặt lớp đầu trang. Bài kiểm tra và bài theo đề chỉ được tính sau khi công bố điểm.</p>
+    </section>
+}
+
+<section class="b-page-section" aria-labelledby="class-members-title">
+    <div class="b-section-toolbar">
+        <h2 class="section-head" id="class-members-title"><span class="section-icon" style="--tint:var(--pink)"><icon name="users" /></span>Thành viên <span class="b-count">@allStudents.Count</span></h2>
+        <a asp-action="Members" asp-route-id="@Model.Id">Xem tất cả thành viên <icon name="chevron-right" /></a>
+    </div>
+@if (pending.Count > 0)
+{
+    <h3 class="h5" id="class-pending">Chờ duyệt (@pending.Count)</h3>
+    <ul class="list-group mb-4">
+        @foreach (var m in pending)
+        {
+            <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+                <span class="me-auto">@m.User.DisplayName <span class="text-muted small">@m.User.Email</span></span>
+                <form method="post" asp-action="Decide" asp-route-id="@Model.Id"><input type="hidden" name="memberId" value="@m.Id" /><input type="hidden" name="approve" value="true" />
+                    <button class="btn btn-sm btn-success"><icon name="check" />Duyệt</button></form>
+                <form method="post" asp-action="Decide" asp-route-id="@Model.Id"><input type="hidden" name="memberId" value="@m.Id" /><input type="hidden" name="approve" value="false" />
+                    <button class="btn btn-sm btn-outline-danger" data-confirm="Từ chối @m.User.DisplayName vào lớp?"><icon name="x" />Từ chối</button></form>
+            </li>
+        }
+    </ul>
+}
+
+    @* Góp ý 18/11: danh sách học viên thu gọn, bấm mới mở; có ô tìm. Người chờ duyệt ở trên luôn hiện để không bị bỏ sót. *@
+    <details class="b-members" id="class-members" open="@membersOpen">
+        <summary><icon name="chevron-down" />Danh sách học viên (@allStudents.Count) — bấm để xem, tìm hoặc xóa khỏi lớp</summary>
+        @if (allStudents.Count > 0)
+        {
+            <form method="get" action="@(Url.Action("Details", new { id = Model.Id }) + "#class-members-title")" class="b-member-search" role="search">
+                <label for="member-search" class="visually-hidden">Tìm học viên theo tên hoặc email</label>
+                <input id="member-search" name="q" value="@memberQuery" class="form-control" placeholder="Tìm theo tên hoặc email" />
+                <button class="btn btn-outline-secondary"><icon name="search" />Tìm</button>
+                @if (memberQuery.Length > 0) { <a class="btn btn-link" href="@(Url.Action("Details", new { id = Model.Id }) + "#class-members-title")">Bỏ lọc</a> }
+            </form>
+        }
+    @if (allStudents.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="section-icon" style="--tint:var(--pink)"><icon name="user-plus" /></span>
+            <h3>Lớp đang chờ học viên</h3>
+            <p>Gửi mã vào lớp ở đầu trang hoặc chiếu mã QR lên bảng để học viên tham gia.</p>
+            <a class="btn btn-outline-primary" href="#class-code-title"><icon name="ticket" />Xem mã vào lớp</a>
+        </div>
+    }
+    else if (students.Count == 0)
+    {
+        <p class="text-muted">Không có học viên khớp "@memberQuery".</p>
+    }
+    else
+    {
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-end mb-3">
+        <p class="small mb-0">Học viên @(memberFrom + 1)–@Math.Min(memberFrom + memberPageSize, students.Count) trên @students.Count</p>
+        <form method="post" asp-action="MemberPageSize" asp-route-id="@Model.Id" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label for="member-page-size">Mỗi trang</label>
+                <select id="member-page-size" name="size" class="form-select form-select-sm w-auto">
+                    @foreach (var size in UserSettingPresetService.MemberPageSizes)
+                    {
+                        <option value="@size" selected="@(size == memberPageSize)">@size</option>
+                    }
+                </select>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary">Áp dụng</button>
+        </form>
+    </div>
+<ul class="list-group">
+    @foreach (var m in students.Skip(memberFrom).Take(memberPageSize))
+    {
+        <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+            <span class="me-auto">@m.User.DisplayName <span class="text-muted small">@m.User.Email</span></span>
+            <a class="small me-2" asp-controller="Reports" asp-action="Create" asp-route-targetType="User" asp-route-targetId="@m.UserId" asp-route-classroomId="@Model.Id">Báo tên không phù hợp</a>
+            <form method="post" asp-action="RemoveMember" asp-route-id="@Model.Id" data-confirm="Xóa @m.User.DisplayName khỏi lớp?">
+                <input type="hidden" name="memberId" value="@m.Id" />
+                <button class="btn btn-sm btn-outline-danger"><icon name="user-x" />Xóa khỏi lớp</button>
+            </form>
+        </li>
+    }
+</ul>
+    <partial name="_Pager" model='new PagerModel(memberPage, memberTotalPages, n => Url.Action("Details", new { id = Model.Id, page = n, q = memberQuery.Length > 0 ? memberQuery : null }) + "#class-members-title", "Trang danh sách học viên")' />
+
+    }
+    </details>
+</section>
+</div>
+@if (ViewData["Code"] is string classCode)
+{
+    <partial name="_QrPopup" model="@(new QrPopupModel("class-qr-popup", "Mã QR vào lớp",
+        new JoinQrModel(classCode, Url.Action("Join", "Classrooms", new { code = classCode }, Context.Request.Scheme)!, Url.Action("Join", "Classrooms", null, Context.Request.Scheme)!),
+        Url.Action("Qr", new { id = Model.Id })!))" />
+}
+@section Scripts {
+    <script src="~/lib/qrcode-generator/qrcode.js"></script>
+    <script src="~/js/qr-popup.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const button = document.getElementById('copy-class-code');
+            const code = document.getElementById('class-join-code');
+            const message = document.getElementById('class-copy-status');
+            button.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(code.textContent.trim());
+                    message.textContent = 'Đã sao chép mã vào lớp. Bạn có thể gửi cho học viên.';
+                } catch {
+                    message.textContent = 'Chưa sao chép được. Hãy chọn mã vào lớp rồi sao chép bằng tay.';
+                }
+            });
+        })();
+    </script>
+}

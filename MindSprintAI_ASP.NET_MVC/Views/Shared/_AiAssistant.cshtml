@@ -1,0 +1,38 @@
+@model AiPanelModel
+<div class="ai-assistant my-3" data-assignment="@Model.AssignmentId" data-attempt="@Model.AttemptId"
+     data-state-url="@Url.Action("State", "Ai", new { id = Model.AssignmentId })"
+     data-history-url="@Url.Action("History", "Ai", new { id = Model.AssignmentId })"
+     data-conversation-url="@Url.Action("Conversation", "Ai")" data-source-url="@Url.Action("Read", "SourceTexts")" data-report-url="@Url.Action("Create", "Reports")" data-hub-url="@Url.Content("~/hubs/learn")">
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary" data-bs-toggle="offcanvas" data-bs-target="#ai-drawer-@Model.AssignmentId" aria-controls="ai-drawer-@Model.AssignmentId"><icon name="sparkles" />Hỏi trợ lý</button>
+        <a class="btn btn-outline-secondary ai-source d-none" asp-controller="SourceTexts" asp-action="Read" asp-route-id="@Model.AssignmentId">Văn bản nguồn</a>
+    </div>
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="ai-drawer-@Model.AssignmentId" aria-labelledby="ai-title-@Model.AssignmentId" style="--bs-offcanvas-width: min(100vw, 30rem)">
+        <div class="offcanvas-header"><h2 class="offcanvas-title ai-drawer-title h5" id="ai-title-@Model.AssignmentId">Trợ lý AI</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng trợ lý"></button></div>
+        <div class="offcanvas-body">
+            <p class="small text-muted">Trợ lý trả lời theo văn bản nguồn. Hội thoại chỉ mình bạn xem được; giảng viên chỉ thấy số lượt hỏi tổng hợp.</p>
+            <p class="ai-status alert alert-light border" role="status" tabindex="-1">Đang kiểm tra quyền dùng trợ lý…</p>
+            <div class="ai-key-help alert alert-info d-none">Nhập API key Gemini (mã riêng do Google cấp để dùng trợ lý AI) — miễn phí, khoảng 1 phút: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">lấy API key Gemini ở Google AI Studio ↗</a>, bấm Create API key (tạo mã), sao chép, rồi dán vào trang <a asp-controller="Account" asp-action="Index">Tài khoản</a>. Bạn vẫn làm bài bình thường khi chưa có API key Gemini.</div>
+            <div class="ai-private-history d-none">
+                <label class="form-label" for="ai-history-@Model.AssignmentId">Hội thoại của bạn</label>
+                <select class="ai-history form-select mb-3" id="ai-history-@Model.AssignmentId"><option value="">Hội thoại mới</option></select>
+                <div class="ai-messages mb-3" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Nội dung hội thoại"></div>
+            </div>
+            <form method="post" asp-controller="Ai" asp-action="Ask" class="ai-compose d-none">
+                <input type="hidden" name="id" value="@Model.AssignmentId" />
+                <input type="hidden" name="attemptId" value="@Model.AttemptId" />
+                <input type="hidden" name="conversationId" value="" />
+                <label class="form-label" for="ai-question-context-@Model.AssignmentId">Hỏi về câu này (tùy chọn)</label>
+                <select class="form-select mb-2" name="questionId" id="ai-question-context-@Model.AssignmentId">
+                    <option value="">Không gắn câu</option>
+                    @if (Model.Questions != null) { foreach (var q in Model.Questions) { <option value="@q.Id">@q.Label</option> } }
+                </select>
+                <label class="form-label" for="ai-question-@Model.AssignmentId">Câu hỏi của bạn</label>
+                <textarea class="form-control mb-2" name="question" id="ai-question-@Model.AssignmentId" maxlength="1000" rows="3" required></textarea>
+                <p class="small text-muted mb-2">Câu trả lời do AI tạo ra nên có thể sai. Hãy đối chiếu với văn bản nguồn.</p>
+                <button class="btn btn-primary">Gửi câu hỏi</button>
+                <p class="small text-muted mt-2">Tối đa 1.000 ký tự, 10 câu hỏi mỗi phút.</p>
+            </form>
+        </div>
+    </div>
+</div>

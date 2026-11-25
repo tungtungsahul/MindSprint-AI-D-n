@@ -1,0 +1,41 @@
+@{ ViewData["Title"] = "Trợ giúp"; }
+<a class="btn btn-sm b-back" href="@BackLink.Url(Context.Request, Url.Action("Index", "Home")!)"><icon name="chevron-right" class="b-back-icon" />Quay lại trang trước</a>
+<header class="page-head">
+    <div>
+        <h1>Trợ giúp</h1>
+        <p>Hướng dẫn nhanh từng mục của MindSprint AI. Bấm vào một mục để xem.</p>
+    </div>
+</header>
+
+<div class="help-list">
+    <details class="help-item" open><summary>Bắt đầu thế nào?</summary>
+        <ol>
+            <li>Tạo tài khoản hoặc đăng nhập.</li>
+            <li>Học viên: xin giảng viên <b>mã vào lớp</b> rồi bấm <b>Vào lớp bằng mã</b>. Tự học: mở <a asp-controller="Vocab" asp-action="Index">Thư viện từ vựng</a> hoặc tạo bộ học riêng ở <a asp-controller="StudySets" asp-action="Index">Thư viện</a>.</li>
+            <li>Giảng viên: đổi sang chế độ Giảng viên ở menu tài khoản, tạo bộ học, tạo lớp rồi giao bài.</li>
+        </ol>
+    </details>
+    <details class="help-item"><summary>Thư viện và bộ học</summary>
+        <p>Mỗi bộ học có thẻ ghi nhớ, quiz và văn bản nguồn. Bấm <b>Ôn thẻ</b> để ôn lặp lại ngắt quãng; bấm <b>…</b> để giao bài, đổi tên, nhân bản hoặc xóa (xóa xong vẫn khôi phục được trong Thùng rác).</p>
+        <p>Có thể nhập câu hỏi từ tệp Excel mẫu hoặc để AI tạo bản nháp từ tài liệu; mọi câu đều được xem lại trước khi lưu.</p>
+    </details>
+    <details class="help-item"><summary>Luyện tập</summary>
+        <p>Tab <b>Bài được giao</b> là bài của lớp. Tab <b>Trắc nghiệm &amp; Tự luận</b> và <b>Game ghép thẻ</b> để tự ôn từ vựng bất cứ lúc nào.</p>
+    </details>
+    <details class="help-item"><summary>Sổ tay AI và Gia sư</summary>
+        <p>Thêm tài liệu (dán chữ, tệp PDF, ảnh đề hoặc đường link), rồi hỏi đáp: câu trả lời chỉ dựa trên tài liệu và có trích dẫn. Studio tạo tóm tắt, hướng dẫn ôn, sơ đồ tư duy… Chế độ <b>Gia sư</b> giải bài từng bước, kiểm tra bài làm, gợi ý tự luyện và xem giúp đoạn code.</p>
+    </details>
+    <details class="help-item"><summary>Lấy API key Gemini để dùng AI</summary>
+        <ol>
+            <li>Mở trang Google AI Studio bằng tài khoản Google của bạn và bấm nút tạo khóa mới.</li>
+            <li>Sao chép khóa vừa tạo, rồi dán vào mục <b>API key Gemini</b> ở trang <a asp-controller="Account" asp-action="Index">Tài khoản</a>.</li>
+            <li>API key Gemini thuộc về bạn và được lưu mã hóa; bạn có thể xóa bất cứ lúc nào.</li>
+        </ol>
+    </details>
+    <details class="help-item"><summary>Lịch học, chuông báo và chuỗi ngày học</summary>
+        <p>Xếp giờ học trong tuần ở <a asp-controller="Schedule" asp-action="Index">Lịch học</a>, bật chuông để được nhắc khi đến giờ. Mỗi ngày ôn thẻ hoặc làm quiz được tính là một ngày học; bỏ trọn một ngày thì chuỗi bắt đầu lại.</p>
+    </details>
+    <details class="help-item"><summary>Cài ứng dụng lên điện thoại</summary>
+        <p>Vào <a asp-controller="Settings" asp-action="Index">Cài đặt</a> → <b>Cài ứng dụng lên máy</b>, hoặc mở menu trình duyệt và chọn "Thêm vào màn hình chính".</p>
+    </details>
+</div>

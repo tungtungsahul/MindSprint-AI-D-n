@@ -1,0 +1,27 @@
+@model AiConversation
+@{ ViewData["Title"] = "Hội thoại trợ lý"; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Lịch sử trợ lý</a>
+<h1 class="h3 mt-2 text-break">@Model.Title</h1>
+<p class="text-muted">Hội thoại riêng tư. Mở lại bài để hỏi tiếp khi giảng viên cho phép.</p>
+@if (Model.AssignmentId != null)
+{ <p><a class="btn btn-primary" asp-controller="Learn" asp-action="Assignment" asp-route-id="@Model.AssignmentId">Về bài này để hỏi tiếp</a></p> }
+@foreach (var message in Model.Messages.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id))
+{
+    <article class="card card-body mb-3">
+        <h2 class="h6">@(message.Role == "user" ? "Bạn" : "Trợ lý") <span class="fw-normal small text-muted">· @VnTime.Format(message.CreatedAt)</span></h2>
+        <p class="mb-2" style="white-space:pre-wrap;overflow-wrap:anywhere">@message.Content</p>
+        @if (message.Citations.Count > 0 && ViewData["SourceVersion"] is int currentVersion && message.SourceVersion != currentVersion) { <p class="small text-muted">Nguồn đã được cập nhật; đoạn trích dưới đây giữ theo phiên bản lúc hỏi.</p> }
+        @foreach (var citation in message.Citations)
+        {
+            <blockquote class="small border-start ps-2" style="white-space:pre-wrap">@citation.ExcerptText</blockquote>
+            @if (Model.AssignmentId != null)
+            {
+                <a class="small mb-2" asp-controller="SourceTexts" asp-action="Read" asp-route-id="@Model.AssignmentId" asp-route-start="@citation.StartOffset" asp-route-end="@citation.EndOffset" asp-route-version="@message.SourceVersion">Mở đoạn trích · bản văn bản nguồn lúc bạn hỏi</a>
+            }
+        }
+        @if (message.Role == "assistant")
+        {
+            <a class="small" asp-controller="Reports" asp-action="Create" asp-route-targetType="AiConversation" asp-route-targetId="@Model.Id">Báo cáo câu trả lời</a>
+        }
+    </article>
+}

@@ -1,0 +1,343 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> Users
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Environment
+@inject NotificationService Notifications
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var me = User.Identity?.IsAuthenticated == true ? await Users.GetUserAsync(User) : null;
+    // Menu tài khoản (accountMenu bên dưới) là khuôn dựng lười, chạy khi trang đã ghi ra một phần: nếu form trong đó là form đầu
+    // tiên cần cookie chống giả mạo thì không đặt cookie được nữa và trang bị cắt (lỗi /Learn/Review của khách trên server 16/11).
+    if (me != null) Antiforgery.GetAndStoreTokens(Context);
+    var lecturer = me?.CurrentMode == UserMode.Lecturer;
+    var unread = me == null || me.IsGuest ? 0 : await Notifications.UnreadAsync(me.Id);
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var signedIn = me != null && !me.IsGuest;
+    // Như nhóm: ai cũng vào thẳng khung ứng dụng có thanh bên (người chưa đăng nhập thấy thẻ "Khách").
+    // Ngoại lệ: khách vào bằng mã (đang làm bài) và các trang Đăng nhập/Đăng ký (có bố cục riêng) giữ thanh trên.
+    var sidebar = signedIn || (me == null && controller != "Account");
+    var modeLabel = me?.IsGuest == true ? "Khách" : lecturer ? "Giảng viên" : "Học viên";
+    string Current(string c, string? a = null) => controller == c && (a == null || action == a) ? "active" : "";
+    var practice = controller == "Learn" || (controller == "Vocab" && action is "Practice" or "Game"); // 3 tab của Luyện tập
+}
+<!DOCTYPE html>
+<html lang="vi" data-type="@ViewData["PageKind"]">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#FFFEFA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#191721" media="(prefers-color-scheme: dark)" />
+    <title>@ViewData["Title"] - @Brand.Name</title>
+    @if (ViewData["Description"] is string description)
+    {
+        <meta name="description" content="@description" />
+    }
+    @if (ViewData["OgTitle"] is string ogTitle)
+    {
+        <meta property="og:title" content="@ogTitle" />
+        <meta property="og:description" content="@ViewData["Description"]" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="@($"{Context.Request.Scheme}://{Context.Request.Host}{Url.Content(ViewData["OgImage"] as string)}")" />
+        <meta name="page-type" content="software" />
+        <meta name="site-kind" content="software" />
+    }
+    <script>
+        (() => {
+            let theme;
+            try { theme = localStorage.getItem('mindsprint-theme'); } catch { }
+            if (theme !== 'light' && theme !== 'dark') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.querySelectorAll('meta[name="theme-color"]').forEach(meta => meta.setAttribute('content', theme === 'dark' ? '#191721' : '#FFFEFA'));
+            let rail;
+            try { rail = localStorage.getItem('mindsprint-sidebar'); } catch { }
+            // Mặc định mở rộng như giao diện nhóm (QuizEdu từng mặc định thu gọn); chỉ thu gọn khi người dùng đã tự bấm.
+            if (rail === 'collapsed') document.documentElement.setAttribute('data-sidebar', 'collapsed');
+        })();
+    </script>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MindSprintAI_ASP.NET_MVC.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint-fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint-decor.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint-pages-a.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint-pages-b.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint-pages-c.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint-pages-d.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/katex/katex.min.css" />
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="~/img/app/icon-192.jpg" />
+</head>
+<body data-brand="@Brand.Name" class="@(controller is "Learn" or "Assignments" or "Admin" or "Reports" && !(controller == "Learn" && action == "Index") ? "mindsprint-still" : "") @(sidebar ? "has-sidebar" : "")">
+    <partial name="_Icons" />
+    <a class="skip-link" href="#main-content">Đến nội dung chính</a>
+    @{
+        // Menu tài khoản viết một lần: ở thanh trên (khách, trang ngoài) hoặc ở header ứng dụng (người đã đăng nhập). Chỉ gọi khi me != null.
+        Func<object?, object> accountMenu = @<div class="dropdown account-menu">
+            <button class="btn dropdown-toggle account-menu-toggle" type="button" id="account-menu" data-bs-toggle="dropdown" aria-expanded="false" title="@me!.DisplayName">
+                <partial name="_Avatar" model="me" />
+                <span class="account-copy"><span class="nav-label account-name">@me.DisplayName</span><span class="account-mode">@modeLabel</span>@if (!string.IsNullOrWhiteSpace(me.Email)) { <span class="account-mail">@me.Email</span> }</span>
+                <span class="nav-short" aria-hidden="true">Tôi</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="account-menu">
+                <li class="account-identity">
+                    <partial name="_Avatar" model="me" />
+                    <div class="account-copy"><span class="account-name">@me.DisplayName</span>
+                        <span class="account-mode">@modeLabel</span>
+                        @if (!string.IsNullOrWhiteSpace(me.Email)) { <span class="account-email">@me.Email</span> }
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                @if (!me.IsGuest)
+                {
+                    <li><a class="dropdown-item" asp-controller="Account" asp-action="Index"><icon name="settings-2" />Tài khoản</a></li>
+                    <li><form method="post" asp-controller="Account" asp-action="SwitchMode">
+                        <button class="dropdown-item"><icon name="repeat-2" />@(lecturer ? "Chuyển sang Học viên" : "Chuyển sang Giảng viên")</button>
+                    </form></li>
+                }
+                <li><form method="post" asp-controller="Account" asp-action="Logout">
+                    <button class="dropdown-item"><icon name="log-out" />Đăng xuất</button>
+                </form></li>
+            </ul>
+        </div>;
+    }
+    <header class="mindsprint-header container">
+        <nav class="navbar navbar-expand-lg" aria-label="Điều hướng chính">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="@(me?.IsGuest == true ? "/Classrooms/Join" : "/")"><icon name="copy" class="brand-icon" /><span class="brand-full">@Brand.Name</span><span class="brand-short" aria-hidden="true">@Brand.Name.Substring(0, 1)</span></a>
+                @if (!sidebar)
+                {
+                    <button class="btn theme-toggle" type="button" id="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Giao diện tối"><icon name="moon" /><span class="theme-label-full" aria-hidden="true">Giao diện tối</span><span class="theme-label-short" aria-hidden="true">Tối</span></button>
+                }
+                @if (sidebar)
+                {
+                    <button class="btn sidebar-toggle" type="button" data-sidebar-toggle aria-expanded="true" aria-label="Thu gọn thanh bên" title="Thu gọn / mở rộng thanh bên"><icon name="panel-left-close" class="when-open" /><icon name="panel-left-open" class="when-collapsed" /><span class="nav-short" aria-hidden="true">Mở rộng</span></button>
+                }
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                        aria-expanded="false" aria-label="Mở menu">
+                    <icon name="menu" />
+                </button>
+                <div class="navbar-collapse collapse" id="app-menu">
+                    @if (signedIn)
+                    {
+                        @* Thẻ người dùng dưới logo như sidebar nhóm (docs/GIAO_DIEN_NHOM.md); nhóm ghi khẩu hiệu, MVC ghi chế độ đang dùng vì có 2 chế độ. *@
+                        <div class="sidebar-user nav-label">
+                            <span class="sidebar-user-name">@me!.DisplayName</span>
+                            <span class="sidebar-user-mode">Đang dùng: @modeLabel</span>
+                            <form method="post" asp-controller="Account" asp-action="Logout"><button class="btn btn-sm btn-outline-secondary"><icon name="log-out" />Đăng xuất</button></form>
+                        </div>
+                    }
+                    else if (sidebar)
+                    {
+                        <div class="sidebar-user nav-label">
+                            <span class="sidebar-user-name">Khách</span>
+                            <span class="sidebar-user-mode">Đăng nhập để lưu tiến độ học.</span>
+                            <a class="btn btn-sm btn-outline-secondary" asp-controller="Account" asp-action="Login"><icon name="log-in" />Đăng nhập</a>
+                        </div>
+                    }
+                    <ul class="navbar-nav me-auto">
+                        @if (sidebar)
+                        {
+                            @* Menu theo nhóm (người dùng chốt 15/11/2026): HỌC TẬP · TỔ CHỨC · ỨNG DỤNG. Lớp và mã lớp là phần riêng của MVC. *@
+                            <li class="nav-heading" aria-hidden="true">Học tập</li>
+                            <li class="nav-item"><a class="nav-link @Current("Home", "Index")" aria-current="@(Current("Home", "Index") != "" ? "page" : null)" asp-controller="Home" asp-action="Index" title="Trang chủ"><icon name="house" /><span class="nav-label">Trang chủ</span><span class="nav-short" aria-hidden="true">Hôm nay</span></a></li>
+                            <li class="nav-item"><a class="nav-link @(action == "Trash" ? "" : Current("StudySets"))" aria-current="@(action != "Trash" && Current("StudySets") != "" ? "page" : null)" asp-controller="StudySets" asp-action="Index" title="Thư viện"><icon name="layers" /><span class="nav-label">Thư viện</span><span class="nav-short" aria-hidden="true">Thư viện</span></a></li>
+                            @if (controller is "StudySets" || (controller == "Vocab" && action is "Index" or "Topic"))
+                            {
+                                @* Danh mục con dưới Thư viện như sidebar nhóm (DANH MỤC: Tất cả · Tiếng Anh · Lập trình · Kiến thức chung). *@
+                                var vocabCategory = Context.Request.Query["category"].ToString();
+                                <li class="nav-sub-heading nav-label" aria-hidden="true">Danh mục</li>
+                                <li class="nav-item nav-sub"><a class="nav-link @(controller == "StudySets" && action != "Trash" ? "active" : "")" asp-controller="StudySets" asp-action="Index"><span class="nav-label">Bộ học của tôi</span></a></li>
+                                <li class="nav-item nav-sub"><a class="nav-link @(controller == "Vocab" && vocabCategory == "" ? "active" : "")" asp-controller="Vocab" asp-action="Index"><span class="nav-label">Tất cả từ vựng</span></a></li>
+                                <li class="nav-item nav-sub"><a class="nav-link @(vocabCategory == "english" ? "active" : "")" asp-controller="Vocab" asp-action="Index" asp-route-category="english"><span class="nav-label">Tiếng Anh</span></a></li>
+                                <li class="nav-item nav-sub"><a class="nav-link @(vocabCategory == "programming" ? "active" : "")" asp-controller="Vocab" asp-action="Index" asp-route-category="programming"><span class="nav-label">Lập trình</span></a></li>
+                                <li class="nav-item nav-sub"><a class="nav-link @(vocabCategory == "general" ? "active" : "")" asp-controller="Vocab" asp-action="Index" asp-route-category="general"><span class="nav-label">Kiến thức chung</span></a></li>
+                            }
+                            <li class="nav-item"><a class="nav-link @(practice ? "active" : "")" aria-current="@(practice ? "page" : null)" asp-controller="Learn" asp-action="Index" title="Luyện tập"><icon name="square-pen" /><span class="nav-label">Luyện tập</span><span class="nav-short" aria-hidden="true">Luyện tập</span></a></li>
+                            <li class="nav-item"><a class="nav-link @Current("Notebooks")" aria-current="@(Current("Notebooks") != "" ? "page" : null)" asp-controller="Notebooks" asp-action="Index" title="Sổ tay AI"><icon name="notebook-pen" /><span class="nav-label">Sổ tay AI</span><span class="nav-short" aria-hidden="true">Sổ tay</span></a></li>
+                            <li class="nav-item"><a class="nav-link @(controller == "Classrooms" ? "active" : "")" aria-current="@(controller == "Classrooms" ? "page" : null)" asp-controller="Classrooms" asp-action="Index" title="@(lecturer ? "Lớp tôi dạy" : "Lớp của tôi")"><icon name="users" /><span class="nav-label">@(lecturer ? "Lớp tôi dạy" : "Lớp của tôi")</span><span class="nav-short" aria-hidden="true">Lớp</span></a></li>
+                            <li class="nav-heading" aria-hidden="true">Tổ chức</li>
+                            <li class="nav-item"><a class="nav-link @Current("Overview")" aria-current="@(Current("Overview") != "" ? "page" : null)" asp-controller="Overview" asp-action="Index" title="Tổng quan"><icon name="chart-column" /><span class="nav-label">Tổng quan</span><span class="nav-short" aria-hidden="true">Tổng quan</span></a></li>
+                            <li class="nav-item"><a class="nav-link @Current("WeakAreas")" aria-current="@(Current("WeakAreas") != "" ? "page" : null)" asp-controller="WeakAreas" asp-action="Index" title="Điểm yếu"><icon name="target" /><span class="nav-label">Điểm yếu</span><span class="nav-short" aria-hidden="true">Điểm yếu</span></a></li>
+                            <li class="nav-item"><a class="nav-link @Current("Schedule")" aria-current="@(Current("Schedule") != "" ? "page" : null)" asp-controller="Schedule" asp-action="Index" title="Lịch học"><icon name="calendar" /><span class="nav-label">Lịch học</span><span class="nav-short" aria-hidden="true">Lịch</span></a></li>
+                            <li class="nav-item"><a class="nav-link @Current("Kanban")" aria-current="@(Current("Kanban") != "" ? "page" : null)" asp-controller="Kanban" asp-action="Index" title="Công việc"><icon name="square-kanban" /><span class="nav-label">Công việc</span><span class="nav-short" aria-hidden="true">Việc</span></a></li>
+                        }
+                        @if (signedIn && lecturer)
+                        {
+                            <li class="nav-item"><a class="nav-link @Current("Reports", "Index")" aria-current="@(Current("Reports", "Index") != "" ? "page" : null)" asp-controller="Reports" asp-action="Index" title="Báo cáo"><icon name="chart-column" /><span class="nav-label">Báo cáo</span><span class="nav-short" aria-hidden="true">Báo cáo</span></a></li>
+                        }
+                    </ul>
+                    @if (me != null && !me.IsGuest)
+                    {
+                        <ul class="navbar-nav sidebar-secondary">
+                            <li class="nav-heading" aria-hidden="true">Ứng dụng</li>
+                            <li class="nav-item"><a class="nav-link @Current("Settings")" aria-current="@(Current("Settings") != "" ? "page" : null)" asp-controller="Settings" asp-action="Index" title="Cài đặt"><icon name="settings-2" /><span class="nav-label">Cài đặt</span><span class="nav-short" aria-hidden="true">Cài đặt</span></a></li>
+                            @if (me != null && !me.IsGuest)
+                            {
+                                <li class="nav-item"><a class="nav-link sidebar-trash @Current("StudySets", "Trash")" asp-controller="StudySets" asp-action="Trash" aria-current="@(Current("StudySets", "Trash") != "" ? "page" : null)" title="Thùng rác"><icon name="trash-2" /><span class="nav-label">Thùng rác</span><span class="nav-short" aria-hidden="true">Thùng rác</span></a></li>
+                            }
+                            @if (me?.IsSystemAdmin == true && !me.IsGuest)
+                            {
+                                <li class="nav-item dropdown">
+                                    <button class="nav-link dropdown-toggle @Current("Admin")" type="button" id="admin-menu" data-bs-toggle="dropdown" aria-expanded="false" title="Quản trị"><icon name="shield-check" /><span class="nav-label">Quản trị</span><span class="nav-short" aria-hidden="true">Quản trị</span></button>
+                                    <ul class="dropdown-menu" aria-labelledby="admin-menu">
+                                        <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index"><icon name="settings-2" />Quản trị</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Admin" asp-action="Audit"><icon name="scroll-text" />Nhật ký hoạt động</a></li>
+                                    </ul>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    @if (me != null && !sidebar)
+                    {
+                        @accountMenu(null)
+                    }
+                    else if (me == null && !sidebar)
+                    {
+                        <a class="btn btn-outline-secondary app-join-out" asp-controller="Classrooms" asp-action="Join"><icon name="ticket" />Tham gia bằng mã</a>
+                        <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+                        <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Tạo tài khoản</a>
+                    }
+                    @if (sidebar)
+                    {
+                        @* Đáy sidebar như nhóm: một nút chính + link phụ (chân trang website ẩn trong ứng dụng). *@
+                        <div class="sidebar-footer">
+                            @if (!signedIn)
+                            {
+                                <a class="btn btn-primary sidebar-cta" asp-controller="Account" asp-action="Register" title="Tạo tài khoản"><icon name="user-plus" /><span class="nav-label">Tạo tài khoản</span></a>
+                            }
+                            else if (lecturer)
+                            {
+                                <a class="btn btn-primary sidebar-cta" href="@Url.Action("Index", "StudySets")#tao-bo-hoc" title="Bộ học mới"><icon name="plus" /><span class="nav-label">Bộ học mới</span></a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-primary sidebar-cta" asp-controller="Classrooms" asp-action="Join" title="Vào lớp bằng mã"><icon name="plus" /><span class="nav-label">Vào lớp bằng mã</span></a>
+                            }
+                            <div class="sidebar-links nav-label">
+                                <a asp-controller="Home" asp-action="Help"><icon name="circle-help" />Trợ giúp</a> · <a asp-controller="Home" asp-action="Privacy">Chính sách</a> · <a asp-controller="Home" asp-action="Terms">Điều khoản</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+    @if (sidebar)
+    {
+        @* Điện thoại: thanh tab dưới đáy như nhóm (Hôm nay · Thư viện · Luyện tập · Công việc · Khác); "Khác" mở menu đầy đủ. *@
+        <nav class="app-tabbar" aria-label="Điều hướng nhanh">
+            <a class="@Current("Home", "Index")" asp-controller="Home" asp-action="Index"><icon name="house" /><span>Hôm nay</span></a>
+            <a class="@(action == "Trash" ? "" : Current("StudySets"))" asp-controller="StudySets" asp-action="Index"><icon name="layers" /><span>Thư viện</span></a>
+            <a class="@(practice ? "active" : "")" asp-controller="Learn" asp-action="Index"><icon name="square-pen" /><span>Luyện tập</span></a>
+            <a class="@Current("Kanban")" asp-controller="Kanban" asp-action="Index"><icon name="square-kanban" /><span>Công việc</span></a>
+            <button type="button" data-bs-toggle="collapse" data-bs-target="#app-menu" aria-controls="app-menu" aria-expanded="false"><icon name="menu" /><span>Khác</span></button>
+        </nav>
+    }
+    <div class="container">
+        @if (sidebar)
+        {
+            @* Header ứng dụng như giao diện nhóm: ô tìm trang bên trái; chuông + tài khoản bên phải. *@
+            <div class="app-topbar @(signedIn ? null : "is-guest")">
+                <form class="app-search" role="search" data-app-search data-items-url="@(signedIn ? Url.Action("SearchItems", "StudySets") : null)">
+                    <icon name="search" />
+                    <input type="search" class="form-control" list="app-pages" placeholder="@(signedIn ? "Tìm trang hoặc bộ thẻ…" : "Tìm trang…")" aria-label="@(signedIn ? "Tìm trang hoặc bộ thẻ" : "Tìm trang trong MindSprint AI")" autocomplete="off" />
+                    <datalist id="app-pages"></datalist>
+                </form>
+                <div class="app-actions">
+                    @* Như nhóm: thanh bên không có nút nào trên thẻ người dùng; đổi sáng/tối là nút icon cạnh chuông (nhóm đặt ở đây nút thư). *@
+                    @if (signedIn) { <a class="app-icon-btn @Current("Notebooks")" asp-controller="Notebooks" asp-action="Index" aria-label="Sổ tay AI" title="Sổ tay AI"><icon name="mail" /></a> } @* nút thư của nhóm mở Sổ tay AI *@
+                    @* Người dùng góp ý 17/11: nút vào lớp/bài bằng mã khó tìm → luôn ở thanh trên, mọi trang (điện thoại chỉ còn biểu tượng). *@
+                    <a class="btn btn-primary app-join @Current("Classrooms", "Join")" asp-controller="Classrooms" asp-action="Join" title="Tham gia lớp hoặc bài bằng mã 8 số"><icon name="ticket" /><span class="app-join-label">Tham gia bằng mã</span></a>
+                    <button class="app-icon-btn" type="button" data-theme-toggle aria-pressed="false" aria-label="Giao diện tối" title="Giao diện tối"><icon name="moon" /></button>
+                    @if (signedIn)
+                    {
+                        <a class="app-icon-btn @Current("Notifications")" id="notification-bell" asp-controller="Notifications" asp-action="Index" aria-label="Thông báo, @unread chưa đọc" title="Thông báo">
+                            <icon name="bell" /><span class="badge bg-danger" id="notification-unread" aria-live="polite" aria-label="@unread thông báo chưa đọc">@unread</span></a>
+                        @accountMenu(null)
+                    }
+                    else
+                    {
+                        <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Login">Đăng nhập</a>
+                        <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Tạo tài khoản</a>
+                    }
+                </div>
+            </div>
+        }
+        <main role="main" class="pb-3" id="main-content" tabindex="-1">
+            @if (me?.IsGuest == true)
+            {
+                <div class="alert alert-info" role="status">
+                    <b>Khách</b> · Kết quả gắn với trình duyệt này. Khách không dùng AI hoặc xin làm lại.
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Tạo tài khoản để lưu kết quả</a>
+                        <a class="btn btn-outline-primary" asp-controller="Account" asp-action="Login">Đăng nhập để lưu kết quả</a>
+                        <a class="btn btn-outline-secondary" asp-controller="Classrooms" asp-action="Join">Tham gia bằng mã</a>
+                    </div>
+                    <p class="small mb-0 mt-2">Tạo tài khoản: xác minh email rồi đăng nhập tại trình duyệt này để chuyển kết quả.</p>
+                </div>
+            }
+            @if (TempData["Error"] is string error)
+            {
+                <div class="alert alert-danger" role="alert">@error</div>
+            }
+            @if (TempData["Success"] is string ok)
+            {
+                <div class="alert alert-success" role="status">@ok</div>
+            }
+            @if (MindSprintAI_ASP.NET_MVC.Controllers.AccountController.CanShowDevLink(Environment.IsDevelopment(), Context.Connection.RemoteIpAddress)
+                && TempData["DevLink"] is string devLink)
+            {
+                <div class="alert alert-warning small">
+                    <b>Chế độ thử ở máy:</b> bản sao email được lưu trong <code>App_Data/emails</code> (đã cấu hình SMTP thì email cũng được gửi thật).
+                    Link trong email: <a href="@devLink">@devLink</a>
+                </div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="mindsprint-footer">
+        <div class="container footer-columns">
+            <div><h2 class="h5">@Brand.Name</h2><p class="small mb-0">&copy; 2026 · Học và ôn tập mỗi ngày.</p></div>
+            <div><h2 class="h6">Hỗ trợ</h2>
+                <div><a asp-controller="Classrooms" asp-action="Join">Tham gia bằng mã</a></div>
+                <div><a asp-controller="Home" asp-action="Privacy">Chính sách quyền riêng tư</a></div>
+                <div><a asp-controller="Home" asp-action="Terms">Điều khoản sử dụng</a></div>
+            </div>
+            <div><h2 class="h6">Tài khoản</h2>
+                @if (me != null) { <a asp-controller="Account" asp-action="Index">Tài khoản của tôi</a> }
+                else { <a asp-controller="Account" asp-action="Login">Đăng nhập</a> }
+            </div>
+        </div>
+        <div class="container">@await RenderSectionAsync("PhotoCredits", required: false)</div>
+    </footer>
+    <script src="~/js/theme.js" asp-append-version="true"></script>
+    <script src="~/js/avatar.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/pwa.js" asp-append-version="true"></script>
+    @* Công thức toán (KaTeX) như nhóm: hiện $...$ trong Sổ tay AI, Gia sư, thẻ và câu hỏi. *@
+    <script src="~/lib/katex/katex.min.js" defer></script>
+    <script src="~/lib/katex/contrib/auto-render.min.js" defer></script>
+    <script src="~/js/text-renderer.js" asp-append-version="true" defer></script>
+    <script src="~/js/autosave.js" asp-append-version="true" defer></script>
+    @* (F7) mức nhẹ chỉ để nhận lại máy lúc đăng nhập; không thu ở các trang khác. *@
+    @if (ViewContext.RouteData.Values["controller"]?.ToString() == "Account"
+        && ViewContext.RouteData.Values["action"]?.ToString() is "Login" or "LoginTwoFactor")
+    {
+        <partial name="_MachineHint" />
+    }
+    <script src="~/js/device-signals.js" asp-append-version="true" type="module"></script>
+    @if (me != null && !me.IsGuest)
+    {
+        <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+        <script src="~/js/notifications.js" asp-append-version="true"></script>
+        <script src="~/js/alarm.js" asp-append-version="true"></script>
+    }
+    @if (me != null) { <script src="~/js/offline-cards.js" asp-append-version="true" data-user="@me.Id"></script> } @* gồm cả khách vào bằng mã (bài giao GV cho ôn khi mất mạng) *@
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

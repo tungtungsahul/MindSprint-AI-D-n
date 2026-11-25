@@ -1,0 +1,48 @@
+@model int
+@{ ViewData["Title"] = "Nhập câu hỏi từ Excel"; }
+<a class="btn btn-sm b-back" asp-controller="StudySets" asp-action="Quiz" asp-route-id="@Model"><icon name="chevron-right" class="b-back-icon" />Quay lại Quiz</a>
+<h1 class="h3 my-3">Nhập câu hỏi từ Excel</h1>
+<p>File Excel (.xlsx) tối đa 5 MB; tối đa 500 dòng mỗi sheet Excel. Dán giá trị ô, không dùng công thức.</p>
+<p class="small text-muted">File mẫu có hai sheet Excel tên <b>CauHoi</b> (câu hỏi) và <b>Flashcard</b> (thẻ ghi nhớ). Dòng 1 là tên cột, dòng 2 ghi cột nào bắt buộc hay tùy chọn, các dòng sau là ví dụ cho từng loại câu: xóa ví dụ rồi nhập câu của bạn từ dòng 3. Hãy giữ nguyên tên hai sheet và dòng tên cột.</p>
+<ul class="small text-muted">
+    <li><b>Chọn một / Chọn nhiều:</b> ghi các lựa chọn vào cột Lựa chọn 1–6, cột Đáp án đúng ghi số (1,3) hoặc chữ (A,C).</li>
+    <li><b>Điền chữ:</b> mỗi cột Lựa chọn là một ô trống; nhiều cách trả lời đúng ghi cách nhau bằng dấu |, ví dụ <i>Hà Nội|Thủ đô Hà Nội</i>.</li>
+    <li><b>Điền số:</b> ghi con số đúng vào cột Đáp án đúng, ví dụ 3,14.</li>
+    <li>Các cột tô xám ở cuối là cài đặt nâng cao, để trống là dùng mặc định. File theo mẫu cũ (trước 13/11/2026) không nhập được: hãy tải file mẫu mới.</li>
+</ul>
+<a class="btn btn-outline-primary mb-3" asp-action="Template" asp-route-id="@Model">Tải file mẫu</a>
+<form method="post" asp-action="Preview" asp-route-id="@Model" enctype="multipart/form-data">
+    <label class="form-label" for="excel-file">File Excel theo mẫu</label>
+    <input class="form-control mb-3" id="excel-file" name="file" type="file" accept=".xlsx" data-max-bytes="@ExcelTemplate.MaxBytes" required />
+    <button class="btn btn-primary">Xem trước</button>
+</form>
+
+@* Tạo bằng AI (chuyển từ nhóm): AI soạn nháp từ tài liệu → cùng trang xem trước như nhập Excel, bạn sửa/bỏ dòng rồi mới lưu. *@
+<section class="ai-generate" aria-labelledby="ai-generate-title">
+    <h2 class="h5" id="ai-generate-title"><icon name="sparkles" />Tạo bằng AI từ tài liệu</h2>
+    <p class="small text-muted">Dán đoạn văn hoặc tải tệp PDF hay tệp chữ TXT, MD, CSV (tối đa 10 MB, đọc tối đa @AiGenerateService.MaxChars.ToString("N0") ký tự). AI dùng <b>API key Gemini của bạn</b> (trang Tài khoản) và chỉ tạo bản nháp: bạn xem lại, sửa hoặc bỏ từng dòng trước khi lưu.</p>
+    <form method="post" asp-action="AiPreview" asp-route-id="@Model" enctype="multipart/form-data">
+        <div class="row g-3">
+            <div class="col-md-6"><label class="form-label" for="ai-kind">Tạo</label>
+                <select class="form-select" id="ai-kind" name="kind"><option value="quiz">Câu hỏi trắc nghiệm</option><option value="cards">Thẻ ghi nhớ</option></select></div>
+            <div class="col-md-6"><label class="form-label" for="ai-count">Số lượng (1–@AiGenerateService.MaxCount)</label>
+                <input class="form-control" id="ai-count" name="count" data-estimate-from="ai-text" type="number" min="1" max="@AiGenerateService.MaxCount" value="10" /></div>
+            <div class="col-12"><label class="form-label" for="ai-file">Tệp tài liệu (không bắt buộc)</label>
+                <input class="form-control" id="ai-file" name="file" type="file" accept="@string.Join(",", AiGenerateService.FileTypes)" data-max-bytes="@AiGenerateService.MaxFileBytes" /></div>
+            <div class="col-12"><label class="form-label" for="ai-text">Hoặc dán nội dung</label>
+                <textarea class="form-control" id="ai-text" name="text" rows="6" maxlength="@AiGenerateService.MaxChars" placeholder="Dán đoạn bài học, ghi chú hoặc tài liệu..."></textarea></div>
+        </div>
+        <button class="btn btn-primary mt-3"><icon name="sparkles" />Tạo bản nháp bằng AI</button>
+    </form>
+</section>
+@* Dán nhiều thẻ một lúc ("Nhập hàng loạt flashcards" của nhóm) → cùng trang xem trước, sửa/bỏ dòng rồi mới lưu. *@
+<section class="ai-generate" id="dan-nhieu-the" aria-labelledby="paste-title">
+    <h2 class="h5" id="paste-title"><icon name="layers" />Dán nhiều thẻ ghi nhớ</h2>
+    <p class="small text-muted">Mỗi dòng một thẻ: <b>Câu hỏi : Câu trả lời</b> (tách ở dấu hai chấm đầu tiên) hoặc <b>mặt trước | mặt sau</b>. Tối đa @ExcelTemplate.MaxRows thẻ mỗi lần.</p>
+    <form method="post" asp-action="PastePreview" asp-route-id="@Model">
+        <label class="form-label" for="paste-text">Nội dung</label>
+        <textarea class="form-control" id="paste-text" name="text" rows="6" maxlength="@PasteCards.MaxChars" required placeholder="Ti thể : Bào quan tạo năng lượng cho tế bào&#10;Lục lạp | Nơi diễn ra quang hợp"></textarea>
+        <button class="btn btn-primary mt-3"><icon name="eye" />Xem trước</button>
+    </form>
+</section>
+@section Scripts { <script src="~/js/ai-count.js" asp-append-version="true"></script> }

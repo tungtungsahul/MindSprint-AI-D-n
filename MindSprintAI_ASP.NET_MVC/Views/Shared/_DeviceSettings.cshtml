@@ -1,0 +1,17 @@
+@model AssignmentInput
+<fieldset class="border rounded p-3 mb-3">
+    <legend class="float-none w-auto fs-6 px-1">Thiết bị làm bài và rời màn hình</legend>
+    <div class="form-check mb-2">
+        <input type="checkbox" id="DeviceLock" name="DeviceLock" value="true" checked="@Model.DeviceLock" class="form-check-input" />
+        <label for="DeviceLock" class="form-check-label">Khóa 1 thiết bị</label>
+    </div>
+    <p class="small text-muted">Học viên muốn chuyển thiết bị phải được giảng viên cho phép. Đồng hồ làm bài vẫn chạy trong lúc chờ.</p>
+    <div class="form-check mb-2">
+        <input type="checkbox" id="MonitorScreen" name="MonitorScreen" value="true" checked="@Model.MonitorScreen" class="form-check-input" />
+        <label for="MonitorScreen" class="form-check-label">Giám sát rời màn hình</label>
+    </div>
+    <label for="AutoSubmitLeaves" class="form-label">Rời màn hình đến lần thứ N thì tự nộp bài</label>
+    <input type="number" id="AutoSubmitLeaves" name="AutoSubmitLeaves" min="1" max="20" value="@Model.AutoSubmitLeaves" class="form-control" aria-describedby="leave-limit-help monitor-limit" />
+    <p id="leave-limit-help" class="small text-muted">Để trống để tắt tự nộp. Nếu bật, nhập từ 1 đến 20. Đến lần thứ N từ 2 giây trở lên thì bài tự nộp; mất tín hiệu không tính.</p>
+    <p id="monitor-limit" class="small text-muted">Tính năng này không phát hiện được việc học viên dùng điện thoại hoặc thiết bị thứ hai để tra cứu, và không thấy những gì diễn ra ngoài trình duyệt khi trang làm bài vẫn đang mở trên màn hình.</p>
+</fieldset>

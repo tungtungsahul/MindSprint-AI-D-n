@@ -1,0 +1,18 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Có lỗi xảy ra";
+}
+
+@* (G0) trang lỗi chung dùng lời dễ hiểu; hướng dẫn cho lập trình viên nằm trong docs, không hiện cho người dùng. *@
+<h1 class="text-danger">Có lỗi xảy ra.</h1>
+<h2 class="text-danger">Chưa thực hiện được thao tác của bạn.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>Mã tra cứu lỗi:</strong> <code>@Model.RequestId</code>
+    </p>
+}
+
+<p>Hãy thử lại. Nếu vẫn lỗi, @(Model.ShowRequestId ? "gửi mã tra cứu lỗi ở trên" : "báo lại thao tác bạn vừa làm") cho quản trị viên.</p>
+<p><a class="btn btn-primary" href="~/">Về trang chính</a></p>

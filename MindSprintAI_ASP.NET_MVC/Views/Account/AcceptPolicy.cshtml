@@ -1,0 +1,40 @@
+@model AcceptPolicyModel
+@{
+    ViewData["Title"] = "Trước khi dùng MindSprint AI";
+}
+@* Pháp lý C2. Trang chặn: nút "Không đồng ý, đăng xuất" thay cho nút Quay lại. *@
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h1 class="h3 mb-3 mindsprint-title">Trước khi dùng MindSprint AI</h1>
+        <p>@(Model.Updated
+            ? "MindSprint AI vừa cập nhật Điều khoản sử dụng và Chính sách quyền riêng tư. Hãy đọc và đồng ý để tiếp tục."
+            : "Hãy đọc và đồng ý với Điều khoản sử dụng và Chính sách quyền riêng tư để tiếp tục dùng MindSprint AI.")</p>
+        <form method="post" asp-action="AcceptPolicy">
+            <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div class="mb-3">
+                <div class="consent-check">
+                    <input asp-for="AcceptTerms" type="checkbox" class="form-check-input" />
+                    <label asp-for="AcceptTerms" class="form-check-label">Tôi từ đủ 16 tuổi, đã đọc và đồng ý với <a asp-controller="Home" asp-action="Terms" target="_blank">Điều khoản sử dụng</a>.</label>
+                </div>
+                <span asp-validation-for="AcceptTerms" class="text-danger small d-block mb-2"></span>
+                <div class="consent-check">
+                    <input asp-for="AcceptPrivacy" type="checkbox" class="form-check-input" />
+                    <label asp-for="AcceptPrivacy" class="form-check-label">Tôi đồng ý để MindSprint AI xử lý dữ liệu của tôi như <a asp-controller="Home" asp-action="Privacy" target="_blank">Chính sách quyền riêng tư</a> mô tả.</label>
+                </div>
+                <span asp-validation-for="AcceptPrivacy" class="text-danger small d-block"></span>
+            </div>
+            <button class="btn btn-primary w-100 mb-2">Đồng ý và tiếp tục</button>
+        </form>
+        <form method="post" asp-action="Logout">
+            <button class="btn btn-outline-secondary w-100">Không đồng ý, đăng xuất</button>
+        </form>
+        @if (!GuestAccess.IsGuest(User))
+        {
+            <form method="post" asp-action="DeleteAccount" class="mt-3" data-confirm="Gửi thư xác nhận xóa tài khoản tới email của bạn?">
+                <p class="small mb-1">Không muốn tiếp tục dùng MindSprint AI? Bạn có thể xóa tài khoản. MindSprint AI sẽ gửi thư xác nhận tới email của bạn.</p>
+                <button class="btn btn-sm btn-outline-danger">Xóa tài khoản</button>
+            </form>
+        }
+    </div>
+</div>

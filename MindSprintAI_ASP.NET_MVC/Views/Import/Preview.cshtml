@@ -1,0 +1,54 @@
+@model ImportPreview
+@{ ViewData["Title"] = "Xem trước dữ liệu nhập"; }
+@if (Model.QuizId == 0) { <a class="btn btn-sm b-back" href="@BackLink.Url(Context.Request, Url.Action("Index", "StudySets")!)"><icon name="chevron-right" class="b-back-icon" />Quay lại trang trước</a> } @* bản nháp bộ học mới: từ Sổ tay AI hoặc "Tạo thẻ bằng AI" ở Thư viện *@
+else { <a class="btn btn-sm b-back" asp-controller="Import" asp-action="Index" asp-route-id="@Model.QuizId"><icon name="chevron-right" class="b-back-icon" />Quay lại chọn file khác</a> }
+<h1 class="h3">Xem trước — @Model.FileName</h1>
+@if (Model.NewSetTitle != null) { <p class="alert alert-info">Khi bấm Lưu, MindSprint AI tạo bộ học mới <b>@Model.NewSetTitle</b> chứa các dòng đã chọn. Chưa lưu thì chưa có bộ học nào được tạo.</p> }
+@if (Model.Notice != null) { <p class="alert alert-warning" role="status">@Model.Notice</p> }
+<p>Chưa lưu dữ liệu. Có @Model.Rows.Count(r => r.Error == null) dòng hợp lệ, @Model.Rows.Count(r => r.Error != null) dòng lỗi.</p>
+<p class="small text-muted">Sửa trực tiếp các ô, hoặc bỏ tick Nhập để bỏ qua dòng. Bấm Kiểm tra lại để cập nhật lỗi trước khi Lưu. Vuốt ngang bảng để xem đủ cột trên điện thoại.</p>
+<form method="post" asp-controller="Import" asp-action="Save">
+    <input type="hidden" name="QuizId" value="@Model.QuizId" /><input type="hidden" name="FileName" value="@Model.FileName" /><input type="hidden" name="NewSetTitle" value="@Model.NewSetTitle" />
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <button type="submit" class="btn btn-outline-primary" formaction="@Url.Action("Recheck", "Import")">Kiểm tra lại</button>
+        <button class="btn btn-primary" disabled="@(!Model.Rows.Any(r => r.Include) || Model.Rows.Any(r => r.Include && r.Error != null))">Lưu các dòng đã chọn</button>
+        @if (Model.QuizId != 0) { <a class="btn btn-outline-secondary" asp-controller="Import" asp-action="Index" asp-route-id="@Model.QuizId">Tải lại file</a> }
+    </div>
+    @foreach (var sheet in new[] { "CauHoi", "Flashcard" })
+    {
+        var headers = sheet == "CauHoi" ? ExcelTemplate.Headers : ExcelTemplate.CardHeaders;
+        <h2 class="h5">@(sheet == "CauHoi" ? "CauHoi (câu hỏi)" : "Flashcard (thẻ ghi nhớ)")</h2>
+        <div class="table-responsive mb-3"><table class="table table-sm align-middle"><thead><tr><th>Nhập</th><th>Dòng / lỗi</th>@foreach (var header in headers) { <th>@header</th> }</tr></thead><tbody>
+        @for (var i = 0; i < Model.Rows.Count; i++)
+        {
+            var row = Model.Rows[i];
+            if (row.Sheet != sheet) { continue; }
+            <tr class="@(row.Error == null ? "" : "table-danger")">
+                <td><label class="form-label small" for="include-@i">Nhập dòng @row.Row</label><input id="include-@i" type="checkbox" class="form-check-input" name="Rows[@i].Include" value="true" checked="@row.Include" aria-label="Nhập dòng @row.Row sheet @sheet" /><input type="hidden" name="Rows[@i].Include" value="false" /></td>
+                <td style="min-width: 13rem">
+                    <input type="hidden" name="Rows[@i].Sheet" value="@row.Sheet" /><input type="hidden" name="Rows[@i].Row" value="@row.Row" />
+                    <b>Dòng @row.Row</b><p class="small mb-0 @(row.Error == null ? "text-success" : "text-danger")">@(row.Error ?? "Hợp lệ")</p>
+                </td>
+                @for (var col = 0; col < headers.Length; col++)
+                {
+                    <td style="min-width: 12rem">
+                        @if (sheet == "CauHoi" && col == ExcelTemplate.Type)
+                        {
+                            <label class="form-label small" for="import-@i-@col">Loại câu dòng @row.Row</label>
+                            <select id="import-@i-@col" class="form-select form-select-sm" name="Rows[@i].Values[@col]" aria-label="Loại câu dòng @row.Row">
+                                @if (row.Values.ElementAtOrDefault(col) is { Length: > 0 } other && !ExcelTemplate.TypeNames.Contains(other)) { <option selected value="@(row.Values.ElementAtOrDefault(col))">@(row.Values.ElementAtOrDefault(col))</option> }
+                                @foreach (var type in ExcelTemplate.TypeNames) { <option selected="@(row.Values.ElementAtOrDefault(col) == type || (string.IsNullOrEmpty(row.Values.ElementAtOrDefault(col)) && type == "Chọn một"))">@type</option> }
+                            </select>
+                        }
+                        else
+                        {
+                            <label class="form-label small" for="import-@i-@col">@headers[col] dòng @row.Row</label>
+                            <textarea id="import-@i-@col" class="form-control form-control-sm" rows="2" name="Rows[@i].Values[@col]" aria-label="@headers[col] dòng @row.Row" maxlength="32767">@(row.Values.ElementAtOrDefault(col))</textarea>
+                        }
+                    </td>
+                }
+            </tr>
+        }
+        </tbody></table></div>
+    }
+</form>

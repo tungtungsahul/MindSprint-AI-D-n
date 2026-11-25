@@ -1,0 +1,37 @@
+@model Attempt
+@{
+    var submission = (PaperSubmission)ViewData["Submission"]!;
+    var a = Model.Participant.Assignment;
+    var showScores = ViewData["ShowScores"] is true;
+    ViewData["Title"] = "Bài đã nộp — " + a.PaperTitle;
+}
+<a class="btn btn-sm b-back" asp-action="Assignment" asp-route-id="@a.Id"><icon name="chevron-right" class="b-back-icon" />Quay lại bài</a>
+<h1 class="h4 mt-3">@a.PaperTitle — lượt @Model.AttemptNumber</h1>
+<p class="text-muted">@(Model.Status == AttemptStatus.Cancelled ? "Lượt đã bị hủy." : $"Đã nộp lúc {VnTime.Format(Model.EndedAt)}.")
+    <a asp-controller="Papers" asp-action="Exam" asp-route-id="@a.Id" target="_blank" rel="noopener">Xem lại đề</a></p>
+
+<section class="flat-section mb-3" aria-labelledby="paper-result-title">
+    <h2 class="h5" id="paper-result-title">Kết quả</h2>
+    @if (!showScores) { <p class="mb-0">Giảng viên chưa công bố điểm.</p> }
+    else if (submission.Score == null) { <p class="mb-0">Bài chưa được chấm.</p> }
+    else
+    {
+        <p class="fs-4 fw-bold mb-1">@submission.Score.Value.ToString("0.##") / 10</p>
+        @if (submission.Comment != null) { <p class="mb-0" style="white-space: pre-wrap"><b>Nhận xét:</b> @submission.Comment</p> }
+    }
+</section>
+
+<section class="flat-section mb-3" aria-labelledby="paper-text-title">
+    <h2 class="h5" id="paper-text-title">Bài viết</h2>
+    @if (string.IsNullOrWhiteSpace(submission.Text)) { <p class="text-muted mb-0">Không có bài viết.</p> }
+    else { <div class="paper-readonly" style="white-space: pre-wrap">@submission.Text</div> }
+</section>
+
+<section class="flat-section mb-3" aria-labelledby="paper-files-title">
+    <h2 class="h5" id="paper-files-title">Tệp đính kèm</h2>
+    @if (submission.Files.Count == 0) { <p class="text-muted mb-0">Không có tệp.</p> }
+    else
+    {
+        <ul class="mb-0">@foreach (var f in submission.Files.OrderBy(f => f.UploadedAt)) { <li><a href="@Url.Action("File", "Papers", new { id = f.Id })" target="_blank" rel="noopener">@f.FileName</a> <span class="text-muted small">(@(Math.Max(1, (f.SizeBytes + 1023) / 1024)) KB)</span></li> }</ul>
+    }
+</section>

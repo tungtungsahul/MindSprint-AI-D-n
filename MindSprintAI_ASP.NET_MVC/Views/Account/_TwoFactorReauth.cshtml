@@ -1,0 +1,20 @@
+@model TwoFactorStatus
+@{ var fieldId = "reauth-" + Guid.NewGuid().ToString("N"); }
+@if (Model.HasPassword)
+{
+    <label class="form-label" for="@fieldId">Mật khẩu hiện tại</label>
+    <input class="form-control mb-2" id="@fieldId" name="password" type="password" autocomplete="current-password" required />
+    <input name="code" type="hidden" value="" />
+}
+else if (Model.Enabled)
+{
+    <label class="form-label" for="@fieldId">Mã xác thực 2 lớp hiện tại (ứng dụng, email hoặc mã dự phòng)</label>
+    <input class="form-control mb-2" id="@fieldId" name="code" autocomplete="one-time-code" required maxlength="100" />
+    <input name="password" type="hidden" value="" />
+}
+else
+{
+    <p class="small">Tài khoản này đăng nhập bằng Google hoặc tài khoản liên kết nên chỉ xác nhận được trong 10 phút sau khi đăng nhập. Quá thời gian, hãy đăng xuất rồi đăng nhập lại.</p>
+    <input name="password" type="hidden" value="" />
+    <input name="code" type="hidden" value="" />
+}

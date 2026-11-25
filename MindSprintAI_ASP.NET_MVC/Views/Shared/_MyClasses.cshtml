@@ -1,0 +1,27 @@
+@model List<ClassMember>
+@* Lớp học viên đã tham gia: dùng ở trang Lớp (chế độ Học viên). *@
+<ul class="list-group my-classes">
+    @foreach (var m in Model)
+    {
+        <li class="list-group-item my-class">
+            <span class="my-class-name">@m.Classroom.Name</span>
+            <span class="my-class-actions">
+                @if (m.Status == ClassMemberStatus.Active)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-controller="Classrooms" asp-action="Members" asp-route-id="@m.ClassroomId"><icon name="users" />Thành viên</a>
+                    <form method="post" asp-controller="Classrooms" asp-action="Leave" asp-route-id="@m.ClassroomId" data-confirm="Rời lớp này? Bài và điểm cũ vẫn xem được.">
+                        <button class="btn btn-sm btn-outline-secondary">Rời lớp</button>
+                    </form>
+                }
+                else if (m.Status == ClassMemberStatus.PendingApproval)
+                {
+                    <span class="badge bg-warning text-body">Chờ giảng viên duyệt</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Lớp đã rời</span>
+                }
+            </span>
+        </li>
+    }
+</ul>

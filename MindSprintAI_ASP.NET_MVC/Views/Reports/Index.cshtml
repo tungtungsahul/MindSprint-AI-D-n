@@ -1,0 +1,71 @@
+@model AssignmentReportPage
+@{ ViewData["Title"] = "Báo cáo"; }
+<div class="c-reports">
+<header class="learn-head"><div><h1 class="mindsprint-title">Báo cáo</h1><p class="learn-summary">Theo dõi bài giao và xem kết quả của các lớp bạn dạy.</p></div></header>
+<div class="c-section-shell c-report-shell">
+<form method="get" class="c-report-filters">
+    <input type="hidden" name="status" value="@Model.Status" />
+    <label for="report-q">Tìm theo tên bài<input class="form-control" id="report-q" type="search" name="q" value="@Model.Query" maxlength="200" /></label>
+    <label for="report-class">Lớp học<select class="form-select" id="report-class" name="classId"><option value="">Tất cả lớp học</option>@foreach (var room in Model.Classes) { <option value="@room.Id" selected="@(Model.ClassId == room.Id)">@room.Name</option> }</select></label>
+    <button class="btn btn-primary"><icon name="search" />Tìm và lọc</button>
+</form>
+<nav class="c-report-status c-section-nav" aria-label="Trạng thái bài giao">
+    <h2 class="visually-hidden">Trạng thái bài giao</h2>
+    <a class="btn" aria-current="@(Model.Status == "all" ? "page" : null)" asp-action="Index" asp-route-q="@Model.Query" asp-route-classId="@Model.ClassId">Tất cả (@Model.Counts.Values.Sum())</a>
+    @foreach (var (key, label, state) in new[] { ("open", "Đang mở", AssignmentReportState.Open), ("upcoming", "Chưa mở", AssignmentReportState.Upcoming), ("closed", "Đã đóng", AssignmentReportState.Closed) })
+    {
+        <a class="btn" aria-current="@(Model.Status == key ? "page" : null)" asp-action="Index" asp-route-status="@key" asp-route-q="@Model.Query" asp-route-classId="@Model.ClassId">@label (@Model.Counts.GetValueOrDefault(state))</a>
+    }
+</nav>
+<div class="c-section-content">
+@if (Model.Items.Count == 0)
+{
+    <div class="empty-state"><span class="section-icon"><icon name="chart-column" /></span><h2 class="h4">Chưa có bài giao phù hợp</h2><p>Thử đổi bộ lọc hoặc chọn một bộ học để giao cho lớp.</p><a class="btn btn-primary" asp-controller="StudySets" asp-action="Index">Chọn bộ học</a></div>
+}
+else
+{
+    <div class="table-responsive c-report-table-frame">
+    <table class="table align-middle c-report-table">
+        <thead><tr><th scope="col">Tên bài</th><th scope="col">Ngày giao</th><th scope="col">Người làm</th><th scope="col">Mã vào bài</th><th scope="col">Lớp</th><th scope="col">Hành động</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Items)
+        {
+            var label = item.State switch { AssignmentReportState.Open => "Đang mở", AssignmentReportState.Upcoming => "Chưa mở", _ => "Đã đóng" };
+            <tr>
+                <td><a asp-controller="Assignments" asp-action="Details" asp-route-id="@item.Id"><strong>@item.Title</strong></a><div class="small">@DisplayText.Of(item.Mode) · <span class="c-status-dot state-@item.State.ToString().ToLowerInvariant()" aria-hidden="true"></span> @label</div></td>
+                <td data-label="Ngày giao">@VnTime.Format(item.CreatedAt)</td><td data-label="Người làm">@item.Participants</td><td data-label="Mã vào bài" class="font-monospace">@(item.Code ?? "—")</td><td data-label="Lớp">@item.Classroom</td>
+                <td data-label="Hành động"><div class="c-report-actions">
+                    @if (item.State == AssignmentReportState.Open)
+                    {
+                        <form method="post" asp-controller="Assignments" asp-action="Close" asp-route-id="@item.Id" data-confirm="Đóng bài giao này? Học viên sẽ không vào làm bài được nữa. Nếu còn người đang làm, bạn sẽ được chọn đóng ngay hoặc sau 15 phút."><button class="btn btn-outline-danger"><icon name="lock" />Đóng bài giao</button></form>
+                    }
+                    else if (item.State == AssignmentReportState.Closed)
+                    {
+                        <a class="btn" asp-controller="Assignments" asp-action="Details" asp-route-id="@item.Id"><icon name="chart-column" />Xem báo cáo</a>
+                    }
+                    else
+                    {
+                        <a class="btn" asp-controller="Assignments" asp-action="Details" asp-route-id="@item.Id" asp-fragment="cai-dat"><icon name="settings-2" />Sửa cài đặt</a>
+                    }
+                    <div class="dropdown"><button class="btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thao tác khác cho @item.Title" title="Thao tác khác"><icon name="ellipsis" /></button>
+                        <ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" asp-controller="Assignments" asp-action="Details" asp-route-id="@item.Id">Theo dõi &amp; bảng điểm</a></li><li><a class="dropdown-item" asp-controller="Assignments" asp-action="Details" asp-route-id="@item.Id" asp-fragment="cai-dat">Cài đặt bài giao</a></li><li><a class="dropdown-item" asp-controller="Classrooms" asp-action="Details" asp-route-id="@item.ClassroomId">Mở lớp học</a></li></ul>
+                    </div>
+                </div></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+    <nav class="c-report-pagination" aria-label="Trang báo cáo">
+        @if (Model.Page > 1) { <a class="btn" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-status="@Model.Status" asp-route-q="@Model.Query" asp-route-classId="@Model.ClassId">Trước</a> }
+        @foreach (var number in new[] { 1, Model.Page - 1, Model.Page, Model.Page + 1, Model.Pages }.Where(n => n >= 1 && n <= Model.Pages).Distinct().OrderBy(n => n))
+        {
+            <a class="btn" aria-current="@(number == Model.Page ? "page" : null)" asp-action="Index" asp-route-page="@number" asp-route-status="@Model.Status" asp-route-q="@Model.Query" asp-route-classId="@Model.ClassId">@number</a>
+        }
+        @if (Model.Page < Model.Pages) { <a class="btn" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-status="@Model.Status" asp-route-q="@Model.Query" asp-route-classId="@Model.ClassId">Sau</a> }
+    </nav>
+    <p aria-live="polite">Đang hiện @((Model.Page - 1) * 20 + 1)–@Math.Min(Model.Page * 20, Model.Total) trên @Model.Total bài giao</p>
+}
+</div>
+</div>
+</div>

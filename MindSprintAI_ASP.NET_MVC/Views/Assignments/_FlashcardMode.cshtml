@@ -1,0 +1,7 @@
+@model FlashcardMode
+<label class="form-label" for="FlashcardMode">Chế độ thẻ ghi nhớ</label>
+<select class="form-select" id="FlashcardMode" name="FlashcardMode">
+    <option value="0" selected="@(Model == FlashcardMode.Traditional)">Truyền thống</option>
+    <option value="1" selected="@(Model == FlashcardMode.SpacedRepetition)">Ôn ngắt quãng</option>
+    <option value="2" selected="@(Model == FlashcardMode.LearnerChoice)">Để học viên tự chọn</option>
+</select>

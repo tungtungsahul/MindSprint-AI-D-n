@@ -1,0 +1,13 @@
+@model ClassMemberNames
+@{ ViewData["Title"] = "Thành viên lớp"; }
+<a class="btn btn-sm b-back" asp-action="Room" asp-route-id="@Model.ClassroomId"><icon name="chevron-right" class="b-back-icon" />Quay lại lớp @Model.ClassName</a>
+<h1 class="h3">Thành viên lớp @Model.ClassName</h1>
+<ul class="list-group">
+@foreach (var member in Model.Members)
+{
+    <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+        <span>@member.DisplayName · @DisplayText.Of(member.Role)@if (member.Email != null) { <span class="text-muted small text-break"> · @member.Email</span> }</span>
+        <a asp-controller="Reports" asp-action="Create" asp-route-targetType="User" asp-route-targetId="@member.UserId" asp-route-classroomId="@Model.ClassroomId">Báo tên không phù hợp</a>
+    </li>
+}
+</ul>

@@ -1,0 +1,49 @@
+@model OverviewPage
+@{
+    ViewData["Title"] = "Tổng quan";
+    // Bố cục trang "Tổng quan & Phân tích tiến độ" của nhóm (docs/giao-dien-nhom/07): 3 thẻ số liệu · khung độ thành thạo.
+}
+<header class="page-head">
+    <div>
+        <h1>Tổng quan &amp; phân tích tiến độ</h1>
+        <p>Theo dõi mức độ thành thạo, nhịp học mỗi ngày và chủ đề cần cải thiện.</p>
+    </div>
+</header>
+
+<div class="overview-stats">
+    <section class="overview-stat">
+        <h2><icon name="sparkles" />Điểm thành thạo chung</h2>
+        <p class="overview-val">@Model.MasteryScore<small>/100</small></p>
+        <p class="overview-sub">Tỷ lệ thẻ đã nhớ trên @Model.CardsStudied thẻ đã học</p>
+    </section>
+    <section class="overview-stat">
+        <h2><icon name="clock" />Số thẻ đã ôn hôm nay</h2>
+        <p class="overview-val">@Model.Today.CardsReviewed<small> thẻ</small></p>
+        <p class="overview-sub">Chuỗi học: @Model.Streak.Current ngày · @Model.Today.Answered câu quiz hôm nay</p>
+    </section>
+    <section class="overview-stat">
+        <h2><icon name="book-open-text" />Chủ đề cần cải thiện</h2>
+        <p class="overview-val overview-topic">@(Model.Improve?.Topic ?? "Chưa có")</p>
+        <p class="overview-sub @(Model.Improve != null ? "is-bad" : "")">@(Model.Improve?.Reason ?? "Chưa có chủ đề nào dưới 70% chính xác")</p>
+    </section>
+</div>
+
+<section class="overview-mastery" aria-labelledby="mastery-title">
+    <div class="home-section-head"><h2 id="mastery-title">Độ thành thạo theo bộ học</h2><a asp-controller="WeakAreas" asp-action="Index">Xem điểm yếu<icon name="chevron-right" /></a></div>
+    @if (Model.Mastery.Count == 0)
+    {
+        <p class="home-empty">Chưa có thẻ nào được ôn. Mở Thư viện và bấm "Ôn thẻ" để bắt đầu.</p>
+    }
+    else
+    {
+        <ul class="mastery-list">
+            @foreach (var m in Model.Mastery)
+            {
+                <li>
+                    <div class="mastery-row"><span>@m.Title</span><b>@m.Percent%</b></div>
+                    <div class="weak-bar is-good" role="img" aria-label="@m.Title: đã nhớ @m.Remembered trên @m.Studied thẻ"><span style="--p: @m.Percent%"></span></div>
+                </li>
+            }
+        </ul>
+    }
+</section>

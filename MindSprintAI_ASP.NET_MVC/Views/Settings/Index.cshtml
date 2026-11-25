@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = "Cài đặt";
+    // Như trang Cài đặt của nhóm (settings-section): mỗi mục một khung, mô tả ngắn, một nút. Cài đặt tài khoản/bảo mật ở trang Tài khoản.
+}
+<header class="page-head">
+    <div>
+        <h1>Cài đặt</h1>
+        <p>Tùy chỉnh MindSprint AI trên máy này. Thông tin tài khoản, mật khẩu và bảo mật nằm ở trang Tài khoản.</p>
+    </div>
+    <div class="page-head-actions"><a class="btn btn-secondary" asp-controller="Account" asp-action="Index"><icon name="user" />Tài khoản &amp; bảo mật</a></div>
+</header>
+
+<div class="settings-list">
+    <section class="settings-item" aria-labelledby="set-install">
+        <h2 id="set-install"><icon name="smartphone" />Cài ứng dụng lên máy</h2>
+        <p>Thêm MindSprint AI vào màn hình chính điện thoại hoặc máy tính để mở nhanh như một ứng dụng, kèm trang báo khi mất mạng.</p>
+        <button type="button" class="btn btn-primary" id="pwa-install" hidden><icon name="download" />Cài đặt ứng dụng</button>
+        <p class="settings-status" id="pwa-status" role="status">Nếu không thấy nút cài: trên điện thoại mở menu trình duyệt và chọn "Thêm vào màn hình chính".</p>
+    </section>
+    <section class="settings-item" aria-labelledby="set-theme">
+        <h2 id="set-theme"><icon name="moon" />Giao diện sáng / tối</h2>
+        <p>Chuyển giữa nền sáng và nền tối. Lựa chọn được nhớ trên trình duyệt này.</p>
+        <button type="button" class="btn btn-secondary" data-theme-toggle aria-pressed="false" aria-label="Giao diện tối"><icon name="moon" />Giao diện tối</button>
+    </section>
+    <section class="settings-item" aria-labelledby="set-alarm">
+        <h2 id="set-alarm"><icon name="bell" />Chuông báo giờ học</h2>
+        <p>Nhắc bạn khi đến giờ học trong <a asp-controller="Schedule" asp-action="Index">Lịch học</a>. Chuông kêu khi MindSprint AI đang mở; thông báo chữ hiện cả khi bạn ở thẻ khác.</p>
+        <div class="settings-row">
+            <label class="alarm-style-field"><icon name="settings-2" />Kiểu báo:
+                <select class="form-select form-select-sm" id="alarm-style">
+                    <option value="both">Thông báo + Chuông</option>
+                    <option value="text">Chỉ thông báo chữ</option>
+                    <option value="sound">Chỉ chuông báo</option>
+                    <option value="voice">Chuông + đọc to giờ học</option>
+                </select>
+            </label>
+            <button type="button" class="btn btn-secondary" id="alarm-toggle" aria-pressed="false"><icon name="bell" /><span>Bật chuông báo</span></button>
+        </div>
+        <p class="settings-status" id="alarm-status" role="status"></p>
+    </section>
+</div>

@@ -1,0 +1,67 @@
+@model ClassMemberNames
+@{
+    ViewData["Title"] = Model.ClassName;
+    var list = (List<Assignment>)ViewData["Assignments"]!;
+    var participations = (List<Participant>)ViewData["Participations"]!;
+    var board = (Leaderboard)ViewData["Ranking"]!;
+    var lecturers = Model.Members.Where(m => m.Role != ClassRole.Student).ToList();
+    var students = Model.Members.Count(m => m.Role == ClassRole.Student);
+    CompletionStatus StatusOf(Assignment a) => participations.FirstOrDefault(x => x.AssignmentId == a.Id)?.CompletionStatus ?? CompletionStatus.NotStarted;
+    var now = DateTime.UtcNow;
+    DateTime? DeadlineOf(Assignment a) => a.Mode == AssignmentMode.Test ? a.TestEndsAt : a.DueAt;
+    bool Over(Assignment a) => a.Status == AssignmentStatus.Closed || DeadlineOf(a) is { } d && d <= now;
+    var done = list.Where(a => StatusOf(a) == CompletionStatus.Completed).ToList();
+    var waiting = list.Where(a => StatusOf(a) == CompletionStatus.SubmittedAwaitingScore).ToList();
+    var todo = list.Except(done).Except(waiting).Where(a => !Over(a)).OrderBy(a => a.Mode == AssignmentMode.Test ? 0 : 1).ThenBy(a => DeadlineOf(a) ?? DateTime.MaxValue).ToList();
+    var missed = list.Except(done).Except(waiting).Except(todo).ToList();
+    string Kind(Assignment a) => a.Form == AssignmentForm.Document ? "Bài theo đề" : DisplayText.Of(a.Mode);
+    string When(Assignment a) => Over(a) ? "Đã đóng" : a.Mode == AssignmentMode.Test
+        ? (a.TestEndsAt == null ? "Chờ giảng viên bắt đầu" : "Kết thúc lúc " + VnTime.Format(a.TestEndsAt))
+        : a.DueAt == null ? "Không có hạn" : "Hạn " + VnTime.Format(a.DueAt);
+}
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Lớp của tôi</a>
+<header class="learn-head mt-3">
+    <div>
+        <h1 class="mindsprint-title mb-2">@Model.ClassName</h1>
+        <p class="learn-summary mb-0">Giảng viên: @(lecturers.Count == 0 ? "—" : string.Join(", ", lecturers.Select(l => l.DisplayName))) · @students học viên</p>
+    </div>
+    <a class="btn btn-secondary" asp-action="Members" asp-route-id="@Model.ClassroomId"><icon name="users" />Thành viên</a>
+</header>
+
+@{
+    async Task Card(Assignment a)
+    {
+        var status = StatusOf(a);
+        var go = status == CompletionStatus.NotStarted ? (Over(a) ? "Xem" : "Vào bài") : status == CompletionStatus.InProgress ? "Làm tiếp" : "Xem lại";
+        <a class="learn-card @(a.Mode == AssignmentMode.Test ? "is-test" : "")" asp-controller="Learn" asp-action="Assignment" asp-route-id="@a.Id">
+            <span class="learn-card-top"><span class="learn-mode">@Kind(a)</span><span class="badge @(status == CompletionStatus.NotStarted ? "bg-warning" : "bg-info")">@DisplayText.Of(status)</span></span>
+            <span class="learn-card-title">@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</span>
+            <span class="learn-card-when">@When(a)</span>
+            <span class="room-go">@go <icon name="chevron-right" /></span>
+        </a>
+    }
+}
+
+<section class="room-section" aria-labelledby="room-work-title">
+    <h2 class="section-head" id="room-work-title"><span class="section-icon"><icon name="notebook-pen" /></span>Bài của lớp <span class="b-count">@list.Count</span></h2>
+    @if (list.Count == 0) { <p class="text-muted">Lớp chưa có bài nào. Khi giảng viên giao bài, bài sẽ hiện ở đây — bấm vào là làm, không cần nhập mã.</p> }
+    @if (todo.Count > 0) { <h3 class="learn-group">Cần làm <span>@todo.Count</span></h3><div class="learn-grid">@foreach (var a in todo) { await Card(a); }</div> }
+    @if (waiting.Count > 0) { <h3 class="learn-group">Chờ công bố điểm <span>@waiting.Count</span></h3><div class="learn-grid">@foreach (var a in waiting) { await Card(a); }</div> }
+    @if (done.Count > 0)
+    {
+        @* Thu gọn như trang Luyện tập: lớp có nhiều bài đã xong không đẩy bảng xếp hạng xuống quá xa. *@
+        <details class="learn-done"><summary><h3 class="learn-group mb-0">Đã xong <span>@done.Count</span></h3></summary>
+            <div class="learn-grid mt-3">@foreach (var a in done) { await Card(a); }</div></details>
+    }
+    @if (missed.Count > 0)
+    {
+        <details class="learn-done"><summary><h3 class="learn-group mb-0">Đã đóng, chưa làm <span>@missed.Count</span></h3></summary>
+            <div class="learn-grid mt-3">@foreach (var a in missed) { await Card(a); }</div></details>
+    }
+</section>
+
+<partial name="_Leaderboard" model="@((board, "Xếp hạng lớp", true))" />
+
+<form method="post" asp-action="Leave" asp-route-id="@Model.ClassroomId" class="mt-4" data-confirm="Rời lớp này? Bài và điểm cũ vẫn xem được.">
+    <button class="btn btn-sm btn-outline-secondary"><icon name="log-out" />Rời lớp</button>
+</form>

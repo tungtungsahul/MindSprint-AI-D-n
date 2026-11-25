@@ -1,0 +1,49 @@
+@model ReportDetails
+@{ ViewData["Title"] = "Xem báo cáo"; var r = Model.Report; }
+<a class="btn btn-sm b-back" asp-action="Reports"><icon name="chevron-right" class="b-back-icon" />Quay lại Báo cáo vi phạm</a>
+<h1 class="h3 mt-2">Báo cáo #@r.Id · @DisplayText.Of(r.TargetType)</h1>
+<p>@r.Reason · @DisplayText.Of(r.Status) · @VnTime.Format(r.CreatedAt)</p>
+<p style="white-space:pre-wrap">@r.Note</p>
+<div class="card card-body mb-3">
+    <h2 class="h5" style="white-space:pre-wrap">@Model.Content.Title</h2>
+    @if (Model.Content.Messages != null)
+    {
+        <p class="small text-muted">Chỉ hội thoại bị báo cáo. Lần xem này đã được ghi nhật ký truy cập.</p>
+        @foreach (var message in Model.Content.Messages)
+        {
+            <article class="border-top mt-2 pt-2">
+                <h3 class="h6">@(message.Role == "user" ? "Người hỏi" : "Trợ lý")</h3>
+                <p style="white-space:pre-wrap;overflow-wrap:anywhere">@message.Content</p>
+                @foreach (var citation in message.Citations) { <blockquote class="small border-start ps-2" style="white-space:pre-wrap">@citation</blockquote> }
+            </article>
+        }
+    }
+    @foreach (var q in Model.Content.Questions)
+    {
+        <article class="border-top mt-2 pt-2">
+            <h3 class="h6" style="white-space:pre-wrap">Câu @(q.OrderIndex + 1): @q.Prompt</h3>
+            <ul>@foreach (var o in q.Options) { <li style="white-space:pre-wrap">@o.Text @(o.IsCorrect ? "(đáp án đúng)" : "")</li> }</ul>
+            @foreach (var blank in q.Blanks) { <p>Đáp án ô: @string.Join("; ", blank.Answers)</p> }
+            @if (q.Type == QuestionType.NumberInput) { <p>Đáp án số: @q.NumberAnswer · Sai số: @q.NumberTolerance</p> }
+            <p style="white-space:pre-wrap">@q.Explanation</p>
+        </article>
+    }
+    @foreach (var c in Model.Content.Cards) { <article class="border-top mt-2 pt-2"><p style="white-space:pre-wrap">@c.Front</p><p style="white-space:pre-wrap">@c.Back</p>@if (c.Example != null) { <p style="white-space:pre-wrap">Ví dụ: @c.Example</p> }</article> }
+</div>
+@if (r.Status == ReportStatus.Pending)
+{
+    <div class="d-flex flex-wrap gap-3 mb-3">
+        <form method="post" asp-action="HandleReport" asp-route-id="@r.Id"><input type="hidden" name="hide" value="false" /><button class="btn btn-outline-secondary">Bác bỏ</button></form>
+        <a class="btn btn-outline-danger" asp-action="Lock" asp-route-reportId="@r.Id">Khóa vi phạm người dùng</a>
+    </div>
+    @if (r.StudySetId != null)
+    {
+        <form method="post" asp-action="HandleReport" asp-route-id="@r.Id" class="card card-body col-lg-7">
+            <input type="hidden" name="hide" value="true" />
+            <label for="reason" class="form-label">Lý do ẩn bộ học (bắt buộc)</label><textarea id="reason" name="reason" maxlength="500" class="form-control mb-2" required></textarea>
+            <p class="small">Ẩn cả bộ học: không giao mới được, mọi bài giao đang chạy của bộ học này đóng ngay (lượt dở kết thúc, điểm giữ nguyên), học viên không xem lại được nội dung.</p>
+            <button class="btn btn-danger">Ẩn nội dung</button>
+        </form>
+    }
+}
+else { <p>Người xử lý: @r.HandledById · @VnTime.Format(r.HandledAt)</p> }

@@ -1,0 +1,32 @@
+@model List<ClassMember>
+@* Lớp học viên đã tham gia (trang Lớp, chế độ Học viên): lưới thẻ pastel như lớp của giảng viên và Thư viện (kiểu thẻ của nhóm). *@
+<div class="class-grid my-classes">
+    @foreach (var m in Model)
+    {
+        <article class="class-card my-class">
+            <span class="class-initial" aria-hidden="true">@(m.Classroom.Name.Trim().FirstOrDefault())</span>
+            @* Góp ý 17/11: bấm tên lớp vào trang lớp (bài của lớp, xếp hạng); trước đây thẻ lớp không bấm được. *@
+            @if (m.Status == ClassMemberStatus.Active) { <a class="class-name my-class-name stretched-link" asp-controller="Classrooms" asp-action="Room" asp-route-id="@m.ClassroomId">@m.Classroom.Name</a> }
+            else { <span class="class-name my-class-name">@m.Classroom.Name</span> }
+            <span class="class-tags">
+                @if (m.Status == ClassMemberStatus.Active) { <span class="class-tag">Đang học</span> }
+                else if (m.Status == ClassMemberStatus.PendingApproval) { <span class="badge bg-warning text-body">Chờ giảng viên duyệt</span> }
+                else { <span class="badge bg-secondary">Lớp đã rời</span> }
+            </span>
+            <span class="class-foot my-class-actions">
+                @if (m.Status == ClassMemberStatus.Active)
+                {
+                    <a class="btn btn-sm btn-primary" asp-controller="Classrooms" asp-action="Room" asp-route-id="@m.ClassroomId"><icon name="chevron-right" />Vào lớp</a>
+                    <a class="btn btn-sm btn-secondary" asp-controller="Classrooms" asp-action="Members" asp-route-id="@m.ClassroomId"><icon name="users" />Thành viên</a>
+                    <form method="post" asp-controller="Classrooms" asp-action="Leave" asp-route-id="@m.ClassroomId" data-confirm="Rời lớp này? Bài và điểm cũ vẫn xem được.">
+                        <button class="btn btn-sm btn-outline-secondary">Rời lớp</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="btn btn-sm btn-secondary" asp-controller="Learn" asp-action="Index"><icon name="list-checks" />Xem bài đã làm</a>
+                }
+            </span>
+        </article>
+    }
+</div>

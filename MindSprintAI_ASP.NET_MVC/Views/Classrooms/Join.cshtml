@@ -1,0 +1,36 @@
+@{
+    ViewData["Title"] = "Tham gia bằng mã";
+}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4 text-center">
+        <h1 class="h3 mb-3">Tham gia bằng mã</h1>
+        <p class="text-muted">Nhập mã 8 số của lớp hoặc của bài giao do giảng viên cung cấp.</p>
+        <form method="post">
+            <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+            <label for="join-code" class="form-label">Mã 8 số</label>
+            <input id="join-code" name="code" value="@ViewData["Code"]" class="form-control form-control-lg text-center font-monospace mb-3" inputmode="numeric" title="Nhập 8 chữ số của mã; có dấu cách cũng được"
+                   pattern="[0-9 ]{8,9}" maxlength="9" placeholder="12345678" aria-label="Mã 8 số" required autofocus />
+            <partial name="_Turnstile" />
+            @if (ViewData["GuestNameRequired"] is true)
+            {
+                <label for="guest-name" class="form-label">Tên khách (1–50 ký tự)</label>
+                <input id="guest-name" name="displayName" value="@ViewData["GuestName"]" maxlength="50" class="form-control mb-3" required autocomplete="nickname" />
+                <p class="small text-muted">Lượt gắn với trình duyệt này. Xóa dữ liệu trình duyệt sẽ mất quyền tiếp tục. Khách không dùng AI, không xin làm lại.</p>
+            }
+            @if (ViewData["GuestNameRequired"] is true || ViewData["GuestConsentRequired"] is true)
+            {
+                @* Pháp lý C3: khách mới và khách cũ vào bài mới đều tick lại (giảng viên của bài này là người khác). *@
+                <input type="hidden" name="acceptPolicyShown" value="true" />
+                <div class="consent-check mb-3">
+                    <input id="guest-accept" name="acceptPolicy" type="checkbox" value="true" class="form-check-input" required />
+                    <label for="guest-accept" class="form-check-label small">Tôi từ đủ 16 tuổi. Tôi đồng ý để MindSprint AI lưu tên tôi nhập, câu trả lời và điểm để giảng viên của bài này xem, và lưu một mã trên trình duyệt này (cookie) để nhận ra tôi khi quay lại. <a asp-controller="Home" asp-action="Privacy" target="_blank">Chính sách quyền riêng tư</a> · <a asp-controller="Home" asp-action="Terms" target="_blank">Điều khoản sử dụng</a></label>
+                </div>
+            }
+            @if (ViewData["GuestNameRequired"] is true)
+            {
+                <p><a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Url.Action("Join", "Classrooms", new { code = ViewData["Code"] })">Đăng nhập bằng tài khoản</a></p>
+            }
+            <button class="btn btn-primary btn-lg w-100">Tham gia</button>
+        </form>
+    </div>
+</div>

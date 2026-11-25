@@ -1,0 +1,294 @@
+<title>Bằng chứng chuyển đổi MindSprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Manrope:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Bố cục: một cột tài liệu tra cứu; tóm tắt số liệu trước, rồi từng bảng đối chiếu có nhãn bằng chứng và ô lọc. */
+:root {
+  --bg: #f7f8f3; --surface: #ffffff; --ink: #1f2a1c; --muted: #5d6658; --line: #dde3d4;
+  --accent: #4f6b2c; --accent-soft: #e8f1d6;
+  --ok: #2f6b3a; --ok-bg: #e2f2e4; --web: #2d5f86; --web-bg: #e1edf7;
+  --todo: #8a4b16; --todo-bg: #fbeadb; --skip: #5c5470; --skip-bg: #ece9f3;
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161a14; --surface: #1f251c; --ink: #e8eee1; --muted: #a9b3a0; --line: #343d2f;
+  --accent: #b9d98a; --accent-soft: #2c3824;
+  --ok: #9fd8a8; --ok-bg: #22362a; --web: #9cc6ea; --web-bg: #1f3242;
+  --todo: #f2b98a; --todo-bg: #3e2b1d; --skip: #c9c0de; --skip-bg: #2e2a3a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #161a14; --surface: #1f251c; --ink: #e8eee1; --muted: #a9b3a0; --line: #343d2f;
+  --accent: #b9d98a; --accent-soft: #2c3824;
+  --ok: #9fd8a8; --ok-bg: #22362a; --web: #9cc6ea; --web-bg: #1f3242;
+  --todo: #f2b98a; --todo-bg: #3e2b1d; --skip: #c9c0de; --skip-bg: #2e2a3a; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.15; }
+h2 { font-size: 1.35rem; }
+p { margin: 0; max-width: 72ch; }
+.lede { color: var(--muted); margin-top: 10px; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+code, .mono { font-family: var(--font-mono); font-size: .82em; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+section { display: grid; gap: 14px; min-width: 0; }
+.sub { color: var(--muted); font-size: .9rem; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 2px; }
+.stat b { font-family: var(--font-display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: .85rem; }
+
+.tools { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.tools input { flex: 1 1 220px; min-width: 0; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.filter { font: inherit; font-size: .85rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.filter[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+input:focus-visible, .filter:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.count { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; min-width: 150px; }
+td.where { min-width: 220px; }
+td.proof { min-width: 170px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.c-test { color: var(--ok); background: var(--ok-bg); }
+.c-web { color: var(--web); background: var(--web-bg); }
+.c-todo { color: var(--todo); background: var(--todo-bg); }
+.c-skip { color: var(--skip); background: var(--skip-bg); }
+.note { display: block; color: var(--muted); font-size: .8rem; margin-top: 4px; font-weight: 400; }
+.empty { padding: 14px; color: var(--muted); }
+
+.arch { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.arch div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; min-width: 0; }
+.arch h3 { margin: 0; font-family: var(--font-display); font-size: 1rem; }
+.arch ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .85rem; color: var(--muted); }
+footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">MindSprint AI · ASP.NET Core MVC</div>
+    <h1>Bằng chứng chuyển đổi hai project cũ sang project nhóm mới</h1>
+    <p class="lede">Mỗi chức năng của QuizEduManager và của bản nhóm cũ (MindSprint-AI-D-n) được ghi: nằm ở đâu trong project mới, và đã được kiểm chứng bằng cách nào. Cập nhật 15/11/2026.</p>
+  </header>
+
+  <section aria-labelledby="tong-quan">
+    <h2 id="tong-quan">Tóm tắt</h2>
+    <div class="stats">
+      <div class="stat"><b>1811/1811</b><span>test tự động đang qua (81 tệp test)</span></div>
+      <div class="stat"><b>201/201</b><span>action của QuizEdu có trong project mới</span></div>
+      <div class="stat"><b>19/23</b><span>yêu cầu FR của nhóm đủ; 3 có giới hạn, 1 nhóm chưa từng làm</span></div>
+      <div class="stat"><b>9 + 10</b><span>tab và hộp thoại của giao diện nhóm đều có chỗ tương ứng</span></div>
+    </div>
+    <div class="legend" aria-label="Chú thích nhãn">
+      <span><span class="chip c-test">Có test</span> có test tự động trong <code>tests/</code></span>
+      <span><span class="chip c-web">Đã thử Chrome</span> đã bấm thử trên trình duyệt</span>
+      <span><span class="chip c-todo">Chưa kiểm</span> cần kiểm thêm</span>
+      <span><span class="chip c-skip">Không chuyển</span> cố ý bỏ, có lý do</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="kien-truc">
+    <h2 id="kien-truc">Kiến trúc: giữ chức năng và giao diện nhóm, dùng khung QuizEdu</h2>
+    <div class="arch">
+      <div><h3>Bản nhóm cũ</h3><ul>
+        <li><code>frontend/</code>: HTML + JS chạy trong trình duyệt (<code>script.js</code> 218 KB), triển khai trên Vercel</li>
+        <li><code>backend/MindSprint.Api</code>: API ASP.NET Core 8, đăng nhập JWT, PostgreSQL trên Render</li>
+        <li>Bản phụ <code>backend/app</code> (Python FastAPI) + <code>standalone.html</code></li>
+      </ul></div>
+      <div><h3>Project mới</h3><ul>
+        <li>Một project ASP.NET Core MVC (.NET 10), SQL Server, EF Core</li>
+        <li>Thứ tự lớp: Database → Service (quy tắc nghiệp vụ) → Controller → View (Razor) + JS nhỏ theo trang</li>
+        <li>Đăng nhập ASP.NET Identity: phiên thiết bị, xác thực 2 bước, passkey, Google</li>
+        <li>Giao diện theo bản nhóm: màu xanh chanh, menu, bố cục, đối chiếu ảnh <code>docs/giao-dien-nhom/01–18</code></li>
+      </ul></div>
+    </div>
+  </section>
+
+  <div class="tools" role="search">
+    <label class="visually-hidden" for="q" style="position:absolute;left:-9999px">Lọc theo chữ</label>
+    <input id="q" type="search" placeholder="Lọc: tên chức năng, tệp, tên bạn phụ trách…" autocomplete="off">
+    <button class="filter" type="button" data-f="" aria-pressed="true">Tất cả</button>
+    <button class="filter" type="button" data-f="test" aria-pressed="false">Có test</button>
+    <button class="filter" type="button" data-f="web" aria-pressed="false">Đã thử Chrome</button>
+    <button class="filter" type="button" data-f="todo" aria-pressed="false">Chưa kiểm</button>
+    <button class="filter" type="button" data-f="skip" aria-pressed="false">Không chuyển</button>
+    <span class="count" id="count" aria-live="polite"></span>
+  </div>
+
+  <section aria-labelledby="quizedu">
+    <h2 id="quizedu">1. Từ QuizEduManager (project cá nhân)</h2>
+    <p class="sub">QuizEdu là phần nền: database, quy tắc nghiệp vụ và toàn bộ test gốc được chép sang rồi chạy lại trên project mới.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Phần</th><th>Nằm ở đâu</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr data-s="test"><td>Toàn bộ controller / action</td><td class="where">201 action trong <code>Controllers/</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">So tự động từng action: 201/201, không thiếu cái nào</span></td></tr>
+        <tr data-s="test"><td>Mọi nút bấm của mọi trang</td><td class="where"><code>Views/</code> (107 trang của QuizEdu)</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">So từng đích bấm của từng trang: đều còn; trang chủ giảng viên đã gộp vào trang chủ nhóm</span></td></tr>
+        <tr data-s="test"><td>Service, JS dùng chung</td><td class="where"><code>Services/</code>, <code>wwwroot/js/</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">So nội dung từng tệp: chỉ khác tên thương hiệu</span></td></tr>
+        <tr data-s="test"><td>Tài khoản và bảo mật: đăng ký, xác thực email, 2 bước, passkey, phiên thiết bị, khóa tài khoản, xóa tài khoản</td><td class="where"><code>AccountController*.cs</code>, <code>LoginService.cs</code>, <code>DeviceSessionService.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thuộc bộ test gốc của QuizEdu (chép sang, chạy lại đều qua)</span></td></tr>
+        <tr data-s="test"><td>Bộ học, quiz, nhiều loại câu hỏi, nhập Excel</td><td class="where"><code>StudySetsController</code>, <code>ImportController</code>, <code>ExcelImportService.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thuộc bộ test gốc của QuizEdu (chép sang, chạy lại đều qua)</span></td></tr>
+        <tr data-s="test"><td>Lớp học, mã vào lớp, chuyển lớp, giao bài Ôn tập / Kiểm tra, báo cáo</td><td class="where"><code>ClassroomsController</code>, <code>AssignmentsController</code>, <code>ReportsController</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Thuộc bộ test gốc của QuizEdu (chép sang, chạy lại đều qua)</span></td></tr>
+        <tr data-s="test"><td>Làm bài, chấm điểm, chống gian lận (khóa thiết bị, giám sát màn hình)</td><td class="where"><code>LearnController</code>, <code>AttemptService.cs</code>, <code>Hubs/</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Thuộc bộ test gốc của QuizEdu (chép sang, chạy lại đều qua)</span></td></tr>
+        <tr data-s="test web"><td>Ôn thẻ lặp lại ngắt quãng</td><td class="where"><code>FlashcardsController</code>, <code>FlashcardService.cs</code>, <code>js/flashcards.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test"><td>Trợ lý AI trong bộ học, API key Gemini của từng người</td><td class="where"><code>AiAssistantService.cs</code>, <code>UserApiKeyService.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-todo">Chưa kiểm</span></span><span class="note">Cùng hàm hỏi đáp với Sổ tay (đã thử key thật); chưa bấm thử trong bài giao thật (cần tài khoản giảng viên + học viên)</span></td></tr>
+        <tr data-s="skip"><td>Trang giới thiệu QuizEdu, hiệu ứng <code>home-moments.js</code></td><td class="where">Thay bằng trang chủ của nhóm</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Đã chốt dùng trang chủ và bố cục nhóm</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="backend">
+    <h2 id="backend">2. Từ backend bản nhóm (API)</h2>
+    <p class="sub">Mỗi endpoint API cũ giờ là một action MVC (trang hoặc gọi bằng JS) trong cùng project.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>API cũ</th><th>Nằm ở đâu</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr data-s="test web"><td>Auth: register, login, refresh, revoke, revoke-all, demo</td><td class="where"><code>AccountController</code>: Đăng ký, Đăng nhập (phiên tự gia hạn thay cho refresh), Đăng xuất, "Đăng xuất tất cả thiết bị", <code>AccountDemo.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">CaiDatPwaDemoTests, DuLieuDemoTests; nút demo đã sửa lỗi phiên thiết bị</span></td></tr>
+        <tr data-s="test web"><td>Google: config, đăng nhập</td><td class="where"><code>Account.ExternalLogin</code>, <code>ExternalProviderConfig.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã đăng nhập Google thật trên mindsprint.rekal.id.vn (16/11)</span></td></tr>
+        <tr data-s="test web"><td>Flashcards: lấy, tạo, sửa, xóa</td><td class="where"><code>Flashcards/Editor</code>, <code>Save</code>, <code>Delete</code>, <code>AddMany</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">DanNhieuTheTests</span></td></tr>
+        <tr data-s="test web"><td>Review: chấm thẻ, thẻ đến hạn</td><td class="where"><code>Flashcards/Study</code>, <code>Rate</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">OnTheKhiMatMangTests (ôn khi mất mạng)</span></td></tr>
+        <tr data-s="test web"><td>AI: flashcards, quiz, extract-file</td><td class="where"><code>Import/AiPreview</code>, <code>AiGenerateService.cs</code>, <code>FallbackCards.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thử key thật 16/11: 5 thẻ đúng nội dung sau 1,5 giây</span></td></tr>
+        <tr data-s="test web"><td>Notebooks: sổ tay, nguồn chữ / link, chat, suggestions, generate, save-cards, notes</td><td class="where"><code>NotebooksController</code>, <code>NotebookService.cs</code>, <code>NotebookAiService.cs</code>, <code>NotebookUrlReader.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">SoTayAiTests, SoTayStudioGiaSuTests; thử key thật 15–16/11: hỏi đáp, gợi ý, Studio 8 loại (gồm Nghe tổng quan, Flashcard/Trắc nghiệm làm thử tại chỗ), thêm nguồn từ link Wikipedia</span></td></tr>
+        <tr data-s="test web"><td>Tutor, Tutor OCR</td><td class="where"><code>Notebooks/Tutor</code>, nguồn ảnh trong <code>AddSource</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thử key thật 16/11: Giải bài, Gợi ý mức 2 (không lộ đáp số), Kiểm tra bài (chỉ đúng bước sai đầu tiên), Sửa code; đọc đúng chữ trong ảnh đề bài</span></td></tr>
+        <tr data-s="test"><td>StudyStats: days, streak</td><td class="where"><code>StudyStatsService</code> trong <code>StudyPlanService.cs</code>: tính từ hoạt động thật trên máy chủ</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">LichHocTests</span></td></tr>
+        <tr data-s="test web"><td>StudyStats: schedule (tạo, sửa, xóa)</td><td class="where"><code>ScheduleController</code>, <code>js/schedule.js</code>, <code>js/alarm.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="skip"><td>StudyStats: schedule toggle (bật/tắt)</td><td class="where">Không có</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Giao diện nhóm chưa từng gọi tới; lịch tắt biến mất không bật lại được (GAP-04 của nhóm)</span></td></tr>
+        <tr data-s="test web"><td>Tasks: tạo, sửa, xóa, move</td><td class="where"><code>KanbanController</code>, <code>KanbanService.cs</code>, <code>js/kanban.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">KanbanTests</span></td></tr>
+        <tr data-s="test web"><td>WeakAreas: lấy, analyze</td><td class="where"><code>WeakAreasController</code> (tính ngay khi mở trang, thêm "Tạo thẻ ôn tập từ điểm yếu")</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">DiemYeuTests (không lộ đáp án bài kiểm tra chưa công bố)</span></td></tr>
+        <tr data-s="test web"><td>Bản FastAPI phụ: bulk, stats, review, tasks status, ai-generate</td><td class="where"><code>Flashcards/AddMany</code>, <code>Import/PastePreview</code>, <code>Overview</code>, <code>Rate</code>, <code>Kanban</code>, <code>AiPreview</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Gemini: model dự phòng (FallbackModels)</td><td class="where"><code>GeminiClient.cs</code>: hết lượt / ngừng / quá tải thì thử <code>gemini-flash-lite-latest</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thử thật 16/11: model chính hết lượt → model dự phòng trả lời sau 1,8 giây</span></td></tr>
+        <tr data-s="test"><td>Kiểm kết quả AI (NFR-14, NotebookOutputValidation)</td><td class="where"><code>NotebookAiService.CheckOutput</code>: Studio + Gia sư</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Sơ đồ tư duy ≤ 3 cấp, ≤ 100 nút, ≤ 12 con</span></td></tr>
+        <tr data-s="test"><td>Đọc DOCX / PPTX / XLSX / RSS (NotebookDocumentExtractor)</td><td class="where"><code>OfficeText.cs</code>, <code>NotebookUrlReader.cs</code>, <code>AiGenerateService.ExtractAsync</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Tải tệp và đường link đều dùng</span></td></tr>
+        <tr data-s="test"><td>Bộ từ vựng phía backend (<code>vocab_seed.json</code>)</td><td class="where"><code>tools/vocab/extract-vocab.cjs</code> → <code>Data/Vocab/vocab.json</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Thêm 740 thẻ chưa có, tổng 2572</span></td></tr>
+        <tr data-s="test web"><td>/healthz, /readyz (NFR-08), header bảo mật</td><td class="where"><code>Program.cs</code></td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã gọi thử: ok / ready, có nosniff + Referrer-Policy</span></td></tr>
+        <tr data-s="todo"><td>CI trên GitHub (ci-cd.yml)</td><td class="where"><code>.github/workflows/ci.yml</code>: build + test với SQL Server tạm + đóng gói Docker</td><td class="proof"><span class="chips"><span class="chip c-todo">Chưa kiểm</span></span><span class="note">Chạy lần đầu khi đẩy lên GitHub</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="frontend">
+    <h2 id="frontend">3. Từ giao diện bản nhóm (frontend)</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Chức năng giao diện</th><th>Nằm ở đâu</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr data-s="test web"><td>Thanh bên, menu, nút thu gọn, thanh tab điện thoại, nút "Khác"</td><td class="where"><code>Views/Shared/_Layout.cshtml</code>, <code>mindsprint-pages-d.css</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">SidebarPureTests; thử khổ 390px sáng + tối</span></td></tr>
+        <tr data-s="test web"><td>Trang chủ: Hôm nay học gì, Tiến độ, Mục tiêu hôm nay, mốc chuỗi ngày học</td><td class="where"><code>Views/Home/Index.cshtml</code>, <code>HomeService.cs</code>, <code>js/home.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">GiaoDienTests, RekalDashboardTests</span></td></tr>
+        <tr data-s="test web"><td>Thư viện bộ thẻ, danh mục con, "Tạo thẻ bằng AI", dán nhiều thẻ</td><td class="where"><code>Views/StudySets/Index.cshtml</code>, <code>Views/Flashcards/Editor.cshtml</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Ôn bộ thẻ: lật thẻ 3D, Chưa thuộc / Đã thuộc, sửa thẻ khi ôn</td><td class="where"><code>Views/Flashcards/Study.cshtml</code>, <code>Views/Vocab/Topic.cshtml</code>, <code>js/vocab-study.js</code>, <code>MindSprintFlip</code> trong <code>site.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Thư viện từ vựng (2572 thẻ), luyện trắc nghiệm / tự luận, game ghép thẻ</td><td class="where"><code>VocabController</code>, <code>Data/Vocab/vocab.json</code>, <code>js/vocab-practice.js</code>, <code>js/vocab-game.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">TuVungTests</span></td></tr>
+        <tr data-s="test web"><td>Sổ tay AI: hai chế độ, Studio 8 loại (làm thử tại chỗ), Gia sư, nói / nghe, KaTeX</td><td class="where"><code>Views/Notebooks/Index.cshtml</code>, <code>js/notebook.js</code>, <code>js/text-renderer.js</code>, <code>lib/katex</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã thử với key Gemini thật 15–16/11</span></td></tr>
+        <tr data-s="test web"><td>Tổng quan, Điểm yếu</td><td class="where"><code>Views/Overview</code>, <code>Views/WeakAreas</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Lịch học, chuông báo, nhắc học bù</td><td class="where"><code>Views/Schedule</code>, <code>js/alarm.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã thử hộp "Bạn đã lỡ giờ học" với một buổi học tạm</span></td></tr>
+        <tr data-s="test web"><td>Công việc (Kanban), kéo thả</td><td class="where"><code>Views/Kanban</code>, <code>js/kanban.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Cài đặt, cài ứng dụng lên máy (PWA), trang báo mất mạng</td><td class="where"><code>Views/Settings</code>, <code>manifest.webmanifest</code>, <code>sw.js</code>, <code>offline.html</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span><span class="chip c-todo">Chưa kiểm</span></span><span class="note">Chưa cài thử trên điện thoại thật</span></td></tr>
+        <tr data-s="test web todo"><td>Ôn thẻ khi mất mạng, gửi bù khi có mạng (FR-21/22)</td><td class="where"><code>js/offline-cards.js</code>, lựa chọn GV <code>AllowOfflineCards</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span><span class="chip c-todo">Chưa kiểm</span></span><span class="note">Đã giả lập mất mạng; chưa tắt Wi-Fi thật trên điện thoại</span></td></tr>
+        <tr data-s="web"><td>Ô tìm trang hoặc bộ thẻ, nút thư, Trợ giúp, giao diện tối</td><td class="where"><code>_Layout.cshtml</code>, <code>site.js</code>, <code>Views/Home/Help.cshtml</code></td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đo tương phản chữ 997 chữ / 25 trang ở giao diện tối</span></td></tr>
+        <tr data-s="web"><td>Chặn tệp quá nặng / sai loại trước khi gửi</td><td class="where"><code>data-max-bytes</code> trong <code>site.js</code></td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Ví dụ minh họa trên thẻ, danh mục bộ học + bộ lọc</td><td class="where"><code>Flashcards.Example</code>, <code>StudySets.Category</code> (migration <code>DanhMucVaViDu</code>)</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Đổi ảnh đại diện / Dùng ảnh mặc định</td><td class="where"><code>AvatarService.UploadAsync</code>, <code>js/avatar-upload.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Lưu trên server (nhóm lưu trong trình duyệt nên đổi máy là mất)</span></td></tr>
+        <tr data-s="web"><td>Báo giờ học bằng giọng đọc ("Giọng nói AI")</td><td class="where">Kiểu "Chuông + đọc to giờ học" trong <code>js/alarm.js</code></td><td class="proof"><span class="chips"></span><span class="note">Bên nhóm chọn kiểu này thì không báo gì; chưa nghe thử thật</span></td></tr>
+        <tr data-s="skip"><td>Số "phút học"</td><td class="where">Không có</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Bản nhóm cộng 1 phút cho mỗi thẻ ôn, không phải thời gian thật</span></td></tr>
+        <tr data-s="test skip"><td>Tệp Word cho AI</td><td class="where"><code>.docx</code> đọc được (cả PowerPoint, Excel); <code>.doc</code> cũ thì không</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-skip">Không chuyển</span></span><span class="note">Máy chủ nhóm vốn từ chối <code>.doc</code></span></td></tr>
+        <tr data-s="skip"><td>Nút thử của nhà phát triển (mở khóa, thử chuỗi)</td><td class="where">Không có</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Công cụ thử riêng của nhóm</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="yeucau">
+    <h2 id="yeucau">4. Yêu cầu FR-01 → FR-23 của nhóm</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Yêu cầu</th><th>Trong project mới</th><th>Bằng chứng</th></tr></thead>
+      <tbody>
+        <tr data-s="test web"><td>FR-01, 02 · Đăng ký, đăng nhập, đăng xuất</td><td class="where">Identity + <code>LoginService.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="web"><td>FR-03 · Đăng nhập Google</td><td class="where">Đã bật trên server, đăng nhập thật được</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>FR-04, 05, 06 · Thư viện, thẻ cá nhân, ôn Nhớ / Chưa nhớ</td><td class="where">Thư viện, Soạn thẻ, Ôn thẻ</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>FR-07 · Trắc nghiệm / nhập đáp án</td><td class="where">Luyện tập, làm bài</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>FR-08 · Tài liệu → AI → chọn → lưu thẻ</td><td class="where">Trang xem trước + tách thẻ dự phòng</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thử key thật 16/11</span></td></tr>
+        <tr data-s="test web"><td>FR-09 → FR-16 · Sổ tay, nguồn, hỏi đáp, Studio, ghi chú, Gia sư, giọng nói</td><td class="where">Sổ tay AI</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã thử key thật 15–16/11</span></td></tr>
+        <tr data-s="test web"><td>FR-17 · Kanban</td><td class="where">Công việc</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test skip"><td>FR-18 · Lịch định kỳ (bật/tắt)</td><td class="where">Tạo / sửa / xóa có; bật/tắt không</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-skip">Không chuyển</span></span></td></tr>
+        <tr data-s="test skip"><td>FR-19 · Ngày học, số thẻ / phút, chuỗi</td><td class="where">Thẻ + chuỗi có; phút không</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-skip">Không chuyển</span></span></td></tr>
+        <tr data-s="test web"><td>FR-20 · Điểm yếu → luyện tập</td><td class="where">Điểm yếu</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web todo"><td>FR-21, 22 · Học khi mất mạng, hàng đợi gửi bù</td><td class="where">Tự học luôn được; bài giao do GV bật</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span><span class="chip c-todo">Chưa kiểm</span></span></td></tr>
+        <tr data-s="skip"><td>FR-23 · AI đề xuất kế hoạch học</td><td class="where">Không có</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Bản nhóm chưa từng làm (GAP-01 trong tài liệu nhóm)</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="phancong">
+    <h2 id="phancong">5. Phần việc của từng bạn giờ nằm ở đâu</h2>
+    <p class="sub">Theo tệp "Phân Công Nhiệm Vụ". Mỗi bạn mở các tệp dưới đây để tự kiểm phần mình.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Bạn · phần việc</th><th>Tệp trong project mới</th><th>Ghi chú</th></tr></thead>
+      <tbody>
+        <tr data-s="test web"><td>Duy · AI (Gemini, prompt)</td><td class="where"><code>Services/GeminiClient.cs</code>, <code>AiGenerateService.cs</code>, <code>NotebookAiService.cs</code>, <code>Prompts/NotebookPrompts.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã thử key thật; sửa model dự phòng bị treo (16/11)</span></td></tr>
+        <tr data-s="test"><td>Linh · Database, bảo mật</td><td class="where"><code>Data/AppDbContext.cs</code>, <code>Data/Migrations/</code>, <code>LoginService.cs</code>, <code>DeviceSessionService.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">JWT được thay bằng Identity cookie (hợp với MVC)</span></td></tr>
+        <tr data-s="test web"><td>TV3 · Kanban kéo thả</td><td class="where"><code>Controllers/KanbanController.cs</code>, <code>Services/KanbanService.cs</code>, <code>Views/Kanban/</code>, <code>wwwroot/js/kanban.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="test web"><td>Chiến · API, triển khai</td><td class="where"><code>Controllers/</code> (thay cho API REST)</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã chạy ở https://mindsprint.rekal.id.vn (deploy/setup-mindsprint.sh)</span></td></tr>
+        <tr data-s="test todo"><td>Sơn · QA, tài liệu</td><td class="where"><code>tests/</code> (81 tệp, 1811 test), <code>docs/KICH_BAN_DEMO.md</code>, <code>README.md</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-todo">Chưa kiểm</span></span><span class="note">UML, ERD, báo cáo CNPM vẫn mô tả kiến trúc cũ</span></td></tr>
+        <tr data-s="test web"><td>Hùng · Flashcard, lật thẻ 3D, kiểm tra dữ liệu, giao diện điện thoại</td><td class="where"><code>Views/Flashcards/Study.cshtml</code>, <code>js/flashcards.js</code>, <code>site.js</code> (<code>MindSprintFlip</code>, <code>data-max-bytes</code>), <code>css/mindsprint-pages-d.css</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="conlai">
+    <h2 id="conlai">6. Chưa kiểm chứng và việc còn lại</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Việc</th><th>Vì sao</th><th>Trạng thái</th></tr></thead>
+      <tbody>
+        <tr data-s="web"><td>Thử mọi tính năng AI với API key Gemini thật</td><td class="where">Đã thử 15–16/11 trên tài khoản demo: hỏi đáp, gợi ý, Studio 8 loại, Gia sư 4 chế độ, đọc ảnh, đọc link, tạo thẻ AI. Còn: trợ lý AI trong bài giao thật</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="todo"><td>Thử trên điện thoại thật</td><td class="where">Tắt Wi-Fi thật khi ôn thẻ, cài ứng dụng, vuốt thẻ</td><td class="proof"><span class="chips"><span class="chip c-todo">Chưa kiểm</span></span></td></tr>
+        <tr data-s="web"><td>Đăng nhập Google</td><td class="where">Xong 16/11</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="skip"><td>Ôn ngắt quãng SM-2 của nhóm</td><td class="where">Giữ hộp Leitner của QuizEdu (bài giao, báo cáo GV, thẻ đến hạn đều dựa vào)</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Đổi thuật toán là đổi quy tắc nghiệp vụ, cần cả nhóm quyết</span></td></tr>
+        <tr data-s="skip"><td>Đọc trang web phải chạy JavaScript (Playwright)</td><td class="where">Cần cài Chromium trong ảnh Docker (~300 MB)</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Chờ quyết định; trang thường, PDF, Office, RSS vẫn đọc được</span></td></tr>
+        <tr data-s="web"><td>Đưa lên Internet</td><td class="where">Xong 16/11: https://mindsprint.rekal.id.vn, chạy cùng server với Rekal</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="skip"><td>Dữ liệu trên bản nhóm đang chạy (Render)</td><td class="where">Bản Render không có người dùng thật</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Đã xác nhận 15/11: không cần chuyển</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <footer>Chi tiết từng lần rà: <code>docs/DOI_CHIEU_CHUC_NANG.md</code> · cách chạy: <code>README.md</code>. Số test lấy từ lần chạy toàn bộ ngày 15/11/2026.</footer>
+</div>
+
+<script>
+(() => {
+  const q = document.getElementById('q'), count = document.getElementById('count');
+  const rows = [...document.querySelectorAll('tbody tr')];
+  const buttons = [...document.querySelectorAll('.filter')];
+  let status = '';
+  try { status = localStorage.getItem('mindsprint-proof-filter') ?? ''; } catch {}
+  const norm = s => s.toLocaleLowerCase('vi').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+  const apply = () => {
+    const text = norm(q.value.trim());
+    let shown = 0;
+    for (const r of rows) {
+      const ok = (!status || r.dataset.s.split(' ').includes(status)) && (!text || norm(r.textContent).includes(text));
+      r.hidden = !ok; if (ok) shown++;
+    }
+    for (const tb of document.querySelectorAll('tbody')) {
+      let empty = tb.querySelector('.empty-row');
+      const none = [...tb.rows].every(r => r.hidden || r.classList.contains('empty-row'));
+      if (none && !empty) { empty = tb.insertRow(); empty.className = 'empty-row'; const c = empty.insertCell(); c.colSpan = 3; c.className = 'empty'; c.textContent = 'Không có dòng nào khớp bộ lọc.'; }
+      if (empty) empty.hidden = !none;
+    }
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === status)));
+    count.textContent = `${shown}/${rows.length} dòng`;
+  };
+  buttons.forEach(b => b.addEventListener('click', () => { status = b.dataset.f; try { localStorage.setItem('mindsprint-proof-filter', status); } catch {} apply(); }));
+  q.addEventListener('input', apply);
+  apply();
+})();
+</script>

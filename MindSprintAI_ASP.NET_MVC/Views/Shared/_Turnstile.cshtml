@@ -1,0 +1,16 @@
+@if (ViewData["ChallengeRequired"] is true)
+{
+    if (ViewData["TurnstileSiteKey"] is string key && !string.IsNullOrWhiteSpace(key))
+    {
+        <div class="my-3">
+            <p class="small mb-1">Xác minh bạn là người thật trước khi tiếp tục.</p>
+            <div class="cf-turnstile" data-sitekey="@key" data-language="vi" data-size="flexible"></div>
+            <noscript><p class="text-danger">Trình duyệt đang tắt JavaScript (phần giúp trang web hoạt động). Hãy bật lại JavaScript trong cài đặt trình duyệt để xác minh bạn là người thật.</p></noscript>
+        </div>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    }
+    else
+    {
+        <p class="alert alert-warning" role="alert">Chưa bật xác minh người thật. Hãy báo quản trị viên.</p>
+    }
+}

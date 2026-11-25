@@ -1,0 +1,17 @@
+@model LearnerSurveyResults
+@{ ViewData["Title"] = "Kết quả khảo sát"; }
+<a class="btn btn-sm b-back" asp-action="Assignment" asp-route-id="@Model.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại bài này</a>
+<h1 class="h4 mt-2">Kết quả khảo sát</h1>
+@foreach (var q in Model.Questions)
+{
+    <section class="card card-body mb-3">
+        <h2 class="h5" style="white-space: pre-wrap">@q.Prompt</h2>
+        @if (q.Suppressed) { <p class="mb-0">Chưa đủ 5 người trả lời để công khai</p> }
+        else
+        {
+            <p>@q.Respondents người trả lời</p>
+            <ul>@foreach (var o in q.Options) { <li>@o.Text: @o.Count người (@o.Percent.ToString("0.##")%)</li> }</ul>
+            @foreach (var opinion in q.Opinions) { <p class="border rounded p-2" style="white-space: pre-wrap">@opinion</p> }
+        }
+    </section>
+}

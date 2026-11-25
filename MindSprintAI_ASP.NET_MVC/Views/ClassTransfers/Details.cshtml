@@ -1,0 +1,29 @@
+@model ClassTransfer
+@{ ViewData["Title"] = "Chuyển lớp"; var userId = ViewData["UserId"] as string; }
+<a class="btn btn-sm b-back" asp-controller="Classrooms" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại danh sách lớp</a>
+<h1 class="h3 text-break">Chuyển lớp @Model.Classroom.Name</h1>
+<p>Gửi lúc @VnTime.Format(Model.CreatedAt). Người chuyển chọn: @(Model.FromUserStays ? "Ở lại lớp làm giảng viên phụ" : "Rời hẳn lớp").</p>
+<p>Hạn @VnTime.Format(Model.ExpiresAt ?? Model.CreatedAt.AddDays(7)) (giờ Việt Nam).</p>
+@if (Model.Status == ClassTransferStatus.Pending)
+{
+    <p class="alert alert-info">Đang chờ nhận. Vai trò, bài giao và kết quả chưa thay đổi.</p>
+    @if (Model.ToUserId == userId)
+    {
+        <p>Nhận lớp sẽ nhân bản bộ học dùng trong lớp sang tài khoản của bạn. Bài đang thi tiếp tục theo đồng hồ cũ.</p>
+        <div class="d-flex flex-wrap gap-2">
+            <form method="post" asp-action="Decide" asp-route-id="@Model.Id" data-confirm="Nhận lớp @Model.Classroom.Name? Bạn sẽ thành giảng viên chính và các bộ học của lớp được nhân bản sang tài khoản của bạn."><input type="hidden" name="accept" value="true" /><button class="btn btn-primary">Nhận lớp</button></form>
+            <form method="post" asp-action="Decide" asp-route-id="@Model.Id" data-confirm="Từ chối nhận lớp @Model.Classroom.Name? Lớp vẫn thuộc người chuyển."><input type="hidden" name="accept" value="false" /><button class="btn btn-outline-danger"><icon name="x" />Từ chối</button></form>
+        </div>
+    }
+    @if (Model.FromUserId == userId)
+    {
+        <form method="post" asp-action="Cancel" asp-route-id="@Model.Id" data-confirm="Hủy đề nghị chuyển lớp? Người nhận sẽ không nhận lớp được nữa; muốn chuyển lại thì gửi đề nghị mới."><button class="btn btn-outline-danger">Hủy đề nghị chuyển lớp</button></form>
+    }
+}
+else
+{
+    <p role="status">@(Model.Status == ClassTransferStatus.Accepted ? "Đã nhận lớp" : Model.Status == ClassTransferStatus.Declined ? "Đã từ chối" : Model.Status == ClassTransferStatus.Expired ? "Đã hết hạn" : "Đã hủy")</p>
+    @if (Model.Status == ClassTransferStatus.Accepted && (Model.ToUserId == userId || Model.FromUserStays))
+    { <a class="btn btn-primary" asp-controller="Classrooms" asp-action="Details" asp-route-id="@Model.ClassroomId">Vào lớp</a> }
+}
+<p class="mt-3"><a asp-controller="Notifications" asp-action="Index">Về thông báo</a></p>

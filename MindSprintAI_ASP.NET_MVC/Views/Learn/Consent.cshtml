@@ -1,0 +1,27 @@
+@model DeviceConsentModel
+@{ ViewData["Title"] = "Trước khi làm bài"; }
+<div class="card card-body mx-auto" style="max-width: 40rem">
+    <h1 class="h4">Trước khi làm bài</h1>
+    <p>@Brand.Name ghi nhận đặc điểm của thiết bị và trình duyệt để biết bài đang được làm trên đúng một thiết bị, ghi lại các lần rời khỏi màn hình làm bài và báo cho giảng viên, chỉ dùng trong lúc làm bài này.</p>
+    <p>Hệ thống chỉ lưu dấu nhận biết thiết bị, không lưu thông tin chi tiết của thiết bị. Việc nhận diện chỉ là ước đoán để giảng viên tham khảo.</p>
+    @if (Model.Assignment.DeviceLock)
+    { <p>Bài này bật Khóa 1 thiết bị. Muốn chuyển thiết bị, bạn cần xin giảng viên cho phép. Đồng hồ vẫn chạy khi chờ duyệt.</p> }
+    @if (Model.Assignment.MonitorScreen)
+    { <p>Bài này bật Giám sát rời màn hình. Mỗi lần quay lại, bạn sẽ thấy thời gian đã rời màn hình. Những lần dưới 2 giây vẫn được ghi nhưng không tính vào số lần.</p> }
+    @if (Model.Assignment.AutoSubmitLeaves is int n)
+    { <p class="alert alert-warning">Rời màn hình làm bài đến lần thứ @n thì bài tự nộp. Mất mạng giữa chừng không bị tính.</p> }
+    else
+    { <p>Việc rời màn hình không tự trừ điểm hay tự nộp bài. Giảng viên xem rồi quyết định.</p> }
+    @if (Model.Assignment.Mode == AssignmentMode.Test && Model.RetakeId == null)
+    { <p>Đồng hồ làm bài chạy theo giờ chung của cả lớp.</p> }
+    <p>Bạn cần đồng ý để làm bài này.</p>
+    <p>Nếu không đồng ý, bạn hãy liên hệ giảng viên để được sắp xếp cách khác.</p>
+    <form method="post" asp-action="@(Model.RetakeId == null ? "Start" : "StartRetake")" asp-route-id="@(Model.RetakeId ?? Model.Assignment.Id)" data-machine-full="@(AttemptService.NeedsConsent(Model.Assignment) ? "true" : "false")">
+        <input type="hidden" name="id" value="@(Model.RetakeId ?? Model.Assignment.Id)" />
+        <input type="hidden" name="consent" value="true" />
+        <input type="hidden" name="signals" value="" />
+        @if (Model.AttemptId != null) { <input type="hidden" name="attemptId" value="@Model.AttemptId" /> }
+        <button class="btn btn-primary">Tôi đồng ý</button>
+        <a class="btn btn-outline-secondary" asp-action="Assignment" asp-route-id="@Model.Assignment.Id">Quay lại</a>
+    </form>
+</div>

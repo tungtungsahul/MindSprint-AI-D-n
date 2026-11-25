@@ -1,0 +1,26 @@
+# Chạy: cd deploy && docker compose up -d --build   (hướng dẫn đầy đủ: docs/TRIEN_KHAI_SERVER.md)
+services:
+  mindsprint:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: mindsprint
+    restart: unless-stopped
+    env_file: .env
+    # Chỉ mở cho chính server (127.0.0.1); người ngoài vào qua Cloudflare Tunnel → http://localhost:8080.
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - mindsprint-data:/app/App_Data
+    # Một mạng duy nhất: mạng của container SQL Server (gọi SQL bằng tên container). Một mạng thì yêu cầu từ Cloudflare
+    # Tunnel luôn đi qua gateway của mạng này → đặt ReverseProxy__KnownProxies__0 bằng gateway đó (xem hướng dẫn bước 3).
+    networks:
+      - sql-net
+
+volumes:
+  mindsprint-data:
+
+networks:
+  sql-net:
+    external: true
+    name: ${SQL_NETWORK}

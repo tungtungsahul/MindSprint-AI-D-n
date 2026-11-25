@@ -1,0 +1,52 @@
+@model AuditPage
+@{ ViewData["Title"] = "Nhật ký hoạt động"; var f = Model.Filter; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Quản trị</a>
+<h1 class="h3">Nhật ký hoạt động</h1>
+<nav class="d-flex flex-wrap gap-3 mb-3" aria-label="Quản trị">
+    <a asp-action="Index">Tài khoản</a><a asp-action="Reports">Báo cáo vi phạm</a><a asp-action="History">Lịch sử quyền quản trị viên</a>
+</nav>
+<form method="get" asp-action="Audit" class="row g-3 mb-4">
+    <div class="col-md-4"><label for="Email" class="form-label">Email người thực hiện</label>
+        <input id="Email" name="Email" value="@f.Email" maxlength="256" class="form-control" /></div>
+    <div class="col-md-4"><label for="From" class="form-label">Từ ngày (giờ Việt Nam)</label>
+        <input id="From" name="From" type="date" value="@f.From?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-4"><label for="To" class="form-label">Đến ngày (giờ Việt Nam)</label>
+        <input id="To" name="To" type="date" value="@f.To?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-6"><label for="Action" class="form-label">Thao tác</label>
+        <select id="Action" name="Action" class="form-select"><option value="">Tất cả thao tác</option>
+        @foreach (var action in Enum.GetValues<AuditAction>()) { <option value="@((int)action)" selected="@(f.Action == action)">@action.Text()</option> }
+        </select></div>
+    <div class="col-md-6"><label for="Result" class="form-label">Kết quả</label>
+        <select id="Result" name="Result" class="form-select"><option value="">Tất cả kết quả</option>
+        @foreach (var result in Enum.GetValues<AuditResult>()) { <option value="@((int)result)" selected="@(f.Result == result)">@result.Text()</option> }
+        </select></div>
+    <div class="col-md-6"><label for="TargetType" class="form-label">Loại đối tượng</label>
+        <select id="TargetType" name="TargetType" class="form-select"><option value="">Tất cả đối tượng</option>
+        @foreach (var type in new[] { "User", "Classroom", "ClassMember", "Invitation", "ClassTransfer", "StudySet", "Quiz", "Question", "Flashcard", "Assignment", "Attempt", "Participant", "RetakeRequest", "ContentReport", "Audit", "ControllerAction" })
+        { <option value="@type" selected="@(f.TargetType == type)">@AuditDisplay.Target(type)</option> }
+        </select></div>
+    <div class="col-md-6"><label for="TargetId" class="form-label">Mã đối tượng</label>
+        <input id="TargetId" name="TargetId" value="@f.TargetId" maxlength="64" class="form-control" /></div>
+    <div class="col-md-8"><label for="RequestId" class="form-label">Tìm theo mã tra cứu lỗi</label>
+        <input id="RequestId" name="RequestId" value="@f.RequestId" maxlength="100" class="form-control" /></div>
+    <div class="col-md-4 align-self-end"><button class="btn btn-primary">Tìm</button> <a asp-action="Audit" class="btn btn-outline-secondary">Xóa bộ lọc</a></div>
+</form>
+<p>@Model.Total hoạt động · Trang @Model.Page / @Model.Pages · Mỗi trang tối đa 50 dòng</p>
+<div class="table-responsive"><table class="table table-striped align-middle">
+    <thead><tr><th scope="col">Thời điểm (giờ Việt Nam)</th><th scope="col">Người thực hiện</th><th scope="col">Thao tác</th><th scope="col">Đối tượng</th><th scope="col">Kết quả</th><th scope="col">Ghi chú</th><th scope="col">Mã tra cứu lỗi</th></tr></thead>
+    <tbody>
+    @foreach (var row in Model.Rows)
+    {
+        <tr><td class="text-nowrap">@VnTime.Format(row.Entry.At)</td><td>@row.Actor</td><td>@row.Entry.Action.Text()</td>
+            <td>@if (row.Url != null) { <a href="@row.Url">@row.Target</a> } else { @row.Target }</td>
+            <td>@row.Entry.Result.Text()</td><td>@row.Entry.Note</td><td class="text-break"><code>@row.Entry.RequestId</code></td></tr>
+    }
+    @if (Model.Rows.Count == 0) { <tr><td colspan="7">Không có hoạt động phù hợp.</td></tr> }
+    </tbody>
+</table></div>
+<nav class="d-flex gap-3" aria-label="Trang nhật ký hoạt động">
+@foreach (var pageNumber in new[] { Model.Page - 1, Model.Page + 1 }.Where(p => p >= 1 && p <= Model.Pages))
+{
+    <a href="@f.PageUrl(Url.Action("Audit", "Admin") ?? "/Admin/Audit", pageNumber)">@(pageNumber < Model.Page ? "Trang trước" : "Trang sau")</a>
+}
+</nav>

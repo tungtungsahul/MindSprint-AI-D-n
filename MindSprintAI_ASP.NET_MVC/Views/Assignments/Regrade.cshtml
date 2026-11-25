@@ -1,0 +1,12 @@
+@model RegradePageModel
+@{ ViewData["Title"] = "Chấm lại câu"; }
+<a class="btn btn-sm b-back" asp-action="Details" asp-route-id="@Model.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại Bảng điểm</a>
+<h1 class="h4">Chấm lại câu</h1>
+<p>Chỉ áp dụng trong bài giao này. Điểm được cập nhật cho mọi lượt đã kết thúc, đang làm và lượt bắt đầu sau đó. Tiến độ làm chủ giữ nguyên.</p>
+@foreach (var q in Model.Questions)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h6">Câu @q.Number</h2><p style="white-space: pre-wrap">@q.Prompt</p>
+        <partial name="_RegradeForm" model="@(new RegradeFormModel(Model.AssignmentId, q))" />
+    </div>
+}

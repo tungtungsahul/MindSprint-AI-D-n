@@ -1,0 +1,101 @@
+@model Attempt
+@{
+    var items = (List<(AttemptQuestion Question, QuestionSnapshot Snapshot)>)ViewData["Items"]!;
+    ViewData["Title"] = "Bài làm của " + Model.Participant.User?.DisplayName;
+}
+<a class="btn btn-sm b-back" asp-action="Details" asp-route-id="@Model.Participant.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại Bảng điểm</a>
+<h1 class="h4 mt-2">Bài làm của @Model.Participant.User?.DisplayName — lượt @Model.AttemptNumber</h1>
+@if (CriticalScoreRules.Text(Model.CriticalLabel, Model.CriticalReasons) is { } criticalText) { <p class="badge bg-warning text-body text-wrap">@criticalText</p> }
+@if (Model.MadeAsGuest) { <p class="badge bg-body-tertiary text-body border">Làm khi là khách</p> }
+@if (Model.ExcludeFromGradebook) { <p>Không chọn lượt này vào bảng điểm.</p> }
+<p class="text-muted small">
+    Bắt đầu @VnTime.Format(Model.StartedAt) · @ScreenMonitoringRules.EndText(Model) @(Model.EndedAt == null ? "" : "lúc " + VnTime.Format(Model.EndedAt))
+    · Điểm lần đầu @ScoreFormatter.Format(Model.FirstScore, Model.MaxScore, Model.Participant.Assignment.ScoreScale, Model.Participant.Assignment.Rounding)
+    @if (Model.PracticeScore is { } practice) { <span> · Điểm sau luyện @ScoreFormatter.Format(practice, Model.MaxScore, Model.Participant.Assignment.ScoreScale, Model.Participant.Assignment.Rounding)</span> }
+    · Câu hiện theo thứ tự gốc
+</p>
+<div class="d-flex flex-wrap gap-2 mb-3">
+    @foreach (var x in Model.Participant.Attempts.OrderBy(x => x.AttemptNumber))
+    {
+        <a class="btn btn-sm @(x.Id == Model.Id ? "btn-primary" : "btn-outline-secondary")" aria-current="@(x.Id == Model.Id ? "page" : null)" asp-action="Attempt" asp-route-id="@x.Id">Lượt @x.AttemptNumber · @DisplayText.Of(x.Kind) @(x.Status == AttemptStatus.Cancelled ? "(Đã hủy)" : "")</a>
+    }
+</div>
+<partial name="_ScreenLog" model="Model" />
+@if (Model.Status == AttemptStatus.Cancelled)
+{
+    <p class="alert alert-warning">Đã hủy lúc @VnTime.Format(Model.CancelledAt): @Model.CancelReason</p>
+}
+else if (Model.Participant.Assignment.Mode == AssignmentMode.Test || Model.MadeAsGuest)
+{
+    <form method="post" asp-action="CancelAttempt" asp-route-id="@Model.Id" class="card card-body mb-3" data-confirm="Hủy lượt này? Lượt sẽ không tính vào bảng điểm và trần lượt.">
+        <label class="form-label" for="cancel-reason">Lý do hủy lượt</label>
+        <input class="form-control mb-2" id="cancel-reason" name="reason" required />
+        <button class="btn btn-outline-danger align-self-start">Hủy lượt</button>
+    </form>
+}
+
+@foreach (var (aq, snap) in items)
+{
+    var last = aq.Submissions.Where(s => s.IsFinal).OrderByDescending(s => s.SubmittedAt).ThenByDescending(s => s.Id).FirstOrDefault();
+    var selected = last == null || !SurveyRules.IsChoice(snap.Type) ? new List<int>() : System.Text.Json.JsonSerializer.Deserialize<ChoiceAnswer>(last.PayloadJson)?.Selected.ToList() ?? [];
+    var effective = RegradeRules.Effective(aq, Model.Participant.Assignment.Regrades);
+    // Câu điền chưa có điểm là đang chờ GV chấm tay, không phải trả lời sai.
+    var pendingManual = snap.Type is QuestionType.TextInput or QuestionType.NumberInput && last != null && last.Score == null;
+    <div class="card mb-2">
+        <div class="card-body">
+            <div class="d-flex gap-2">
+                <b>Câu @(snap.OrderIndex + 1).</b>
+                <span class="me-auto" style="white-space: pre-wrap">@snap.Prompt</span>
+                @if (effective.BlankCredit) { <span class="badge text-wrap bg-success">@RegradeRules.BlankCreditLabel</span> }
+                else if (effective.Cancelled) { <span class="badge bg-secondary">Đã hủy câu</span> }
+                else if (last == null) { <span class="badge bg-secondary">Bỏ trống</span> }
+                else if (pendingManual) { <span class="badge bg-warning text-body">Chờ giảng viên chấm</span> }
+                else if (effective.IsCorrect == true) { <span class="badge bg-success">Đúng</span> }
+                else if (SurveyRules.IsSurvey(snap.Type)) { <span class="badge bg-primary">Đã ghi nhận câu trả lời</span> }
+                else { <span class="badge bg-danger">Sai</span> }
+            </div>
+            @if (Model.Participant.Assignment.MasteryThreshold != null)
+            {
+                <p class="small mt-2">Số lần trả lời: @aq.AnswerCount @if (aq.IsMastered) { <span class="badge bg-success">Đã làm chủ</span> }</p>
+            }
+            @if (snap.Type == QuestionType.SurveyText)
+            {
+                var review = ((Dictionary<long, InputReview>)ViewData["InputReviews"]!)[aq.Id];
+                <p style="white-space: pre-wrap">@(review.Values.FirstOrDefault() ?? "(trống)")</p>
+            }
+            <ul class="mb-0 mt-2">
+                @foreach (var o in snap.Options.OrderBy(o => o.OrderIndex))
+                {
+                    <li class="@(o.IsCorrect ? "text-success fw-bold" : "")">
+                        @o.Text @(o.IsCorrect ? "(đáp án đúng)" : "") @(selected.Contains(o.Id) ? "← học viên chọn" : "")
+                    </li>
+                }
+            </ul>
+            @if (snap.Type is QuestionType.TextInput or QuestionType.NumberInput)
+            {
+                @if (pendingManual)
+                {
+                    <form method="post" asp-action="ManualGrade" class="my-3">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <input type="hidden" name="attemptQuestionId" value="@aq.Id" />
+                        <label class="form-label" for="manual-@aq.Id">Điểm giảng viên chấm (0–@snap.Points)</label>
+                        <input class="form-control" id="manual-@aq.Id" name="score" type="number" min="0" max="@snap.Points.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.0001" required />
+                        <button class="btn btn-outline-primary mt-2">Lưu điểm chấm</button>
+                    </form>
+                }
+                var review = ((Dictionary<long, InputReview>)ViewData["InputReviews"]!)[aq.Id];
+                var values = review.Values;
+                var matches = review.Matches;
+                @for (var i = 0; i < (snap.Type == QuestionType.TextInput ? snap.Blanks.Count : 1); i++)
+                {
+                    <p class="mb-1 @(matches?.ElementAtOrDefault(i) == true ? "text-success" : pendingManual ? "" : "text-danger")">Ô @(i + 1): @(values.ElementAtOrDefault(i) ?? "(trống)")</p>
+                }
+                <p class="text-success">Đáp án đúng: @string.Join("; ", review.Answers)</p>
+            }
+            @foreach (var r in Model.Participant.Assignment.Regrades.Where(r => r.QuestionId == snap.QuestionId))
+            { <p class="small text-muted">Chấm lại @VnTime.Format(r.At): @r.Reason</p> }
+            @if ((ViewData["RegradeQuestions"] as List<RegradeQuestion>)?.FirstOrDefault(q => q.Number == snap.OrderIndex + 1) is { } regradeQuestion)
+            { <partial name="_RegradeForm" model="@(new RegradeFormModel(Model.Participant.AssignmentId, regradeQuestion))" /> }
+        </div>
+    </div>
+}

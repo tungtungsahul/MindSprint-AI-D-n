@@ -1,0 +1,39 @@
+@model PaperInput
+@{
+    ViewData["Title"] = "Giao bài làm theo đề";
+}
+<a class="btn btn-sm b-back" asp-controller="Classrooms" asp-action="Details" asp-route-id="@Model.ClassroomId"><icon name="chevron-right" class="b-back-icon" />Quay lại lớp</a>
+<h1 class="h3 mb-3">Giao bài</h1>
+<partial name="_AssignKind" model="(Model.ClassroomId, true)" />
+<p class="text-muted mb-3" style="max-width: 720px">Tải đề lên (PDF hoặc Word). Học viên xem đề ngay trên trang làm bài, viết bài và đính kèm tệp trong thời gian làm.
+    Giảng viên chấm tay (thang 10) rồi công bố điểm cho cả lớp.</p>
+
+<form method="post" enctype="multipart/form-data" class="row g-3" style="max-width: 720px">
+    <input type="hidden" name="ClassroomId" value="@Model.ClassroomId" />
+    <div class="col-12">
+        <label class="form-label" for="Title">Tên bài</label>
+        <input class="form-control" id="Title" name="Title" maxlength="200" required value="@Model.Title" placeholder="Ví dụ: Kiểm tra giữa kỳ — Lập trình Web" />
+    </div>
+    <div class="col-12">
+        <label class="form-label" for="paper">Tệp đề (PDF hoặc Word .docx, tối đa 20 MB)</label>
+        <input class="form-control" id="paper" name="paper" type="file" required accept=".pdf,.docx" data-max-bytes="@PaperFileStore.MaxBytes" />
+        <p class="small text-muted mb-0">Đề Word được đổi sang PDF để mọi máy đều hiện đúng bố cục. Đổi đề được cho tới khi bấm Bắt đầu.</p>
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label" for="DurationMinutes">Thời gian làm bài (1–180 phút)</label>
+        <input class="form-control" id="DurationMinutes" name="DurationMinutes" type="number" min="1" max="180" required value="@Model.DurationMinutes" />
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label" for="OpensAt">Mở lúc (giờ Việt Nam, để trống = mở ngay)</label>
+        <input class="form-control" id="OpensAt" name="OpensAt" type="datetime-local" value="@Model.OpensAt?.ToString("yyyy-MM-ddTHH:mm")" />
+    </div>
+    <div class="col-12">
+        <label class="form-label" for="AudiencePolicy">Ai làm bài</label>
+        <select class="form-select" id="AudiencePolicy" name="AudiencePolicy">
+            <option value="@((int)AudiencePolicy.IncludeLateJoiners)" selected="@(Model.AudiencePolicy == AudiencePolicy.IncludeLateJoiners)">Cả học viên vào lớp sau khi giao</option>
+            <option value="@((int)AudiencePolicy.OnlyCurrentMembers)" selected="@(Model.AudiencePolicy == AudiencePolicy.OnlyCurrentMembers)">Chỉ học viên đang ở lớp lúc giao</option>
+        </select>
+    </div>
+    <div class="col-12"><partial name="_DeviceSettings" model="@(new AssignmentInput { DeviceLock = Model.DeviceLock, MonitorScreen = Model.MonitorScreen, AutoSubmitLeaves = Model.AutoSubmitLeaves })" /></div>
+    <div class="col-12"><button class="btn btn-primary"><icon name="send" />Giao bài</button></div>
+</form>

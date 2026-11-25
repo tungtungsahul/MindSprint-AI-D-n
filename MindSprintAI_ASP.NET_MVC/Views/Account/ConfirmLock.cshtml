@@ -1,0 +1,10 @@
+@model LockConfirmationModel
+@{ ViewData["Title"] = "Xác nhận khóa bảo vệ"; }
+<div class="col-lg-6">
+    <h1 class="h3">Xác nhận khóa bảo vệ</h1>
+    <p>Mọi thiết bị sẽ bị đăng xuất. Các lượt đang làm dừng ngay. Bạn có thể đặt lại mật khẩu qua email để mở khóa.</p>
+    <form method="post" asp-action="ConfirmLock">
+        <input type="hidden" asp-for="UserId" /><input type="hidden" asp-for="Code" /><input type="hidden" asp-for="Nonce" />
+        <button class="btn btn-danger">Xác nhận khóa tài khoản</button>
+    </form>
+</div>

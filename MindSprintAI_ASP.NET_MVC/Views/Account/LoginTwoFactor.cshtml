@@ -1,0 +1,52 @@
+@model TwoFactorLoginPage
+@{ ViewData["Title"] = "Xác thực đăng nhập"; }
+<h1 class="h3">Xác thực đăng nhập</h1>
+<div class="card card-body col-lg-6">
+    <p>Chọn cách xác thực đang có. Mã dự phòng chỉ dùng được một lần.</p>
+    @if (Model.Email)
+    {
+        <form method="post" asp-action="SendTwoFactorEmail" data-action="SendTwoFactorEmail" class="mt-3">
+            <button class="btn btn-outline-secondary">Gửi mã qua email</button>
+            <p class="small mt-2">Bấm Gửi mã qua email trước, rồi nhập mã trong email.</p>
+            <p class="small mt-2">Hạn 5 phút; gửi lại tối đa mỗi phút một lần.</p>
+        </form>
+    }
+    @if (Model.Authenticator || Model.Recovery || Model.Email)
+    {
+    <form method="post" asp-action="LoginTwoFactor" data-action="LoginTwoFactor">
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        <fieldset class="mb-3">
+            <legend class="h6">Cách xác thực</legend>
+            @if (Model.Authenticator)
+            {
+                <div class="form-check"><input class="form-check-input" type="radio" name="method" id="method-app" value="app" checked /><label class="form-check-label" for="method-app">Mã từ ứng dụng xác thực (ví dụ Google Authenticator)</label></div>
+            }
+            @if (Model.Recovery)
+            {
+                <div class="form-check"><input class="form-check-input" type="radio" name="method" id="method-recovery" value="recovery" checked="@(!Model.Authenticator)" /><label class="form-check-label" for="method-recovery">Mã dự phòng</label></div>
+            }
+            @if (Model.Email)
+            {
+                <div class="form-check"><input class="form-check-input" type="radio" name="method" id="method-email" value="email" checked="@(!Model.Authenticator && !Model.Recovery)" /><label class="form-check-label" for="method-email">Mã đã gửi qua email</label></div>
+            }
+        </fieldset>
+        <label class="form-label" for="login-code">Mã xác thực</label>
+        <input class="form-control mb-3" id="login-code" name="code" autocomplete="one-time-code" inputmode="numeric" maxlength="100" required />
+        <button class="btn btn-primary">Xác nhận đăng nhập</button>
+    </form>
+    }
+    @if (Model.Passkey)
+    {
+        <form method="post" asp-action="TwoFactorPasskeyLogin" data-action="TwoFactorPasskeyLogin" data-passkey="get" data-options="@Url.Content("~/Account/TwoFactorPasskeyOptions")" class="mt-3">
+            <input type="hidden" name="credentialJson" value="" />
+            <div data-passkey-controls hidden><button class="btn btn-outline-primary">Xác nhận bằng passkey</button></div>
+            <p class="small mt-2" role="status" aria-live="polite" data-passkey-status></p>
+            <noscript>Trình duyệt đang tắt JavaScript (phần giúp trang web hoạt động). Hãy bật lại JavaScript trong cài đặt trình duyệt để xác nhận bằng passkey.</noscript>
+        </form>
+    }
+    <p class="mt-3 mb-0"><a asp-action="Login">Đăng nhập lại</a></p>
+</div>
+@section Scripts {
+    <script src="~/js/two-factor.js" asp-append-version="true"></script>
+    <script src="~/js/passkey.js" asp-append-version="true"></script>
+}

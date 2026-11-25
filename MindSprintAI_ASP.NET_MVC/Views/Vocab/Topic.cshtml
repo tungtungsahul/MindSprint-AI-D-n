@@ -1,0 +1,56 @@
+@using MindSprintAI_ASP.NET_MVC.Controllers
+@model VocabTopicPage
+@{ ViewData["Title"] = Model.Topic; }
+<a class="btn btn-sm b-back" asp-action="Index" asp-route-category="@Model.Category"><icon name="chevron-right" class="b-back-icon" />Quay lại Thư viện từ vựng</a>
+<header class="page-head">
+    <div>
+        <h1>@Model.Topic</h1>
+        <p>@Model.CategoryName · @Model.Cards.Count thẻ học</p>
+    </div>
+    <div class="page-head-actions">
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#study-modal"><icon name="repeat-2" />Ôn thẻ</button>
+        <a class="btn btn-secondary" asp-action="Game" asp-route-category="@Model.Category" asp-route-topic="@Model.Topic"><icon name="play" />Chơi ghép thẻ</a>
+        <form method="post" asp-action="Copy" asp-route-category="@Model.Category" asp-route-topic="@Model.Topic">
+            <button class="btn btn-primary"><icon name="plus" />Lưu vào Thư viện của tôi</button>
+        </form>
+    </div>
+</header>
+<ul class="vocab-list">
+    @foreach (var c in Model.Cards)
+    {
+        <li class="vocab-item">
+            <strong>@c.Question</strong>
+            <span>@c.Answer</span>
+            @if (c.Example != null) { <small>@c.Example</small> }
+        </li>
+    }
+</ul>
+
+@* Hộp "Ôn tập bộ thẻ" của nhóm (docs/giao-dien-nhom/14–15): thanh tiến trình · thẻ lật · Chưa thuộc / Đã thuộc · trước / sau.
+   Thẻ hệ thống chỉ đọc nên đánh dấu thuộc lưu ở trình duyệt; muốn ôn lặp lại ngắt quãng có lịch thì "Lưu vào Thư viện của tôi". *@
+<div class="modal fade" id="study-modal" tabindex="-1" aria-labelledby="study-title" aria-hidden="true" data-topic="@Model.Category/@Model.Topic">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="study-title">Ôn tập bộ thẻ: @Model.Topic</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+        <div class="modal-body">
+            <div class="study-progress"><span>Tiến trình học tập</span><span data-study-count></span></div>
+            <div class="study-bar" aria-hidden="true"><span data-study-bar></span></div>
+            <button type="button" class="study-card" data-study-card aria-live="polite">
+                <span class="set-card-tag">@Model.CategoryName · @Model.Topic</span>
+                <strong class="study-front" data-study-front></strong>
+                <span class="study-back" data-study-back hidden></span>
+                <small class="study-example" data-study-example hidden></small>
+                <small class="study-hint" data-study-hint><icon name="repeat-2" />Nhấp để lật xem đáp án</small>
+            </button>
+            <div class="study-rate" data-study-rate hidden>
+                <button type="button" class="btn btn-outline-danger" data-rate="0"><icon name="x" />Chưa thuộc</button>
+                <button type="button" class="btn btn-outline-success" data-rate="1"><icon name="check" />Đã thuộc</button>
+            </div>
+            <div class="study-nav">
+                <button type="button" class="btn btn-secondary btn-sm" data-step="-1" aria-label="Thẻ trước"><icon name="chevron-right" class="b-back-icon" /></button>
+                <span class="study-known" data-study-known></span>
+                <button type="button" class="btn btn-secondary btn-sm" data-step="1" aria-label="Thẻ sau"><icon name="chevron-right" /></button>
+            </div>
+        </div>
+    </div></div>
+</div>
+@section Scripts { <script src="~/js/vocab-study.js" asp-append-version="true"></script> }

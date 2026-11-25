@@ -1,0 +1,18 @@
+@model Attempt
+@if (Model.MonitorScreen)
+{
+    var about = (ScreenLeave l) => l.ReportedOffline ? "khoảng " : "";
+    <h2 class="h5 mt-3">Nhật ký rời màn hình</h2>
+    <p>@ScreenMonitoringRules.EndText(Model)</p>
+    <div class="table-responsive"><table class="table table-sm">
+        <thead><tr><th>Việc được ghi nhận</th><th>Bắt đầu</th><th>Quay lại</th><th>Thời gian</th><th>Tính vào số lần</th></tr></thead>
+        <tbody>@foreach (var leave in Model.ScreenLeaves.OrderBy(l => l.StartedAt))
+        {
+            <tr><td>@ScreenMonitoringRules.KindText(leave.Kind)@if (leave.ReportedOffline) { <strong> trong lúc mất mạng</strong> }</td><td>@about(leave)@VnTime.Format(leave.StartedAt)</td><td>@(leave.EndedAt == null ? "Chưa quay lại" : about(leave) + VnTime.Format(leave.EndedAt))</td><td>@about(leave)@DisplayText.Duration(leave.DurationSeconds)</td><td>@(leave.Counted ? "Có" : "Không")</td></tr>
+        }</tbody>
+    </table></div>
+    @if (Model.ScreenLeaves.Any(l => l.ReportedOffline))
+    {
+        <p class="small text-muted">"Trong lúc mất mạng" nghĩa là máy học viên không có Internet khi rời màn hình. Có mạng lại, hệ thống mới nhận được nên thời gian trên chỉ là khoảng.</p>
+    }
+}

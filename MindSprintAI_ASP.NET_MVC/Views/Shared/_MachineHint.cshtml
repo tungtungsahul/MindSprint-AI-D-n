@@ -1,0 +1,4 @@
+<form id="machine-hint" method="post" action="@Url.Action("Light", "DeviceSignals")" hidden>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="signalsJson" value="" />
+</form>

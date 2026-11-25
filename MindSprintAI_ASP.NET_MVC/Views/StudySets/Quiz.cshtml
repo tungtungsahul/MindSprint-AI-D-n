@@ -1,0 +1,243 @@
+@model QuizEditorModel
+@{
+    var quiz = Model.Quiz;
+    var form = Model.Form;
+    var locked = Model.HasAttempts;
+    ViewData["Title"] = quiz.Title;
+}
+<div class="c-editor">
+<header class="c-editor-head">
+    <a class="btn" asp-action="Details" asp-route-id="@quiz.StudySetId"><icon name="chevron-right" class="b-back-icon" />Quay lại chi tiết bộ học</a>
+    <a class="btn" asp-action="Details" asp-route-id="@quiz.StudySetId"><icon name="eye" />Xem trước</a>
+    @if (form.QuestionId != null || !Model.WasAssigned) { <button type="submit" form="question-form" class="btn btn-primary">Lưu</button> }
+    else { <a class="btn btn-primary" asp-action="Details" asp-route-id="@quiz.StudySetId">Xong</a> }
+</header>
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+    <li class="breadcrumb-item"><a asp-action="Index">Bộ học</a></li>
+    <li class="breadcrumb-item">@quiz.StudySet.Title</li>
+    <li class="breadcrumb-item active">@quiz.Title</li>
+</ol></nav>
+@if (quiz.StudySet.HiddenByAdminAt != null) { <p class="alert alert-warning">Bộ học bị quản trị viên ẩn. Lý do: @quiz.StudySet.HiddenReason<br />Quiz này không giao bài mới được nữa. Nếu bạn đã sửa nội dung hoặc thấy việc ẩn là nhầm, hãy <a asp-action="Details" asp-route-id="@quiz.StudySetId">gửi yêu cầu xem xét lại</a>.</p> }
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <h1 class="h3 mb-0">@quiz.Title</h1>
+    <span class="badge fs-6 me-auto @(quiz.Status == QuizStatus.Ready ? "bg-success" : "bg-secondary")">
+        @(quiz.Status == QuizStatus.Ready ? "Sẵn sàng giao" : "Nháp")
+    </span>
+    <a class="btn btn-outline-secondary" asp-controller="Flashcards" asp-action="Editor" asp-route-id="@quiz.StudySetId"><icon name="layers" />Soạn thẻ ghi nhớ</a>
+    @if (!Model.WasAssigned) { <a class="btn btn-outline-primary" asp-controller="Import" asp-action="Index" asp-route-id="@quiz.Id"><icon name="upload" />Nhập câu hỏi từ Excel</a> }
+    @if (quiz.Status == QuizStatus.Draft)
+    {
+        <form method="post" asp-action="MarkReady"><input type="hidden" name="quizId" value="@quiz.Id" />
+            <button class="btn btn-success">Sẵn sàng giao</button></form>
+        <form method="post" asp-action="DeleteQuiz" data-confirm="Xóa quiz này?"><input type="hidden" name="quizId" value="@quiz.Id" />
+            <button class="btn btn-outline-danger"><icon name="trash-2" />Xóa quiz</button></form>
+    }
+    else if (!Model.WasAssigned)
+    {
+        <form method="post" asp-action="MarkDraft"><input type="hidden" name="quizId" value="@quiz.Id" />
+            <button class="btn btn-outline-secondary">Chuyển về Nháp</button></form>
+    }
+    @if (quiz.Status != QuizStatus.Draft && !Model.HasAttempts)
+    {
+        <form method="post" asp-action="DeleteQuiz" data-confirm="Chuyển quiz vào thùng rác? Quiz từng giao chỉ được lưu trữ.">
+            <input type="hidden" name="quizId" value="@quiz.Id" /><button class="btn btn-outline-danger"><icon name="trash-2" />Xóa quiz</button>
+        </form>
+    }
+</div>
+
+@if (locked)
+{
+    <div class="alert alert-warning">@QuestionEditRules.StructureBlocked</div>
+}
+
+@if (Model.Usage.Count > 0)
+{
+    <details class="alert alert-info c-quiz-usage" role="status">
+        <summary class="text-primary">Quiz này đang dùng ở @Model.Usage.Count bài giao · xem và chấm lại</summary>
+        <ul class="mb-0 mt-2">@foreach (var usage in Model.Usage) { <li>@usage.Title · @(usage.Classroom ?? "Không qua lớp") · giao lúc @VnTime.Format(usage.CreatedAt)
+            <a asp-controller="Assignments" asp-action="Regrade" asp-route-id="@usage.Id">Chấm lại câu này</a></li> }</ul>
+    </details>
+}
+else if (Model.WasAssigned)
+{
+    <div class="alert alert-info">Quiz đã được giao: sửa được câu, nhưng không thêm, xóa hay đổi thứ tự câu.</div>
+}
+
+<p class="c-editor-summary">@quiz.Questions.Count(q => q.DeletedAt == null) câu · @quiz.Questions.Where(q => q.DeletedAt == null).Sum(q => q.Points).ToString("0.##") điểm
+@if (quiz.Questions.Count > 0 && quiz.Questions.All(q => q.TimeLimitSeconds != null)) { <span> · @quiz.Questions.Sum(q => q.TimeLimitSeconds) giây</span> }</p>
+@if (!Model.WasAssigned) { <p><a class="btn btn-primary" asp-action="Quiz" asp-route-id="@quiz.Id" asp-fragment="editor"><icon name="plus" />Thêm câu hỏi</a></p> }
+<ol class="c-question-list c-editor-list mb-4">
+    @foreach (var q in quiz.Questions.Where(q => q.DeletedAt == null))
+    {
+        <li class="c-question-card">
+            <span class="c-question-meta">@((q.OrderIndex + 1).ToString("00")) · @DisplayText.Of(q.Type)</span>
+            <div class="d-flex flex-wrap gap-2">
+                <div class="me-auto c-editor-question">
+                    <span class="badge bg-body-tertiary text-body border">@(SurveyRules.IsSurvey(q.Type) ? "Không chấm điểm" : q.Points.ToString("0.##") + " điểm")</span>
+                    @if (q.IsRequired) { <span class="badge bg-warning text-body">Bắt buộc trả lời</span> }
+                    @if (q.TimeLimitSeconds != null) { <span class="badge bg-body-tertiary text-body border">Giờ riêng: @q.TimeLimitSeconds giây</span> }
+                    <div class="mt-1 c-question-prompt">@q.Prompt</div>
+                    <partial name="_QuestionAnswers" model="q" />
+                </div>
+                    <div class="d-flex gap-1 align-items-start c-editor-actions">
+                        <a class="btn btn-sm btn-outline-primary" asp-action="Quiz" asp-route-id="@quiz.Id" asp-route-editId="@q.Id" asp-fragment="editor" aria-label="Sửa câu hỏi" title="Sửa câu hỏi"><icon name="pencil" /><span class="visually-hidden">Sửa</span></a>
+                        @if (!Model.WasAssigned)
+                        {
+                            <form method="post" asp-action="MoveQuestion"><input type="hidden" name="quizId" value="@quiz.Id" /><input type="hidden" name="questionId" value="@q.Id" /><input type="hidden" name="direction" value="-1" />
+                                <button class="btn btn-sm btn-outline-secondary" aria-label="Đưa lên" title="Đưa lên"><icon name="chevron-down" class="c-move-up" /></button></form>
+                            <form method="post" asp-action="MoveQuestion"><input type="hidden" name="quizId" value="@quiz.Id" /><input type="hidden" name="questionId" value="@q.Id" /><input type="hidden" name="direction" value="1" />
+                                <button class="btn btn-sm btn-outline-secondary" aria-label="Đưa xuống" title="Đưa xuống"><icon name="chevron-down" /></button></form>
+                            <form method="post" asp-action="DeleteQuestion" data-confirm="Xóa câu này?"><input type="hidden" name="quizId" value="@quiz.Id" /><input type="hidden" name="questionId" value="@q.Id" />
+                                <button class="btn btn-sm btn-outline-danger" aria-label="Xóa câu hỏi" title="Xóa câu hỏi"><icon name="trash-2" /><span class="visually-hidden">Xóa</span></button></form>
+                        }
+                    </div>
+            </div>
+        </li>
+    }
+</ol>
+@if (!Model.WasAssigned && quiz.Questions.Any(q => q.DeletedAt == null)) { <p><a class="btn btn-outline-primary" asp-action="Quiz" asp-route-id="@quiz.Id" asp-fragment="editor"><icon name="plus" />Thêm câu hỏi</a></p> }
+
+@if (form.QuestionId != null || !Model.WasAssigned)
+{
+    <div class="card" id="editor">
+        <div class="card-header fw-bold">@(form.QuestionId == null ? "Thêm câu hỏi" : "Sửa câu hỏi")</div>
+        <div class="card-body">
+            <form method="post" asp-action="SaveQuestion" id="question-form"
+                  data-question-presets="@System.Text.Json.JsonSerializer.Serialize(Model.Presets)"
+                  data-new-question="@(form.QuestionId == null ? "true" : "false")">
+                <input type="hidden" name="QuizId" value="@form.QuizId" />
+                <input type="hidden" name="QuestionId" value="@form.QuestionId" />
+                <input type="hidden" name="Version" value="@form.Version" />
+                <div class="row g-3">
+                    @if (form.QuestionId != null)
+                    {
+                        <div class="col-12">
+                            <label class="form-label" for="EditKind">Kiểu sửa</label>
+                            @{ var postedKind = ViewData.ModelState.ContainsKey("EditKind") ? (int?)form.EditKind : null; }
+                            <select class="form-select" id="EditKind" name="EditKind" required>
+                                <option value="">Chọn cách lưu</option>
+                                <option value="1" selected="@(postedKind == 1)">Sửa nhỏ (không đổi nghĩa/đáp án)</option>
+                                <option value="2" selected="@(postedKind == 2)">Sửa nội dung/đáp án</option>
+                            </select>
+                            <div class="form-text">Sửa nhỏ: chỉ sửa chữ, câu trả lời của học viên giữ nguyên. Sửa nội dung/đáp án: học viên đang làm mà đã trả lời câu này sẽ phải trả lời lại; bài đã nộp giữ điểm cũ.</div>
+                        </div>
+                        @if (Model.Usage.Any(u => u.RunningTest))
+                        {
+                            <div class="col-sm-6">
+                                <label class="form-label" for="ExtraSessionMinutes">Cộng thêm thời gian cho cả phiên (phút, mặc định 0)</label>
+                                <input class="form-control" id="ExtraSessionMinutes" name="ExtraSessionMinutes" type="number" min="0" value="0" />
+                                <div class="form-text">Chỉ áp dụng khi sửa nội dung/đáp án, cho mọi phiên Kiểm tra đang chạy dùng quiz này.</div>
+                            </div>
+                        }
+                    }
+                    <div class="col-sm-6">
+                        <label class="form-label" for="Type">Dạng câu</label>
+                        <select class="form-select" id="Type" name="Type">
+                            <option value="@((int)QuestionType.SingleChoice)" selected="@(form.Type == QuestionType.SingleChoice)">Chọn một (1 đáp án đúng)</option>
+                            <option value="@((int)QuestionType.MultipleChoice)" selected="@(form.Type == QuestionType.MultipleChoice)">Chọn nhiều (≥ 1 đáp án đúng)</option>
+                            <option value="3" selected="@(form.Type == QuestionType.TextInput)">Điền chữ</option>
+                            <option value="4" selected="@(form.Type == QuestionType.NumberInput)">Điền số</option>
+                            <option value="11" selected="@(form.Type == QuestionType.SurveySingle)">Khảo sát chọn một</option>
+                            <option value="12" selected="@(form.Type == QuestionType.SurveyMultiple)">Khảo sát chọn nhiều</option>
+                            <option value="13" selected="@(form.Type == QuestionType.SurveyText)">Khảo sát ý kiến</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6" data-points-field>
+                        <label class="form-label" for="Points">Điểm</label>
+                        <input class="form-control" id="Points" name="Points" type="number" step="0.0001" min="0.0001" value="@form.Points.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)" required />
+                    </div>
+                    <div class="col-12" data-survey-field>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="IsRequired" id="IsRequired" value="true" checked="@form.IsRequired" /><label class="form-check-label" for="IsRequired">Bắt buộc trả lời</label></div>
+                        <p class="small text-muted">Khảo sát không có đáp án đúng và không có điểm. Ý kiến tối đa 500 ký tự. Chưa hỗ trợ nhập khảo sát từ Excel.</p>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" for="TimeLimitSeconds">Giờ riêng (giây)</label>
+                        <input class="form-control" id="TimeLimitSeconds" name="TimeLimitSeconds" type="number" min="5" max="3600" step="1" value="@form.TimeLimitSeconds" aria-describedby="timer-help" />
+                        <div class="form-text" id="timer-help">Để trống = không giới hạn; từ 5 đến 3600 giây.</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="Prompt">Nội dung câu hỏi</label>
+                        <textarea class="form-control" id="Prompt" name="Prompt" rows="3" required>@form.Prompt</textarea>
+                    </div>
+                    <div class="col-12" data-choice-field>
+                        <label class="form-label">Các lựa chọn (2–6 lựa chọn; câu chấm điểm cần tick đáp án đúng)</label>
+                        <div id="options">
+                            @for (var i = 0; i < form.Options.Count; i++)
+                            {
+                                <div class="input-group mb-2 option-row">
+                                    <label class="form-label option-label" for="option-text-@i">Lựa chọn @(i + 1)</label>
+                                    <div class="input-group-text">
+                                        <label class="small me-2 correct-label" for="option-correct-@i">Đáp án đúng</label>
+                                        <input id="option-correct-@i" class="form-check-input mt-0 correct" type="checkbox" name="Options[@i].IsCorrect" value="true" checked="@form.Options[i].IsCorrect" aria-label="Đáp án đúng" />
+                                    </div>
+                                    <input id="option-text-@i" class="form-control option-text" name="Options[@i].Text" value="@form.Options[i].Text" placeholder="Lựa chọn @(i + 1)" />
+                                    <button type="button" class="btn btn-outline-secondary remove-option" aria-label="Bỏ lựa chọn" title="Bỏ lựa chọn"><icon name="x" /></button>
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" id="add-option">+ Thêm lựa chọn</button>
+                    </div>
+                    <div class="col-12 form-check ms-1" data-choice-field>
+                        <input class="form-check-input" type="checkbox" id="KeepOptionOrder" name="KeepOptionOrder" value="true" checked="@form.KeepOptionOrder" />
+                        <label class="form-check-label" for="KeepOptionOrder">Giữ nguyên thứ tự lựa chọn (cho câu có "Cả A và B", "Tất cả các đáp án trên")</label>
+                    </div>
+                    <div class="col-12" data-text-field>
+                        <label class="form-label">Các chỗ trống trong câu (1–5 ô)</label>
+                        <p class="small text-muted mb-2">Mỗi ô là một chỗ trống học viên phải điền. Nếu chấp nhận nhiều cách viết, ngăn bằng dấu | (ví dụ: Hà Nội|Hanoi).</p>
+                        <div id="blanks">
+                            @for (var i = 0; i < form.BlankAnswers.Count; i++)
+                            {
+                                <div class="input-group mb-2 blank-row">
+                                    <label class="input-group-text blank-label" for="blank-answer-@i">Ô @(i + 1)</label>
+                                    <input id="blank-answer-@i" class="form-control blank-answer" name="BlankAnswers[@i]" value="@form.BlankAnswers[i]" aria-label="Đáp án ô @(i + 1)" />
+                                    <button class="btn btn-outline-secondary remove-blank" type="button" aria-label="Bỏ ô" title="Bỏ ô"><icon name="x" /></button>
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" id="add-blank">+ Thêm ô</button>
+                        @foreach (var setting in new[] { ("CaseSensitive", "Phân biệt hoa thường", form.CaseSensitive), ("AcceptNoDiacritics", "Chấp nhận không dấu", form.AcceptNoDiacritics), ("IgnorePunctuation", "Bỏ qua dấu câu", form.IgnorePunctuation), ("AcceptAnyBlankOrder", "Chấp nhận đổi thứ tự ô", form.AcceptAnyBlankOrder) })
+                        {
+                            <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="@setting.Item1" name="@setting.Item1" value="true" checked="@setting.Item3" /><label class="form-check-label" for="@setting.Item1">@setting.Item2</label></div>
+                        }
+                        <p class="small text-warning mt-2">Bật không dấu thì 'ba', 'bà', 'bá' được coi là giống nhau</p>
+                        <label class="form-label" for="BlankScoring">Chấm điểm</label>
+                        <select class="form-select" name="BlankScoring" id="BlankScoring">
+                            <option value="1" selected="@(form.BlankScoring == BlankScoring.AllOrNothing)">Đúng hết mới có điểm</option>
+                            <option value="2" selected="@(form.BlankScoring == BlankScoring.PerBlank)">Chia đều theo ô</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6" data-number-field><label class="form-label" for="NumberAnswer">Đáp án số</label><input class="form-control" id="NumberAnswer" name="NumberAnswer" inputmode="decimal" value="@form.NumberAnswer" /></div>
+                    <div class="col-sm-6" data-number-field><label class="form-label" for="NumberTolerance">Chênh lệch cho phép (dung sai)</label><input class="form-control" id="NumberTolerance" name="NumberTolerance" inputmode="decimal" value="@(form.NumberTolerance ?? "0")" aria-describedby="tolerance-help" /><div id="tolerance-help" class="form-text">0 là phải đúng tuyệt đối. Ví dụ đáp án 10, dung sai 0,5: nhập từ 9,5 đến 10,5 đều đúng.</div></div>
+                    <div class="col-12">
+                        <label class="form-label" for="Explanation">Giải thích (hiện sau khi học viên trả lời)</label>
+                        <textarea class="form-control" id="Explanation" name="Explanation" rows="2">@form.Explanation</textarea>
+                    </div>
+                    <div class="col-12 text-danger small" id="form-error" role="alert"></div>
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-primary">Lưu câu hỏi</button>
+                        @if (form.QuestionId != null)
+                        {
+                            <a class="btn btn-outline-secondary" asp-action="Quiz" asp-route-id="@quiz.Id">Hủy sửa</a>
+                        }
+                    </div>
+                </div>
+            </form>
+            @if (form.QuestionId == null)
+            {
+                <form method="post" asp-action="ResetQuestionPreset" class="mt-3">
+                    <input type="hidden" name="quizId" value="@quiz.Id" />
+                    <input type="hidden" name="type" id="reset-question-type" value="@((int)form.Type)" />
+                    <button class="btn btn-outline-secondary">Đặt lại cài đặt mặc định</button>
+                    <span class="small text-muted">Chỉ đặt lại dạng câu đang chọn. Các ô bạn vừa nhập trên trang sẽ mất. Cài đặt được nhớ sau khi thêm câu thành công.</span>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+</div>
+@section Scripts {
+    <script src="~/js/setting-presets.js" asp-append-version="true"></script>
+    <script src="~/js/quiz-editor.js" asp-append-version="true"></script>
+}

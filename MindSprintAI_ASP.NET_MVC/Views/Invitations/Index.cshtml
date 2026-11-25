@@ -1,0 +1,50 @@
+@model InvitationPage
+@{ ViewData["Title"] = "Lời mời"; }
+<a class="btn btn-sm b-back" href="@BackLink.Url(Context.Request, Url.Action("Index", "Account")!)"><icon name="chevron-right" class="b-back-icon" />Quay lại trang trước</a>
+<h1 class="h3">Lời mời</h1>
+<p>Lời mời chỉ hiện khi bạn đăng nhập bằng đúng email được mời và email đó đã được xác minh. Mỗi lời mời có hạn 7 ngày (giờ Việt Nam).</p>
+<h2 class="h5">Lời mời dành cho tôi</h2>
+@if (Model.Received.Count == 0)
+{
+    @* Người mở email lời mời nhưng đăng nhập sai tài khoản chỉ thấy danh sách trống: nói rõ đang tìm theo email nào. *@
+    <div class="text-muted mb-3">
+        @if (!Model.EmailConfirmed) { <p class="mb-1">Email của bạn (<b>@Model.Email</b>) chưa được xác minh, nên lời mời gửi tới email này chưa hiện. Hãy mở thư xác minh trong hộp thư rồi quay lại trang này.</p> }
+        else { <p class="mb-1">Không có lời mời nào đang chờ gửi tới <b>@Model.Email</b>.</p> }
+        <p class="mb-0">Nếu bạn được mời bằng một email khác, hãy đăng xuất rồi đăng nhập (hoặc đăng ký) bằng đúng email đó.</p>
+    </div>
+}
+<ul class="list-group mb-4">
+@foreach (var i in Model.Received)
+{
+    <li class="list-group-item text-break">
+        <h3 class="h6">@i.Classroom.Name · @(i.Kind == InvitationKind.Assistant ? "Giảng viên phụ" : "Chuyển lớp")</h3>
+        <p class="small">Hạn @VnTime.Format(i.ExpiresAt) (giờ Việt Nam)</p>
+        @if (i.Kind == InvitationKind.Transfer) { <p>Nhận lớp sẽ nhân bản bộ học sang tài khoản của bạn; bài giao và kết quả được giữ nguyên.</p> }
+        <div class="d-flex flex-wrap gap-2">
+            <form method="post" asp-action="@(i.Kind == InvitationKind.Assistant ? "Assistant" : "Transfer")" data-action="@(i.Kind == InvitationKind.Assistant ? "Assistant" : "Transfer")"
+                  data-confirm="@(i.Kind == InvitationKind.Transfer ? $"Nhận lớp {i.Classroom.Name}? Bạn sẽ thành giảng viên chính và các bộ học của lớp được nhân bản sang tài khoản của bạn." : null)">
+                <input type="hidden" name="id" value="@i.Id" /><input type="hidden" name="accept" value="true" />
+                <button class="btn btn-primary">Chấp nhận<span class="visually-hidden"> lời mời lớp @i.Classroom.Name</span></button>
+            </form>
+            <form method="post" asp-action="@(i.Kind == InvitationKind.Assistant ? "Assistant" : "Transfer")" data-action="@(i.Kind == InvitationKind.Assistant ? "Assistant" : "Transfer")" data-confirm="Từ chối lời mời của lớp @i.Classroom.Name?">
+                <input type="hidden" name="id" value="@i.Id" /><input type="hidden" name="accept" value="false" />
+                <button class="btn btn-outline-danger">Từ chối<span class="visually-hidden"> lời mời lớp @i.Classroom.Name</span></button>
+            </form>
+        </div>
+    </li>
+}
+</ul>
+<h2 class="h5">Lời mời tôi đã gửi</h2>
+@if (Model.Sent.Count == 0) { <p class="text-muted">Bạn chưa gửi lời mời nào đang chờ người nhận trả lời.</p> }
+<ul class="list-group">
+@foreach (var i in Model.Sent)
+{
+    <li class="list-group-item text-break">
+        <p>@i.Classroom.Name · @i.Email · @(i.Kind == InvitationKind.Assistant ? "Giảng viên phụ" : "Chuyển lớp")</p>
+        <p class="small">Hạn @VnTime.Format(i.ExpiresAt) (giờ Việt Nam)</p>
+        <form method="post" asp-action="Revoke" data-action="Revoke" data-confirm="Thu hồi lời mời gửi tới @i.Email? Người nhận sẽ không chấp nhận được nữa."><input type="hidden" name="id" value="@i.Id" />
+            <button class="btn btn-sm btn-outline-danger">Thu hồi<span class="visually-hidden"> lời mời lớp @i.Classroom.Name</span></button>
+        </form>
+    </li>
+}
+</ul>

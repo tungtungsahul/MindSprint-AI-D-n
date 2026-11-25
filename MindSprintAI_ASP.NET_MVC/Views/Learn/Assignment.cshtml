@@ -1,0 +1,178 @@
+@model LearnerAssignmentModel
+@{
+    var a = Model.Assignment;
+    ViewData["Title"] = a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ";
+    var open = Model.Attempts.FirstOrDefault(x => x.Kind != AttemptKind.SelfReview && AttemptRules.IsOpen(x));
+    var ended = Model.Attempts.Where(x => x.Status == AttemptStatus.Ended).ToList();
+    var picked = Model.Score;
+}
+<div class="b-learner">
+@if (!GuestAccess.IsGuest(User)) { <a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Luyện tập</a> }
+<header class="b-learner-head">
+    <h1 class="mindsprint-title">@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</h1>
+    <div class="b-actions mb-3"><span class="badge bg-info">@DisplayText.Of(a.Mode)</span><span>@DisplayText.Of(a.Form)</span>@if (a.Classroom != null) { <span>· @a.Classroom.Name</span> }</div>
+    <dl class="b-assignment-facts">
+        @if (a.Mode == AssignmentMode.Test)
+        {
+            <div><dt><icon name="timer" /> Thời lượng</dt><dd>@a.DurationMinutes phút</dd></div>
+            <div><dt><icon name="clock" /> Kết thúc</dt><dd>@(a.TestEndsAt == null ? "Chờ giảng viên bắt đầu" : VnTime.Format(a.TestEndsAt))</dd></div>
+            <div><dt><icon name="repeat-2" /> Số lượt</dt><dd>Lượt đầu và tối đa 1 lượt làm lại được duyệt</dd></div>
+        }
+        else
+        {
+            <div><dt><icon name="calendar" /> Hạn của bạn</dt><dd>@(Model.PersonalDeadline == null ? "Không có hạn" : VnTime.Format(Model.PersonalDeadline))</dd></div>
+            @if (Model.CannotStartReason != "Giảng viên đã từ chối yêu cầu tham gia.")
+            {
+                <div><dt><icon name="repeat-2" /> Lượt làm bài</dt><dd>Số lượt còn lại: @(Model.RemainingAttempts?.ToString() ?? "Không giới hạn")</dd></div>
+            }
+            <div><dt><icon name="list-checks" /> Cách lấy điểm</dt><dd>@DisplayText.Of(a.ScoreSelection)</dd></div>
+        }
+    </dl>
+</header>
+@if (!GuestAccess.IsGuest(User) && a.Form != AssignmentForm.Document)   @* bài theo đề không có câu hỏi cho trợ lý AI *@
+{
+    <partial name="_AiAssistant" model="@(new AiPanelModel(a.Id))" />
+}
+@if (Model.HiddenContentNotice != null) { <p class="alert alert-warning" role="status">@Model.HiddenContentNotice</p> }
+@if (!GuestAccess.IsGuest(User) && a.Form != AssignmentForm.Document)   @* bài theo đề không có câu hỏi cho trợ lý AI *@
+{
+<div class="d-flex flex-wrap gap-3 mb-2 b-learner-links">
+    @if (a.QuizId != null) { <a asp-controller="Reports" asp-action="Create" asp-route-targetType="Quiz" asp-route-targetId="@a.QuizId" asp-route-assignmentId="@a.Id"><icon name="flag" />Báo lỗi bài này</a> }
+    @if ((a.StudySetId ?? a.Quiz?.StudySetId) is { } setId) { <a asp-controller="Reports" asp-action="Create" asp-route-targetType="StudySet" asp-route-targetId="@setId" asp-route-assignmentId="@a.Id"><icon name="flag" />Báo lỗi bộ học</a> }
+    @if (a.ClassroomId != null && Model.IsClassMember) { <a asp-controller="Classrooms" asp-action="Members" asp-route-id="@a.ClassroomId">Thành viên lớp</a> }
+</div>
+}
+@if (Model.Cards != null)
+{
+    <div class="card card-body mb-3">
+        <h2 class="h5"><icon name="layers" /> Phần thẻ · @DisplayText.Of(a.Form) · Bắt buộc: @DisplayText.Of(a.RequiredParts)</h2>
+        <p>@Model.Cards.ProgressLabel</p>
+        @if (Model.Cards.DueCount is { } dueCount) { <p role="status">Hôm nay có @dueCount thẻ đến hạn ôn</p> }
+        @if (Model.Completion != null) { <p>@DisplayText.Of(Model.Completion.Value) · @Model.MissingCards</p> }
+        @foreach (var label in DisplayText.Of(Model.Labels)) { <span class="badge bg-body-tertiary text-body border">@label</span> }
+        @if (Model.CanSelfReviewCards) { <a class="btn btn-primary align-self-start" asp-controller="Flashcards" asp-action="Study" asp-route-id="@a.StudySetId" asp-route-assignmentId="@a.Id"><icon name="book-open-text" />Tự ôn thẻ ghi nhớ (không tính điểm)</a> }
+        else if (Model.CanStudyCards) { <a class="btn btn-primary align-self-start" asp-controller="Flashcards" asp-action="Study" asp-route-id="@a.StudySetId" asp-route-assignmentId="@a.Id"><icon name="book-open-text" />Học thẻ ghi nhớ / Tiếp tục</a> }
+        else { <p class="text-muted mb-0">Hiện chưa học thẻ được.</p> }
+        @if (a.Form == AssignmentForm.Combined) { <a href="#quiz-part" class="mt-2">Bỏ qua phần thẻ, làm quiz</a> }
+    </div>
+}
+<div id="quiz-part"></div>
+@if (Model.RequirementsNotice != null) { <p class="alert alert-info" role="status">@Model.RequirementsNotice</p> }
+
+@if (Model.Ungraded)
+{
+    <div class="b-score-result"><h2 class="h5 m-0">Bài này không chấm điểm</h2></div>
+}
+else if (picked != null)
+{
+    <section class="b-score-result" aria-labelledby="learner-score-title">
+        <h2 class="h5 m-0" id="learner-score-title">@(a.MasteryThreshold == null ? "Điểm của bạn" : "Điểm lần đầu")</h2>
+        <p class="b-score-value">@ScoreFormatter.Format(picked.Raw, picked.Max, a.ScoreScale, a.Rounding)</p>
+        @if (picked.CriticalText is { } criticalText) { <p class="badge bg-warning text-body text-wrap mb-0">@criticalText</p> }
+        @if (picked.Practice is { } practice) { <p class="mb-0">Điểm sau luyện: <b>@ScoreFormatter.Format(practice, picked.Max, a.ScoreScale, a.Rounding)</b></p> }
+    </section>
+}
+else if (!Model.ShowScores && ended.Count > 0)
+{
+    <div class="alert alert-info"><icon name="clock" /> Chờ giảng viên công bố điểm</div>
+}
+@if (Model.Mastery != null) { <p><b>Làm chủ:</b> @Model.Mastery</p> }
+@if (Model.Cards == null) { foreach (var label in DisplayText.Of(Model.Labels)) { <p class="badge bg-body-tertiary text-body border">@label</p> } }
+@if (Model.CanSeeSurveyResults) { <p><a asp-action="SurveyResults" asp-route-id="@a.Id">Kết quả khảo sát</a></p> }
+
+<div class="b-learner-action">
+@if (Model.Attempts.FirstOrDefault(x => x.Kind == AttemptKind.SelfReview && AttemptRules.IsOpen(x)) is { } selfReview)
+{
+    <a class="btn btn-primary mb-4" asp-action="Play" asp-route-id="@selfReview.Id"><icon name="play" />Tiếp tục tự ôn (không tính điểm)</a>
+}
+@if (Model.CanSelfReview)
+{
+    <section class="d-self-review" aria-label="Tự ôn lại">
+        <p>Bài đã hết hạn. Bạn vẫn ôn lại được; lượt ôn này không tính điểm.</p>
+        @if (a.Form != AssignmentForm.FlashcardOnly)
+        {
+            <form method="post" asp-action="SelfReview" asp-route-id="@a.Id">
+                <button class="btn btn-primary"><icon name="repeat-2" />Tự ôn quiz (không tính điểm)</button>
+            </form>
+        }
+    </section>
+}
+@if (open != null)
+{
+    <a class="btn btn-primary btn-lg mb-4" asp-action="Play" asp-route-id="@open.Id"><icon name="play" />Tiếp tục lượt @open.AttemptNumber</a>
+}
+else if (Model.CanStart)
+{
+    @* Bài kiểm tra tính giờ ngay khi bấm nên hỏi lại; bài ôn tập vào luôn. *@
+    <form method="post" asp-action="Start" asp-route-id="@a.Id" class="mb-4"
+          data-confirm="@(a.Mode == AssignmentMode.Test ? $"Bắt đầu bài kiểm tra? Đồng hồ{(a.DurationMinutes is { } minutes ? $" {minutes} phút" : "")} sẽ chạy ngay khi bạn bấm Đồng ý." : null)">
+        @if (Model.PersonalDeadline != null)
+        {
+            <p class="small text-muted mb-2">Lượt sẽ tự kết thúc lúc <b>@VnTime.Format(Model.PersonalDeadline)</b> nếu bạn chưa nộp; câu chưa làm được 0 điểm.</p>
+        }
+        <button class="btn btn-primary btn-lg"><icon name="play" />@(Model.Attempts.Count == 0 ? "Bắt đầu làm bài" : "Làm lượt mới")</button>
+    </form>
+}
+else if (a.Form != AssignmentForm.FlashcardOnly)
+{
+    <div class="alert alert-secondary">@Model.CannotStartReason</div>
+}
+
+</div>
+
+@if (ended.Count > 0)
+{
+    <h2 class="h4 b-history-title">Các lượt đã làm <span class="b-count">@ended.Count</span></h2>
+    <div class="table-responsive"><table class="table table-sm b-attempt-table">
+        <thead><tr><th scope="col">Lượt</th><th scope="col">Bắt đầu</th><th scope="col">Kết thúc</th><th scope="col">@(a.MasteryThreshold == null ? "Điểm" : "Điểm lần đầu")</th>@if (a.ScoreRetries) { <th scope="col">Điểm sau luyện</th> }@if (a.MasteryThreshold != null) { <th scope="col">Làm chủ</th> }<th scope="col">Xem bài</th></tr></thead>
+        <tbody>
+        @foreach (var x in ended)
+        {
+            <tr>
+                <td data-label="Lượt">@x.AttemptNumber · @DisplayText.Of(x.Kind)
+                    @if (x.MadeAsGuest) { <span class="badge bg-body-tertiary text-body border">Làm khi là khách</span> }
+                    @if (x.ExcludeFromGradebook) { <span class="small">Lượt này không được tính vào bảng điểm</span> }
+                </td>
+                <td data-label="Bắt đầu">@VnTime.Format(x.StartedAt)</td>
+                <td data-label="Kết thúc">@ScreenMonitoringRules.EndText(x)</td>
+                <td data-label="@(a.MasteryThreshold == null ? "Điểm" : "Điểm lần đầu")">@(Model.Ungraded ? "Không chấm điểm" : Model.ShowScores ? ScoreFormatter.Format(x.FirstScore, x.MaxScore, a.ScoreScale, a.Rounding) : "Chờ công bố")
+                    @if (Model.AttemptCriticalTexts.GetValueOrDefault(x.Id) is { } attemptCriticalText) { <span class="badge bg-warning text-body text-wrap">@attemptCriticalText</span> }
+                </td>
+                @if (a.ScoreRetries) { <td data-label="Điểm sau luyện">@(x.PracticeScore is { } practice ? ScoreFormatter.Format(practice, x.MaxScore, a.ScoreScale, a.Rounding) : "—")</td> }
+                @if (a.MasteryThreshold != null) { <td data-label="Làm chủ">@Model.AttemptMastery.GetValueOrDefault(x.Id)</td> }
+                <td data-label="Xem bài"><a asp-action="Review" asp-route-id="@x.Id"><icon name="eye" /> Xem lại</a></td>
+            </tr>
+        }
+        </tbody>
+    </table></div>
+}
+
+@if (Model.CanRequestRetake)
+{
+    <form method="post" asp-action="RequestRetake" asp-route-id="@a.Id" class="card card-body mb-3 b-retake-form">
+        <label class="form-label" for="retake-reason">Lý do xin làm lại</label>
+        <textarea id="retake-reason" name="reason" class="form-control mb-2" required>@ViewData["RetakeReason"]</textarea>
+        <button class="btn btn-outline-primary align-self-start"><icon name="repeat-2" />Xin làm lại</button>
+    </form>
+}
+@foreach (var r in Model.RetakeRequests)
+{
+    <div class="card card-body mb-2">
+        <b>@DisplayText.Of(r.Status)</b>
+        <p class="mb-1">@r.Reason</p>
+        @if (r.Status == RetakeRequestStatus.Expired) { <p class="mb-1">Được làm lại nhưng không làm (điểm cũ được giữ)</p> }
+        @if (r.WindowStartsAt != null)
+        {
+            <p class="small">Thời gian được làm lại: @VnTime.Format(r.WindowStartsAt) → @VnTime.Format(r.WindowEndsAt)</p>
+        }
+        @if (r.Status == RetakeRequestStatus.Approved && Model.HiddenContentNotice == null)
+        {
+            <form method="post" asp-action="StartRetake" asp-route-id="@r.Id" data-confirm="Bắt đầu làm lại? Điểm cũ của bài kiểm tra bị hủy ngay khi bạn bắt đầu, bảng điểm sẽ dùng lượt làm lại này.">
+                <button class="btn btn-primary"><icon name="play" />Bắt đầu làm lại</button>
+            </form>
+        }
+    </div>
+}
+</div>
+@if (ViewData["Ranking"] is Leaderboard ranking) { <partial name="_Leaderboard" model="@((ranking, "Xếp hạng bài này", false))" /> }
+@section Scripts { <script src="~/js/ai-assistant.js" asp-append-version="true"></script> }

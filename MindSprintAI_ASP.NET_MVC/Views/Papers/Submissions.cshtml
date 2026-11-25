@@ -1,0 +1,34 @@
+@model Assignment
+@{
+    var rows = (List<PaperRow>)ViewData["Rows"]!;
+    ViewData["Title"] = "Bài nộp — " + Model.PaperTitle;
+    var submitted = rows.Where(r => r.Status == AttemptStatus.Ended).ToList();
+    var ungraded = submitted.Count(r => r.Score == null);
+}
+<a class="btn btn-sm b-back" asp-controller="Assignments" asp-action="Details" asp-route-id="@Model.Id"><icon name="chevron-right" class="b-back-icon" />Quay lại bài giao</a>
+<h1 class="h4 mt-3 mb-1">Bài nộp — @Model.PaperTitle</h1>
+<p class="text-muted" role="status">@submitted.Count bài đã nộp · @ungraded bài chưa chấm@(Model.ScoresPublishedAt != null ? " · đã công bố điểm" : "")</p>
+
+@if (rows.Count == 0) { <p>Chưa có học viên nào vào bài.</p> }
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th scope="col">Học viên</th><th scope="col">Trạng thái</th><th scope="col">Bài viết</th><th scope="col">Tệp</th><th scope="col">Điểm</th><th scope="col"><span class="visually-hidden">Thao tác</span></th></tr></thead>
+            <tbody>
+            @foreach (var r in rows)
+            {
+                <tr id="bai-@r.AttemptId">
+                    <td>@r.Name @if (r.IsGuest) { <span class="badge bg-secondary">Khách</span> }</td>
+                    <td>@(r.Status switch { AttemptStatus.Ended => "Đã nộp " + VnTime.Format(r.EndedAt), AttemptStatus.InProgress or AttemptStatus.Paused => "Đang làm", null => "Chưa bắt đầu", _ => "Đã hủy" })</td>
+                    <td>@(r.TextLength == 0 ? "—" : $"{r.TextLength:N0} ký tự")</td>
+                    <td>@(r.FileCount == 0 ? "—" : r.FileCount.ToString())</td>
+                    <td>@(r.Score is { } s ? s.ToString("0.##") : r.Status == AttemptStatus.Ended ? "Chưa chấm" : "—")</td>
+                    <td>@if (r.Status == AttemptStatus.Ended && r.AttemptId is long id) { <a class="btn btn-sm @(r.Score == null ? "btn-primary" : "btn-outline-secondary")" asp-action="Grade" asp-route-id="@id">@(r.Score == null ? "Chấm" : "Xem / sửa điểm")</a> }</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+<p class="small text-muted">Chấm hết bài đã nộp rồi bấm <b>Công bố điểm</b> ở trang bài giao để cả lớp cùng thấy điểm và nhận xét.</p>

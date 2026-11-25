@@ -1,0 +1,55 @@
+@model (Leaderboard Board, string Title, bool ClassBoard)
+@* Bảng xếp hạng dùng chung (bài / lớp). Học viên: top 10 + dòng của mình; giảng viên: cả bảng, chọn số người mỗi trang (18/11). *@
+@{
+    var b = Model.Board;
+    var anchor = Model.ClassBoard ? "class-rank-title" : "assignment-rank-title";
+    string Time(TimeSpan? t) => t is not { } v ? "—" : v.TotalHours >= 1 ? $"{(int)v.TotalHours} giờ {v.Minutes} phút" : v.TotalMinutes >= 1 ? $"{(int)v.TotalMinutes} phút {v.Seconds} giây" : $"{v.Seconds} giây";
+    string Medal(int rank) => rank switch { 1 => "rank-gold", 2 => "rank-silver", 3 => "rank-bronze", _ => "" };
+    // Bảng đầy đủ của giảng viên (không có dòng "hạng của bạn" tách riêng) thì chia trang; 0 = hiện tất cả.
+    var full = b.Mine == null && b.Rows.Count == b.Count && b.Count > RankingService.TopForLearners;
+    var sizes = new[] { 10, 20, 50, 0 };
+    var size = int.TryParse(Context.Request.Query["rankSize"], out var askedSize) && sizes.Contains(askedSize) ? askedSize : 10;
+    var pages = !full || size == 0 ? 1 : (int)Math.Ceiling(b.Count / (double)size);
+    var page = int.TryParse(Context.Request.Query["rankPage"], out var askedPage) ? Math.Clamp(askedPage, 1, pages) : 1;
+    var shown = !full || size == 0 ? b.Rows : b.Rows.Skip((page - 1) * size).Take(size).ToList();
+    var keep = Context.Request.Query.Where(q => q.Key is not ("rankSize" or "rankPage")).ToList();
+    string PageUrl(int n) => PagerModel.WithQuery(Context, anchor, ("rankSize", size.ToString()), ("rankPage", n.ToString()));
+}
+<section class="leaderboard" aria-labelledby="@anchor">
+    <h2 class="section-head" id="@anchor"><span class="section-icon"><icon name="trophy" /></span>@Model.Title</h2>
+    @if (b.Hidden != null) { <p class="text-muted mb-0">@b.Hidden</p> }
+    else if (b.Count == 0) { <p class="text-muted mb-0">@(Model.ClassBoard ? "Chưa có bài nào có điểm để xếp hạng." : "Chưa có ai có điểm.")</p> }
+    else
+    {
+        <p class="small text-muted">
+            @(Model.ClassBoard ? "Trung bình % điểm các bài đã giao (bài chưa làm tính 0). Bằng điểm thì xét: làm được nhiều bài hơn → tổng thời gian làm ít hơn → nộp xong sớm hơn."
+                : "Điểm cao xếp trên; bằng điểm thì ai làm nhanh hơn, rồi ai nộp sớm hơn xếp trên.")
+            @if (!full && b.Rows.Count < b.Count) { <span> Hiện @b.Rows.Count / @b.Count người đứng đầu.</span> }
+        </p>
+        @if (full)
+        {
+            <form method="get" action="@(Context.Request.Path + "#" + anchor)" class="rank-size">
+                @foreach (var q in keep) { foreach (var v in q.Value) { <input type="hidden" name="@q.Key" value="@v" /> } }
+                <label for="@(anchor)-size">Mỗi trang</label>
+                <select id="@(anchor)-size" name="rankSize" class="form-select form-select-sm w-auto">
+                    @foreach (var n in sizes) { <option value="@n" selected="@(n == size)">@(n == 0 ? "Tất cả" : n.ToString())</option> }
+                </select>
+                <button class="btn btn-sm btn-outline-secondary">Áp dụng</button>
+                <span class="small text-muted">@(size == 0 ? $"{b.Count} người" : $"Hạng {(page - 1) * size + 1}–{Math.Min(page * size, b.Count)} trên {b.Count}")</span>
+            </form>
+        }
+        <ol class="rank-list">
+            @foreach (var r in shown.Append(b.Mine).Where(r => r != null).Select(r => r!))
+            {
+                if (b.Mine == r) { <li class="rank-gap" aria-hidden="true">…</li> }
+                <li class="rank-row @(r.Me ? "is-me" : "")">
+                    <span class="rank-no @Medal(r.Rank)" aria-label="Hạng @r.Rank">@r.Rank</span>
+                    <span class="rank-name">@r.Name@if (r.Me) { <span class="badge bg-primary ms-1">Bạn</span> }</span>
+                    <span class="rank-score">@r.Percent.ToString("0.#")%</span>
+                    <span class="rank-extra">@(Model.ClassBoard ? $"{r.Done}/{r.Total} bài" : Time(r.Time))</span>
+                </li>
+            }
+        </ol>
+        @if (full) { <partial name="_Pager" model="@(new PagerModel(page, pages, PageUrl, "Trang bảng xếp hạng"))" /> }
+    }
+</section>

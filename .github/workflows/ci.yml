@@ -1,0 +1,52 @@
+# Kiểm tra tự động trên GitHub (thay cho .github/workflows/ci-cd.yml của nhóm): mỗi lần push/PR thì
+# 1) build + chạy toàn bộ test với một SQL Server tạm (test tự tạo database MindSprintAI_Tests bằng migration thật),
+# 2) đóng gói Docker image đúng như lúc triển khai (không đẩy image đi đâu).
+# Không triển khai tự động: server cá nhân cập nhật bằng tay theo docs/TRIEN_KHAI_SERVER.md.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          # Bản Developer, chỉ sống trong lượt chạy này. ACCEPT_EULA=Y = đồng ý giấy phép SQL Server của Microsoft khi chạy.
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci_Only_Pa55w0rd!
+        ports: ["1433:1433"]
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Ci_Only_Pa55w0rd!' -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 12
+    env:
+      MINDSPRINT_TEST_DB: Server=localhost,1433;Database=MindSprintAI_Tests;User Id=sa;Password=Ci_Only_Pa55w0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore MindSprintAI_ASP.NET_MVC.slnx
+      - run: dotnet build MindSprintAI_ASP.NET_MVC.slnx --no-restore
+      - run: dotnet test MindSprintAI_ASP.NET_MVC.slnx --no-build --logger "trx;LogFileName=test.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+          if-no-files-found: ignore
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t mindsprint:ci .

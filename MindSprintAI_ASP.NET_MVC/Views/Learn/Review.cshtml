@@ -1,0 +1,100 @@
+@model Attempt
+@{
+    var questions = (List<PlayQuestion>)ViewData["Questions"]!;
+    var a = Model.Participant.Assignment;
+    ViewData["Title"] = "Xem lại bài";
+    var showScores = (bool)ViewData["ShowScores"]!;
+}
+<a class="btn btn-sm b-back" asp-action="Assignment" asp-route-id="@a.Id"><icon name="chevron-right" class="b-back-icon" />Quay lại bài này</a>
+<h1 class="h4 mt-2">Lượt @Model.AttemptNumber · @DisplayText.Of(Model.Kind)</h1>
+@if (Model.MonitorScreen)
+{
+    <p>Rời màn hình @(Model.ScreenLeaves.Count(l => l.Counted)) lần.</p>
+    var lastLeave = Model.ScreenLeaves.Where(l => ScreenMonitoringRules.Countable(l.Kind)).OrderByDescending(l => l.StartedAt).FirstOrDefault();
+    @if (lastLeave != null)
+    { <p>@ScreenMonitoringRules.Banner(lastLeave.DurationSeconds, Model.ScreenLeaves.Count(l => l.Counted), Model.AutoSubmitLeaves)</p> }
+    @if (Model.EndReason == AttemptEndReason.ScreenLeaveLimit) { <p>@ScreenMonitoringRules.EndText(Model)</p> }
+}
+@if (Model.MadeAsGuest) { <p class="badge bg-body-tertiary text-body border">Làm khi là khách</p> }
+@if (Model.ExcludeFromGradebook) { <p>Lượt này không được tính vào bảng điểm</p> }
+@if (Model.MaxScore == 0) { <p class="fs-5">Không chấm điểm</p> }
+else if (showScores)
+{
+    <p class="fs-5">@(a.MasteryThreshold == null ? "" : "Điểm lần đầu: ")@ScoreFormatter.Format(Model.FirstScore, Model.MaxScore, a.ScoreScale, a.Rounding)
+        @if (Model.PracticeScore is { } practice) { <span> · Điểm sau luyện: @ScoreFormatter.Format(practice, Model.MaxScore, a.ScoreScale, a.Rounding)</span> }
+    </p>
+    @if (ViewData["CriticalText"] is string criticalText) { <p class="badge bg-warning text-body text-wrap">@criticalText</p> }
+}
+else { <p class="alert alert-info">Chờ giảng viên công bố điểm</p> }
+@if (Model.Status == AttemptStatus.Cancelled) { <p class="alert alert-warning">Lượt đã bị hủy: @Model.CancelReason</p> }
+<p class="text-muted small">@ScreenMonitoringRules.EndText(Model) lúc @VnTime.Format(Model.EndedAt)</p>
+@if (!GuestAccess.IsGuest(User))
+{
+    <partial name="_AiAssistant" model="@(new AiPanelModel(a.Id, Model.Id, questions.Select(q => new AiQuestionChoice(Model.Questions.First(x => x.Id == q.Id).QuestionId, $"Câu {q.Number}")).ToList()))" />
+}
+@* Bỏ nhãn trùng với dòng "Kết thúc … lúc …" ở trên. *@
+@* "Làm khi là khách" đã hiện ở đầu trang khi lượt này làm lúc là khách. *@
+@foreach (var label in DisplayText.Of(Model.MadeAsGuest ? Model.Participant.CompletionLabels & ~CompletionLabels.MadeAsGuest : Model.Participant.CompletionLabels).Where(l => l != ScreenMonitoringRules.EndText(Model))) { <span class="badge bg-body-tertiary text-body border">@label</span> }
+@if (ViewData["HiddenContentNotice"] is string hiddenNotice) { <p class="alert alert-warning" role="status">@hiddenNotice</p> }
+
+@foreach (var q in questions)
+{
+    <div class="card mb-2">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-start gap-2">
+                <b>Câu @q.Number.</b>
+                <span class="me-auto" style="white-space: pre-wrap">@q.Prompt</span>
+                @if (!q.Answered) { <span class="badge bg-secondary">Bỏ trống</span> }
+                @if (!GuestAccess.IsGuest(User))
+                {
+                    <a class="small text-nowrap" asp-controller="Reports" asp-action="Create" asp-route-targetType="Question"
+                       asp-route-targetId="@(Model.Questions.First(x => x.Id == q.Id).QuestionId)" asp-route-assignmentId="@a.Id" asp-route-attemptId="@Model.Id">Báo lỗi câu này</a>
+                }
+                @if (q.IsCorrect == true && a.Mode == AssignmentMode.Practice && q.AnswerCount > 1)
+                {
+                    @* Làm chủ: chỉ câu sai mới được trả lời lại, nên lần đầu của câu này là sai (điểm lần đầu = 0). *@
+                    <span class="badge bg-success">Đúng ở lần @q.AnswerCount · lần đầu sai</span>
+                }
+                else if (q.IsCorrect == true) { <span class="badge bg-success">Đúng</span> }
+                else if (q.IsCorrect == false) { <span class="badge bg-danger">Sai</span> }
+                else if (q.Answered) { <span class="badge bg-primary">@(SurveyRules.IsSurvey(q.Type) ? "Đã ghi nhận câu trả lời" : "Đã trả lời")</span> }
+            </div>
+            @if (q.Options.Count > 0)
+            {
+                @* Ô đáp án có chữ cái như màn làm bài; đúng/sai có chữ đi kèm, không chỉ dựa vào màu. *@
+                <ol class="rv-options">
+                    @for (var i = 0; i < q.Options.Count; i++)
+                    {
+                        var o = q.Options[i];
+                        var right = q.CorrectIds?.Contains(o.Id) == true || q.IsCorrect == true && q.Selected.Contains(o.Id);
+                        var picked = q.Selected.Contains(o.Id);
+                        <li class="rv-option @(right ? "is-right" : picked ? (q.CorrectIds == null ? "is-picked" : "is-wrong") : "")">
+                            <span class="rv-letter" aria-hidden="true">@((char)('A' + i % 26))</span>
+                            <span class="rv-text">@o.Text</span>
+                            @if (right) { <span class="rv-tag rv-tag-right"><icon name="check" />Đáp án đúng</span> }
+                            @if (picked) { <span class="rv-tag">@(right || q.CorrectIds == null ? "Bạn chọn" : "Bạn chọn, chưa đúng")</span> }
+                        </li>
+                    }
+                </ol>
+            }
+            @if (q.ReviewNotices != null)
+            {
+                @foreach (var notice in q.ReviewNotices) { <p class="alert alert-info mt-2 mb-1" style="white-space: pre-wrap">@notice</p> }
+            }
+            @if (q.Type == QuestionType.SurveyText) { <p style="white-space: pre-wrap">@(q.Values?.FirstOrDefault() ?? "(trống)")</p> }
+            @if (q.Type is QuestionType.TextInput or QuestionType.NumberInput)
+            {
+                @for (var i = 0; i < (q.Type == QuestionType.TextInput ? q.BlankCount : 1); i++)
+                {
+                    <p class="mb-1 @(q.BlankCorrect?.ElementAtOrDefault(i) == true ? "text-success" : q.BlankCorrect != null ? "text-danger" : "")">@(q.Type == QuestionType.TextInput ? $"Chỗ trống {i + 1}: " : "Bạn nhập: ")@(q.Values?.ElementAtOrDefault(i) ?? "(trống)")@if (q.BlankCorrect != null) { <span> — @(q.BlankCorrect.ElementAtOrDefault(i) ? "Đúng" : "Chưa đúng")</span> }</p>
+                }
+                @if (q.CorrectAnswers != null) { <p class="mb-1 text-success">Đáp án đúng: @string.Join("; ", q.CorrectAnswers)</p> }
+            }
+            @if (!string.IsNullOrWhiteSpace(q.Explanation))
+            {
+                <div class="small text-muted mt-2" style="white-space: pre-wrap">Giải thích: @q.Explanation</div>
+            }
+        </div>
+    </div>
+}
+@section Scripts { <script src="~/js/ai-assistant.js" asp-append-version="true"></script> }

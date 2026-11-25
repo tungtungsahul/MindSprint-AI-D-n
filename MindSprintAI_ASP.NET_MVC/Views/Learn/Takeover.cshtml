@@ -1,0 +1,41 @@
+@model Attempt
+@{
+    ViewData["Title"] = "Chuyển thiết bị";
+    var locked = Model.Participant.Assignment?.DeviceLock == true;
+    var pending = Model.DeviceChanges.FirstOrDefault(r => r.Status == DeviceChangeStatus.Pending);
+    // Vừa bị từ chối thì không còn "chờ": không nhắc "nếu chờ lâu".
+    var denied = pending == null && Model.DeviceChanges.OrderByDescending(r => r.Id).FirstOrDefault()?.Status == DeviceChangeStatus.Denied;
+}
+<div class="card card-body mx-auto" style="max-width: 36rem" id="device-change" data-state-url="@Url.Action("DeviceChangeState", new { id = Model.Id })" data-play-url="@Url.Action("Play", new { id = Model.Id })" data-review-url="@Url.Action("Review", new { id = Model.Id })">
+    <h1 class="h4">Chuyển thiết bị</h1>
+    <p>@(locked ? "Bài đang mở trên thiết bị khác." : "Bài đang mở trên thiết bị khác. Chuyển sang thiết bị này?")</p>
+    <p class="text-muted">Câu đã lưu được giữ lại. Nội dung đang gõ chưa gửi ở thiết bị cũ sẽ mất.</p>
+    <p id="device-change-message" role="status" aria-live="polite">@(pending != null ? "Đang chờ giảng viên cho chuyển thiết bị. Đồng hồ làm bài vẫn chạy." : "")</p>
+    @* (F11) GV có thể tắt chuông; lời nhắc hiện cả trước và sau khi gửi yêu cầu. *@
+    @if (locked && !denied)
+    {
+        <p>Nếu chờ lâu, hãy báo trực tiếp cho giảng viên.</p>
+    }
+    @if (pending != null)
+    {
+        <form method="post" asp-action="CancelDeviceChange" asp-route-id="@Model.Id">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button class="btn btn-outline-secondary">Hủy yêu cầu chuyển thiết bị</button>
+        </form>
+    }
+    else
+    {
+        <form method="post" asp-action="Takeover" asp-route-id="@Model.Id" data-machine-full="@((locked || Model.MonitorScreen) && Model.DeviceConsentAt != null ? "true" : "false")">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="signals" value="" />
+            @if (locked)
+            {
+                <label for="change-reason" class="form-label">Lý do (không bắt buộc, tối đa 200 ký tự)</label>
+                <textarea id="change-reason" name="reason" maxlength="200" class="form-control mb-2" rows="2"></textarea>
+            }
+            <button class="btn btn-primary">@(locked ? "Xin giảng viên cho chuyển sang thiết bị này" : "Chuyển sang thiết bị này")</button>
+        </form>
+    }
+    <a class="btn btn-sm b-back mt-2" asp-action="Assignment" asp-route-id="@Model.Participant.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại bài này</a>
+</div>
+@section Scripts { <script src="~/js/device-change.js" asp-append-version="true"></script> }

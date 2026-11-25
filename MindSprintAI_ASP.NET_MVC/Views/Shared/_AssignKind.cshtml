@@ -1,0 +1,14 @@
+@model (int ClassroomId, bool Paper)
+@* Hai loại bài giao đặt cạnh nhau ở đầu trang Giao bài (người dùng góp ý 17/11: bài theo đề khó tìm). *@
+<nav class="assign-kind" aria-label="Chọn loại bài giao">
+    <a class="assign-kind-card @(Model.Paper ? "" : "active")" aria-current="@(Model.Paper ? null : "page")"
+       asp-controller="Assignments" asp-action="Create" asp-route-classroomId="@Model.ClassroomId">
+        <span class="assign-kind-icon"><icon name="layers" /></span>
+        <span><b>Từ bộ học</b><span>Quiz hoặc thẻ ghi nhớ · Ôn tập hoặc Kiểm tra · chấm tự động</span></span>
+    </a>
+    <a class="assign-kind-card @(Model.Paper ? "active" : "")" aria-current="@(Model.Paper ? "page" : null)"
+       asp-controller="Papers" asp-action="Create" asp-route-classroomId="@Model.ClassroomId">
+        <span class="assign-kind-icon"><icon name="file-text" /></span>
+        <span><b>Theo đề tài liệu</b><span>Tải đề PDF/Word · học viên viết bài, nộp tệp, có giám sát · giảng viên chấm tay</span></span>
+    </a>
+</nav>
