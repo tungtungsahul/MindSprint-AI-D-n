@@ -81,13 +81,13 @@ public class DuLieuMauLopTests : IDisposable
         var env = new Env(root);
         var links = new EmailLinks(new ConfigurationBuilder().Build(), new HttpContextAccessor());
         var store = new PaperFileStore(env, new ConfigurationBuilder().Build(), NullLogger<PaperFileStore>.Instance);
-        var demo = new ClassDemoSeedService(h.Db, users, [new ChoiceGrader()], store, new NoEmail(), links, env, h.Clock);
+        var demo = new ClassDemoSeedService(h.Db, users, [new ChoiceGrader()], store, links, env, h.Clock);
         // Dịch vụ cho việc chạy nền: mỗi phạm vi một DbContext riêng như một yêu cầu thật.
         var services = new ServiceCollection();
         services.AddScoped(_ => new Harness());
         services.AddScoped(sp => Users(sp.GetRequiredService<Harness>().Db));
         services.AddScoped(sp => new ClassDemoSeedService(sp.GetRequiredService<Harness>().Db, sp.GetRequiredService<UserManager<ApplicationUser>>(),
-            [new ChoiceGrader()], store, new NoEmail(), links, env, h.Clock));
+            [new ChoiceGrader()], store, links, env, h.Clock));
         services.AddScoped(sp => { var hh = sp.GetRequiredService<Harness>(); var um = sp.GetRequiredService<UserManager<ApplicationUser>>();
             return new AccountDeletionService(hh.Db, um, new NoEmail(), SecurityRound1Fixtures.Emails(hh, um, new NoEmail(), links), h.Clock); });
         services.AddScoped(sp => sp.GetRequiredService<Harness>().Classrooms);

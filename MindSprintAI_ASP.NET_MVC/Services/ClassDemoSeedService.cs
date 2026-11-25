@@ -18,7 +18,7 @@ public record ClassDemoResult(int Students, int Classes, int Assignments, int At
 // Nhận biết dữ liệu mẫu: email @mindsprint-demo.invalid (tên miền không bao giờ có thật, bộ gửi email bỏ qua),
 // lớp có đuôi "(mẫu)", bộ học bắt đầu "Mẫu — ".
 public sealed class ClassDemoSeedService(AppDbContext db, UserManager<ApplicationUser> users, IEnumerable<IQuestionGrader> graders,
-    PaperFileStore files, IEmailSender email, EmailLinks links, IWebHostEnvironment env, TimeProvider realClock, DemoSeedService? personal = null)
+    PaperFileStore files, EmailLinks links, IWebHostEnvironment env, TimeProvider realClock, DemoSeedService? personal = null)
 {
     public const string Domain = "mindsprint-demo.invalid";
     public const string ClassSuffix = " (mẫu)";
