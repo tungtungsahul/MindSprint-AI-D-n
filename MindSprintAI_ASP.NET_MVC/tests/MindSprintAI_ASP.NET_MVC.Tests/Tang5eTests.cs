@@ -174,17 +174,28 @@ public class Tang5ePureTests
     [InlineData(null), InlineData("ngắn"), InlineData("key có khoảng trắng đủ dài nhưng sai"), InlineData("<script>12345678901234567890</script>")]
     public void KeyDinhDangSaiBiLoai(string? key) => Assert.False(UserApiKeyService.ValidFormat(key));
 
+    // Tạo khóa giả tại runtime để kiểm tra thao tác dán khóa Google.
+    [Theory]
+    [InlineData("  {0}{1} \n")]
+    [InlineData("\"{0}{1}\"")]
+    [InlineData("API key: {0}{1} (Default project)")]
+    [InlineData("{0}\u200B{1}")]
+    public void DanKeyGoogleLayDungPhanKey(string format)
+    {
+        const string prefix = "AIza";
+        var body = new string('x', 35);
+        var key = UserApiKeyService.NormalizePasted(string.Format(format, prefix, body));
+        Assert.Equal(prefix + body, key);
+        Assert.True(UserApiKeyService.ValidFormat(key));
+    }
+
     // Hướng 2: người dùng dán kèm khoảng trắng, ngoặc hoặc cả dòng chữ từ AI Studio.
     [Theory]
-    [InlineData("  AIzaSyA1234567890abcdefghijklmnopqrstuv \n", "AIzaSyA1234567890abcdefghijklmnopqrstuv")]
-    [InlineData("\"AIzaSyA1234567890abcdefghijklmnopqrstuv\"", "AIzaSyA1234567890abcdefghijklmnopqrstuv")]
-    [InlineData("API key: AIzaSyA1234567890abcdefghijklmnopqrstuv (Default project)", "AIzaSyA1234567890abcdefghijklmnopqrstuv")]
     [InlineData(" khoa_khac-12345 67890abcd ", "khoa_khac-1234567890abcd")]
     // Auth key "AQ." (AI Studio tạo mặc định từ 28/05/2026) có dấu chấm; chuỗi dưới đây là giả.
     [InlineData("AQ.Ab8RN6Kfake_key-0123456789abcdefXYZ", "AQ.Ab8RN6Kfake_key-0123456789abcdefXYZ")]
     [InlineData("API Key\tAQ.Ab8RN6Kfake_key-0123456789abcdefXYZ.\n", "AQ.Ab8RN6Kfake_key-0123456789abcdefXYZ")]
     [InlineData("​AQ.Ab8RN6Kfake​_key-0123456789abcdefXYZ﻿", "AQ.Ab8RN6Kfake_key-0123456789abcdefXYZ")]
-    [InlineData("AIzaSyA1234567890abcd​efghijklmnopqrstuv", "AIzaSyA1234567890abcdefghijklmnopqrstuv")]
     public void DanKeyLayDungPhanKey(string pasted, string expected)
     {
         var key = UserApiKeyService.NormalizePasted(pasted);
