@@ -1,0 +1,53 @@
+@model WeakAreaPage
+@{
+    ViewData["Title"] = "Điểm yếu";
+    // Bố cục trang "Điểm yếu & Ôn tập cá nhân hóa" của nhóm (docs/giao-dien-nhom/08): đầu trang · danh sách chủ đề cần củng cố · nút ôn/luyện.
+}
+<header class="page-head">
+    <div>
+        <h1>Điểm yếu &amp; ôn tập cá nhân hóa</h1>
+        <p>Phân tích lịch sử học tập để gợi ý chủ đề cần củng cố. Kết quả cập nhật theo tiến độ của bạn mỗi lần mở trang.</p>
+    </div>
+</header>
+
+@if (Model.Areas.Count == 0)
+{
+    <section class="weak-empty">
+        <span class="section-icon" aria-hidden="true"><icon name="check" /></span>
+        <h2>@(Model.CheckedTopics == 0 ? "Chưa có dữ liệu học tập" : "Chưa có điểm yếu rõ rệt")</h2>
+        <p>@(Model.CheckedTopics == 0
+            ? "Hãy ôn vài thẻ hoặc làm một bài quiz để hệ thống phân tích điểm yếu."
+            : $"Các chủ đề bạn đã học đều đạt từ {WeakAreaService.WeakBelow}% trở lên hoặc chưa đủ {WeakAreaService.MinAttempts} lần thử. Hãy duy trì thói quen học đều đặn.")</p>
+    </section>
+}
+else
+{
+    <p class="weak-summary" role="status">Tìm thấy <b>@Model.Areas.Count</b> chủ đề cần củng cố (dưới @WeakAreaService.WeakBelow% chính xác, ít nhất @WeakAreaService.MinAttempts lần thử).</p>
+    <ul class="weak-list">
+        @foreach (var a in Model.Areas)
+        {
+            <li class="weak-item">
+                <div class="weak-item-head">
+                    <span class="set-card-tag">@(a.Kind == WeakKind.Cards ? "Thẻ ghi nhớ" : "Quiz")</span>
+                    <b class="weak-accuracy">@a.Accuracy%</b>
+                </div>
+                <h2>@a.Topic</h2>
+                <div class="weak-bar" role="img" aria-label="Chính xác @a.Accuracy%"><span style="--p: @a.Accuracy%"></span></div>
+                <p>@a.Reason</p>
+                <p class="weak-suggestion">@a.Suggestion</p>
+                @if (a.AssignmentId is { } assignmentId)
+                {
+                    <a class="btn btn-primary btn-sm" asp-controller="Learn" asp-action="Assignment" asp-route-id="@assignmentId"><icon name="repeat-2" />@(a.Kind == WeakKind.Cards ? "Ôn lại thẻ" : "Xem lại và tự ôn")</a>
+                }
+                else if (a.StudySetId is { } setId)
+                {
+                    <a class="btn btn-primary btn-sm" asp-controller="Flashcards" asp-action="Study" asp-route-id="@setId"><icon name="repeat-2" />Ôn lại thẻ</a>
+                }
+            </li>
+        }
+    </ul>
+}
+<div class="weak-actions">
+    <form method="post" asp-action="CreateReviewSet"><button class="btn btn-secondary"><icon name="plus" />Tạo thẻ ôn tập từ điểm yếu</button></form>
+    <a class="btn btn-primary" asp-controller="Learn" asp-action="Index"><icon name="square-pen" />Luyện tập ngay</a>
+</div>

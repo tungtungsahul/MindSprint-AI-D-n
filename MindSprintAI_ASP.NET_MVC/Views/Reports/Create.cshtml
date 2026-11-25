@@ -1,0 +1,19 @@
+@model ReportForm
+@{ ViewData["Title"] = "Báo cáo vi phạm"; }
+<div class="col-lg-6">
+    <a class="btn btn-sm b-back" href="@BackLink.Url(Context.Request, Url.Action("Index", "Home")!)"><icon name="chevron-right" class="b-back-icon" />Quay lại trang trước</a>
+    <h1 class="h3">Báo cáo vi phạm · @DisplayText.Of(Model.Context.TargetType)</h1>
+    @if (ViewData["TargetName"] is string targetName && targetName.Length > 0) { <p>Đang báo cáo: <strong class="text-break">@targetName</strong></p> }
+    <form method="post" asp-action="Create">
+        <input type="hidden" asp-for="Context.TargetType" /><input type="hidden" asp-for="Context.TargetId" />
+        <input type="hidden" asp-for="Context.AssignmentId" /><input type="hidden" asp-for="Context.AttemptId" /><input type="hidden" asp-for="Context.ClassroomId" />
+        <label asp-for="Reason" class="form-label">Lý do (bắt buộc)</label>
+        <select asp-for="Reason" class="form-select mb-3" required>
+            <option value="">Chọn lý do</option>
+            @foreach (var reason in ContentReportService.Reasons) { <option value="@reason">@reason</option> }
+        </select>
+        <label asp-for="Note" class="form-label">Ghi chú (tùy chọn, tối đa 1000 ký tự)</label>
+        <textarea asp-for="Note" maxlength="1000" class="form-control mb-3" rows="4"></textarea>
+        <button class="btn btn-primary">Gửi báo cáo</button>
+    </form>
+</div>

@@ -1,0 +1,15 @@
+@model SourceEditModel
+@{ ViewData["Title"] = "Văn bản nguồn"; }
+<a class="btn btn-sm b-back" asp-controller="StudySets" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Thư viện</a>
+<h1 class="h3 mt-2">Văn bản nguồn · @Model.Title</h1>
+<p>Mỗi bộ học có một văn bản nguồn dùng chung. Trợ lý trả lời theo phiên bản mới nhất; trích dẫn trong lịch sử giữ nguyên.</p>
+<form method="post" asp-action="Save">
+    <input type="hidden" name="id" value="@Model.StudySetId" />
+    <input type="hidden" name="version" value="@Model.Version" />
+    <label class="form-label" for="source-content">Nội dung nguồn (tối đa 50.000 ký tự)</label>
+    <textarea id="source-content" class="form-control mb-1" name="content" data-limit="50000" data-limit-output="source-count" rows="20" aria-describedby="source-count source-help">@Model.Content</textarea>
+    <p class="small fw-bold mb-2" id="source-count" aria-live="polite"></p>
+    <p class="small text-muted" id="source-help">Văn bản thuần, ngăn các đoạn bằng xuống dòng. Mỗi lần lưu tạo một phiên bản mới.</p>
+    <p class="small text-muted">Khi học viên hỏi trợ lý AI, các đoạn liên quan của văn bản này được gửi sang Google Gemini ở nước ngoài. Đừng đưa thông tin riêng tư của ai vào đây.</p>
+    <button class="btn btn-primary">Lưu văn bản nguồn</button>
+</form>

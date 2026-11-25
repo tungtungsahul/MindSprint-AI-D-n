@@ -1,0 +1,78 @@
+@model AdminUsersPage
+@{ ViewData["Title"] = "Quản trị hệ thống"; }
+<h1 class="h3">Quản trị hệ thống</h1>
+<nav class="d-flex flex-wrap gap-3 mb-3" aria-label="Quản trị">
+    <a asp-action="Reports">Báo cáo vi phạm</a><a asp-action="UnhideRequests">Xin bỏ ẩn (@ViewData["PendingUnhideCount"])</a><a asp-action="History">Lịch sử quyền quản trị viên</a>
+    <a asp-action="ClassTransfers">Chuyển lớp cho giảng viên khác</a>
+    <a asp-action="Audit">Nhật ký hoạt động</a>
+</nav>
+<div class="row g-2 mb-4">
+    <div class="col-6 col-md-3"><div class="card card-body">Người dùng <b>@Model.Stats.Users</b></div></div>
+    <div class="col-6 col-md-3"><div class="card card-body">Lớp <b>@Model.Stats.Classes</b></div></div>
+    <div class="col-6 col-md-3"><div class="card card-body">Bài giao <b>@Model.Stats.Assignments</b></div></div>
+    <div class="col-6 col-md-3"><div class="card card-body">Lượt làm <b>@Model.Stats.Attempts</b></div></div>
+</div>
+<section class="flat-section mb-3" aria-labelledby="demo-title">
+    <h2 class="h5" id="demo-title">Dữ liệu mẫu lớp học</h2>
+    <p class="small text-muted">36 học viên mẫu và 2 giảng viên mẫu (email @@@ClassDemoSeedService.Domain, đăng nhập bằng một mật khẩu chung), 3 lớp do bạn làm giảng viên chính
+        (có giảng viên phụ gv01) và 1 lớp của gv02 đang đề nghị chuyển cho bạn,
+        3 bộ học và các bài ôn tập, kiểm tra, thẻ ghi nhớ, bài theo đề diễn ra trong 20 ngày qua. Tạo mất khoảng 1–2 phút.</p>
+    @if (ViewData["DemoJob"] is DemoJobRunner.Status job && job.UserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)
+    {
+        if (job.Running) { <p class="alert alert-info" role="status">@job.Label đang chạy (bắt đầu @VnTime.Format(job.At)). Tải lại trang sau 1–2 phút.</p> }
+        else
+        {
+            <p class="alert @(job.Failed ? "alert-danger" : "alert-success")" role="status">@job.Label lúc @VnTime.Format(job.At): @job.Message
+                @if (job.Password != null) { <br /><span>Mật khẩu chung của tài khoản mẫu (hv01…hv36, gv01, gv02 @@@ClassDemoSeedService.Domain): <b class="font-monospace">@job.Password</b>.
+                    Danh sách tài khoản cũng lưu trong tệp App_Data/@ClassDemoSeedService.AccountsFile của ứng dụng.</span> }</p>
+        }
+    }
+    <div class="d-flex flex-wrap gap-2">
+        <form method="post" asp-action="SeedClassDemo" data-confirm="Tạo dữ liệu mẫu lớp học? Bạn sẽ là giảng viên chính của 3 lớp mẫu."><button class="btn btn-primary">Tạo dữ liệu mẫu lớp học</button></form>
+        <form method="post" asp-action="RemoveClassDemo" data-confirm="Xóa toàn bộ dữ liệu mẫu (lớp mẫu, bộ học mẫu, 36 học viên và 2 giảng viên mẫu)? Dữ liệu thật không bị đụng tới."><button class="btn btn-outline-danger">Xóa dữ liệu mẫu</button></form>
+    </div>
+</section>
+<form method="get" class="d-flex flex-wrap gap-2 mb-3">
+    <label for="search" class="form-label">Tìm tên hoặc email</label>
+    <input id="search" name="search" value="@Model.Search" maxlength="200" class="form-control w-auto" placeholder="Tên hoặc email" />
+    <button class="btn btn-primary">Tìm</button>
+</form>
+<p>@Model.Total người dùng · Trang @Model.Page</p>
+<div class="table-responsive"><table class="table align-middle">
+    <thead><tr><th>Tên / Email</th><th>Tạo lúc (VN)</th><th>Trạng thái</th><th>Khóa</th><th>Quyền quản trị viên</th></tr></thead>
+    <tbody>
+    @foreach (var row in Model.Rows)
+    {
+        var u = row.User;
+        <tr>
+            <td><b>@u.DisplayName</b><br />@u.Email</td>
+            <td>@VnTime.Format(u.CreatedAt)</td>
+            <td>@(u.DeletedAt != null ? "Đã xóa tài khoản" : row.Lock == null ? "Đang hoạt động" : AccountLockService.Message(row.Lock))</td>
+            <td>
+                @if (u.DeletedAt == null)
+                {
+                    <a class="btn btn-sm btn-outline-danger" asp-action="Lock" asp-route-id="@u.Id">Khóa tài khoản</a>
+                    <a class="btn btn-sm btn-outline-danger mt-2" asp-action="DeleteUser" asp-route-id="@u.Id">Xóa tài khoản</a>
+                }
+                @if (row.Lock != null && u.DeletedAt == null)
+                {
+                    <form method="post" asp-action="Unlock" asp-route-id="@u.Id" class="mt-2"><button class="btn btn-sm btn-outline-success">Mở khóa</button></form>
+                }
+            </td>
+            <td>
+                <span>@(u.IsSystemAdmin ? "Quản trị viên" : "Người dùng")</span>
+                <form method="post" asp-action="Role" asp-route-id="@u.Id" class="mt-1">
+                    <input type="hidden" name="grant" value="@((!u.IsSystemAdmin).ToString().ToLowerInvariant())" />
+                    <label class="form-label small" for="reason-@u.Id">Lý do thay quyền của @u.DisplayName</label>
+                    <input id="reason-@u.Id" name="reason" class="form-control form-control-sm" maxlength="500" placeholder="Lý do bắt buộc" required />
+                    <button class="btn btn-sm btn-outline-secondary mt-1">@(u.IsSystemAdmin ? "Gỡ quyền quản trị viên" : "Cấp quyền quản trị viên")</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table></div>
+<nav class="d-flex gap-3" aria-label="Phân trang người dùng">
+    @if (Model.Page > 1) { <a asp-action="Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page - 1)">Trang trước</a> }
+    @if (Model.Page * 20 < Model.Total) { <a asp-action="Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page + 1)">Trang sau</a> }
+</nav>

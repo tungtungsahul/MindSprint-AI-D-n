@@ -1,0 +1,126 @@
+@using MindSprintAI_ASP.NET_MVC.Controllers
+@model SchedulePage
+@{
+    ViewData["Title"] = "Lịch học";
+    // Bố cục trang "Lịch học" của nhóm (docs/giao-dien-nhom/09; style.css .timetable-*): lưới tuần 06:00–23:00, 50px mỗi giờ,
+    // thẻ "Lịch học tiếp theo" 240px bên phải. Thêm chuỗi ngày học tính từ hoạt động thật (StudyStatsService).
+    var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+    string DayName(DayOfWeek d) => d switch { DayOfWeek.Monday => "Thứ Hai", DayOfWeek.Tuesday => "Thứ Ba", DayOfWeek.Wednesday => "Thứ Tư",
+        DayOfWeek.Thursday => "Thứ Năm", DayOfWeek.Friday => "Thứ Sáu", DayOfWeek.Saturday => "Thứ Bảy", _ => "Chủ nhật" };
+    string TopicName(StudyTopic t) => t switch { StudyTopic.English => "Tiếng Anh", StudyTopic.Programming => "Lập trình", StudyTopic.General => "Kiến thức chung", _ => "Tất cả danh mục" };
+    const int baseHour = 6, rowHeight = 50;
+    double Px(TimeOnly t) => (t.Hour + t.Minute / 60.0 - baseHour) * rowHeight;
+}
+<header class="page-head">
+    <div>
+        <h1>Thời khóa biểu học tập</h1>
+        <p>Lập kế hoạch học tập theo ngày và giờ để rèn luyện thói quen tự học.</p>
+    </div>
+    <div class="page-head-actions">
+        @* Như nhóm: chọn kiểu báo + bật/tắt nhắc giờ học (js/alarm.js; lựa chọn lưu ở trình duyệt này). *@
+        <label class="alarm-style-field"><icon name="settings-2" />Báo thức:
+            <select class="form-select form-select-sm" id="alarm-style">
+                <option value="both">Thông báo + Chuông</option>
+                <option value="text">Chỉ thông báo chữ</option>
+                <option value="sound">Chỉ chuông báo</option>
+                <option value="voice">Chuông + đọc to giờ học</option>
+            </select>
+        </label>
+        <button type="button" class="btn btn-secondary" id="alarm-toggle" aria-pressed="false"><icon name="bell" /><span>Bật chuông báo</span></button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#slot-modal"><icon name="plus" />Thêm lịch học</button>
+    </div>
+    <p class="alarm-status" id="alarm-status" role="status"></p>
+</header>
+
+<div class="schedule-layout">
+    <section class="schedule-grid-panel" aria-label="Thời khóa biểu tuần">
+        <div class="schedule-grid">
+            <div class="schedule-hours" aria-hidden="true">
+                <div class="schedule-head-cell">Giờ</div>
+                @for (var hour = baseHour; hour < 24; hour++) { <div class="schedule-hour">@($"{hour:00}:00")</div> }
+            </div>
+            @foreach (var day in days)
+            {
+                var slots = Model.Slots.Where(s => s.DayOfWeek == day).ToList();
+                <div class="schedule-day">
+                    <h2 class="schedule-head-cell">@DayName(day)</h2>
+                    <ul class="schedule-day-body" aria-label="Giờ học @DayName(day)">
+                        @foreach (var s in slots)
+                        {
+                            <li class="schedule-slot topic-@s.Topic.ToString().ToLowerInvariant()" style="top: @Px(s.StartTime)px; height: @(Px(s.EndTime) - Px(s.StartTime))px">
+                                <button type="button" class="schedule-slot-open" data-bs-toggle="modal" data-bs-target="#slot-modal"
+                                        data-id="@s.Id" data-day="@((int)s.DayOfWeek)" data-start="@s.StartTime.ToString("HH:mm")" data-end="@s.EndTime.ToString("HH:mm")"
+                                        data-topic="@s.Topic" data-note="@s.Note" aria-label="Sửa giờ học @DayName(day) @s.StartTime.ToString("HH:mm")–@s.EndTime.ToString("HH:mm")">
+                                    <span class="slot-time"><icon name="clock" />@s.StartTime.ToString("HH:mm") – @s.EndTime.ToString("HH:mm")</span>
+                                    <span class="slot-title">@TopicName(s.Topic)</span>
+                                    @if (s.Note != null) { <span class="slot-desc">@s.Note</span> }
+                                </button>
+                                <form method="post" asp-action="Delete" asp-route-id="@s.Id" data-confirm="Xóa giờ học @s.StartTime.ToString("HH:mm") – @s.EndTime.ToString("HH:mm") khỏi lịch?">
+                                    <button class="slot-delete" aria-label="Xóa giờ học" title="Xóa giờ học"><icon name="trash-2" /></button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </section>
+
+    <aside class="schedule-side">
+        <section class="schedule-widget" aria-labelledby="next-slot-title">
+            <span class="schedule-widget-icon" aria-hidden="true"><icon name="bell" /></span>
+            @if (Model.Next is { } next)
+            {
+                <div>
+                    <h2 id="next-slot-title">Lịch học tiếp theo</h2>
+                    <p><b>@(next.DaysAhead == 0 ? "Hôm nay" : next.DaysAhead == 1 ? "Ngày mai" : DayName(next.Slot.DayOfWeek))</b> · @next.Slot.StartTime.ToString("HH:mm") – @next.Slot.EndTime.ToString("HH:mm")<br />@TopicName(next.Slot.Topic)@(next.Slot.Note != null ? " · " + next.Slot.Note : "")</p>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <h2 id="next-slot-title">Chưa có lịch học</h2>
+                    <p>Bấm "Thêm lịch học" để xếp giờ học trong tuần.</p>
+                </div>
+            }
+        </section>
+        <section class="schedule-widget schedule-streak" aria-labelledby="streak-title">
+            <h2 id="streak-title">Chuỗi ngày học</h2>
+            <p class="schedule-streak-number"><b>@Model.Streak.Current</b> ngày</p>
+            <p>Dài nhất: @Model.Streak.Longest ngày · Hôm nay: @Model.Today.CardsReviewed thẻ, @Model.Today.Answered câu</p>
+        </section>
+    </aside>
+</div>
+
+<div class="modal fade" id="slot-modal" tabindex="-1" aria-labelledby="slot-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <form method="post" asp-action="Create" id="slot-form" data-create="@Url.Action("Create")" data-edit="@Url.Action("Edit")">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="slot-modal-title">Thêm giờ học mới</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label" for="slot-day">Ngày trong tuần</label>
+                    <select class="form-select" id="slot-day" name="DayOfWeek" required>@foreach (var d in days) { <option value="@((int)d)">@DayName(d)</option> }</select></div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6"><label class="form-label" for="slot-start">Giờ bắt đầu</label><input class="form-control" type="time" id="slot-start" name="StartTime" min="06:00" max="23:00" required></div>
+                    <div class="col-6"><label class="form-label" for="slot-end">Giờ kết thúc</label><input class="form-control" type="time" id="slot-end" name="EndTime" min="06:00" max="23:00" required></div>
+                </div>
+                <div class="mb-3"><label class="form-label" for="slot-topic">Chủ đề học tập</label>
+                    <select class="form-select" id="slot-topic" name="Topic">
+                        @foreach (var t in new[] { StudyTopic.English, StudyTopic.Programming, StudyTopic.General, StudyTopic.Mixed }) { <option value="@t" selected="@(t == StudyTopic.Mixed)">@TopicName(t)</option> }
+                    </select></div>
+                <div><label class="form-label" for="slot-note">Ghi chú thêm</label>
+                    <input class="form-control" id="slot-note" name="Note" maxlength="40" placeholder="Ví dụ: Ôn từ vựng, làm bài tập..."></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button class="btn btn-primary">Lưu lịch học</button>
+            </div>
+        </form>
+    </div></div>
+</div>
+
+@section Scripts {
+    <script src="~/js/schedule.js" asp-append-version="true"></script>
+}

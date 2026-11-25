@@ -1,0 +1,65 @@
+@model PasskeyPage
+@{ var reauth = ViewData["TwoFactor"] as TwoFactorStatus ?? new TwoFactorStatus(false, false, false, false, Model.HasPassword, 0); }
+<section class="acc-card" id="sec-passkeys" aria-labelledby="passkey-title">
+    <div class="acc-card-top">
+        <h2 class="section-head" id="passkey-title"><span class="section-icon" style="--tint:var(--acid)"><icon name="fingerprint" /></span>Passkey</h2>
+        @if (Model.Items.Count > 0)
+        {
+            <span class="acc-state is-on"><icon name="check" />Đã bật · @Model.Items.Count/10</span>
+        }
+        else
+        {
+            <span class="acc-state is-off"><icon name="x" />Chưa bật</span>
+        }
+    </div>
+    <p class="acc-desc">Đăng nhập bằng cách mở khóa điện thoại hoặc máy tính của bạn (vân tay, khuôn mặt hoặc mã PIN).</p>
+    <p class="small text-muted mb-3">Việc nhận diện diễn ra ngay trên thiết bị: MindSprint AI không nhận và không lưu vân tay, khuôn mặt hay mã PIN của bạn. Tối đa 10 passkey mỗi tài khoản. Đăng nhập bằng passkey không hỏi thêm mã xác thực 2 lớp. Passkey cũng đáp ứng yêu cầu bảo vệ tài khoản của quản trị viên.</p>
+    @if (Model.Items.Count > 0)
+    {
+        <div class="acc-stack mb-3">
+            @foreach (var key in Model.Items)
+            {
+                <div class="acc-subcard">
+                    <div class="acc-subhead">
+                        <h3 class="h6"><icon name="key-round" /> @key.Name</h3>
+                    </div>
+                    <p class="small text-muted mb-3">Tạo: @VnTime.Format(key.CreatedAt) · Dùng gần nhất: @(key.LastUsedAt == null ? "Chưa dùng" : VnTime.Format(key.LastUsedAt))</p>
+                    <form method="post" asp-action="RenamePasskey" data-action="RenamePasskey" class="mb-3">
+                        <input type="hidden" name="id" value="@key.Id" />
+                        <label class="form-label" for="passkey-name-@key.Id">Tên passkey</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input class="form-control" id="passkey-name-@key.Id" name="name" value="@key.Name" maxlength="50" required />
+                            <button class="btn btn-outline-secondary"><icon name="pencil" />Đổi tên</button>
+                        </div>
+                    </form>
+                    <details>
+                        <summary>Xóa passkey</summary>
+                        <form method="post" asp-action="DeletePasskey" data-action="DeletePasskey" data-confirm="Xóa passkey này? Thiết bị này sẽ không đăng nhập bằng passkey đó được nữa." class="mt-2">
+                            <input type="hidden" name="id" value="@key.Id" />
+                            <partial name="_TwoFactorReauth" model="reauth" />
+                            <button class="btn btn-outline-danger"><icon name="trash-2" />Xóa passkey</button>
+                        </form>
+                    </details>
+                </div>
+            }
+        </div>
+    }
+    @if (Model.Items.Count >= MindSprintAI_ASP.NET_MVC.Services.PasskeyService.Maximum)
+    {
+        @* Đủ 10 thì ẩn ô thêm (server vẫn chặn); tránh bắt người dùng bấm rồi mới biết. *@
+        <p class="small mb-0" role="status">Đã đủ 10 passkey. Xóa bớt một passkey nếu muốn thêm thiết bị mới.</p>
+    }
+    else
+    {
+        <form method="post" asp-action="RegisterPasskey" data-action="RegisterPasskey" data-passkey="create" data-options="@Url.Content("~/Account/PasskeyCreationOptions")" class="acc-subcard">
+            <input type="hidden" name="credentialJson" value="" />
+            <div data-passkey-controls hidden>
+                <label class="form-label" for="new-passkey-name">Tên passkey mới</label>
+                <input class="form-control mb-2" id="new-passkey-name" name="name" maxlength="50" placeholder="Ví dụ: Điện thoại cá nhân" required />
+                <button class="btn btn-primary"><icon name="plus" />Thêm passkey</button>
+            </div>
+            <p class="small mt-2 mb-0" role="status" aria-live="polite" data-passkey-status></p>
+            <noscript>Trình duyệt đang tắt JavaScript (phần giúp trang web hoạt động). Hãy bật lại JavaScript trong cài đặt trình duyệt để thêm passkey.</noscript>
+        </form>
+    }
+</section>

@@ -1,0 +1,14 @@
+@model SourceReadModel
+@{ ViewData["Title"] = "Văn bản nguồn"; }
+<a class="btn btn-sm b-back" asp-controller="Learn" asp-action="Assignment" asp-route-id="@Model.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại bài giao</a>
+<h1 class="h3 mt-2">Văn bản nguồn · @Model.Title</h1>
+<p class="text-muted small">Phiên bản @Model.Version</p>
+<p id="source-version-notice" class="alert alert-info d-none" role="status">Nguồn đã được cập nhật. Đoạn trích cũ vẫn giữ trong lịch sử; vị trí trong phiên bản hiện tại có thể khác.</p>
+<article id="source-text" data-version="@Model.Version" data-state-url="@Url.Action("State", "Ai", new { id = Model.AssignmentId })" tabindex="-1" aria-label="Văn bản nguồn">
+    @foreach (System.Text.RegularExpressions.Match paragraph in System.Text.RegularExpressions.Regex.Matches(Model.Content ?? "", @"[^\r\n]+"))
+    {
+        <p id="source-@paragraph.Index" data-start="@paragraph.Index" style="white-space:pre-wrap;overflow-wrap:anywhere">@paragraph.Value</p>
+    }
+    @if (string.IsNullOrWhiteSpace(Model.Content)) { <p class="text-muted">Bộ học chưa có văn bản nguồn.</p> }
+</article>
+@section Scripts { <script src="~/js/ai-assistant.js" asp-append-version="true"></script> }

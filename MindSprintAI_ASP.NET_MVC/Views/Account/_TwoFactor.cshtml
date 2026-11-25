@@ -1,0 +1,68 @@
+@model TwoFactorStatus
+<section class="acc-card" id="sec-two-factor" aria-labelledby="two-factor-title">
+    <div class="acc-card-top">
+        <h2 class="section-head" id="two-factor-title"><span class="section-icon" style="--tint:var(--ok)"><icon name="shield-check" /></span>Xác thực 2 lớp</h2>
+        @if (Model.Enabled)
+        {
+            <span class="acc-state is-on"><icon name="check" />Đã bật</span>
+        }
+        else
+        {
+            <span class="acc-state is-off"><icon name="x" />Chưa bật</span>
+        }
+    </div>
+    <p class="acc-desc">Sau mật khẩu, bạn nhập thêm mã bảo mật một lần để bảo vệ tài khoản học tập.</p>
+    <div class="acc-chips">
+        <span class="acc-state @(Model.Authenticator ? "is-on" : "is-off")"><icon name="@(Model.Authenticator ? "check" : "x")" />Ứng dụng xác thực (ví dụ Google Authenticator):@(Model.Authenticator ? "Bật" : "Tắt")</span>
+        <span class="acc-state @(Model.Email ? "is-on" : "is-off")"><icon name="@(Model.Email ? "check" : "x")" />Mã qua email: @(Model.Email ? "Bật" : "Tắt")@(Model.Admin ? " (không dùng cho quản trị viên)" : "")</span>
+    </div>
+    @if (Model.Admin)
+    {
+        <p class="small text-muted">Quản trị viên bắt buộc có ứng dụng xác thực hoặc passkey. Sau mật khẩu luôn cần xác thực thêm; đăng nhập bằng passkey thì vào trực tiếp. Mã email không đủ để vào trang quản trị.</p>
+    }
+    @if (Model.Enabled)
+    {
+        <p class="mb-3">Còn <strong>@Model.RecoveryCodes</strong> mã dự phòng. Mỗi mã dùng một lần.</p>
+        @if (Model.RecoveryCodes <= 3)
+        {
+            <p class="alert alert-warning"><icon name="triangle-alert" /> Bạn chỉ còn @Model.RecoveryCodes mã dự phòng. Hãy tạo bộ mới và cất ở nơi an toàn.</p>
+        }
+    }
+    @if (!Model.Authenticator)
+    {
+        <p class="mb-3"><a class="btn btn-primary" asp-action="SetupAuthenticator"><icon name="qr-code" />Bật ứng dụng xác thực</a></p>
+    }
+    <div class="acc-stack">
+        @if (Model.Authenticator && !Model.Admin)
+        {
+            <form method="post" asp-action="ResetAuthenticator" data-action="ResetAuthenticator" data-confirm="Đặt lại ứng dụng xác thực?Ứng dụng và mã dự phòng cũ sẽ hết hiệu lực. Bạn cần quét ảnh mã vuông mới." class="acc-subcard">
+                <partial name="_TwoFactorReauth" model="Model" />
+                <button class="btn btn-outline-warning"><icon name="rotate-ccw" />Đặt lại ứng dụng xác thực</button>
+            </form>
+        }
+        @if (!Model.Admin || Model.Email)
+        {
+            <form method="post" asp-action="SetEmailTwoFactor" data-action="SetEmailTwoFactor" data-confirm="@(Model.Email ? "Tắt mã qua email? Nếu không còn ứng dụng xác thực,xác thực 2 lớp cũng sẽ tắt." : "Bật mã qua email để xác thực đăng nhập?")" class="acc-subcard">
+                <input type="hidden" name="enabled" value="@((!Model.Email).ToString().ToLowerInvariant())" />
+                @if (Model.Email) { <partial name="_TwoFactorReauth" model="Model" /> }
+                else { <input type="hidden" name="password" value="" /><input type="hidden" name="code" value="" /> }
+                <p class="small text-muted mb-2">Mã email hết hạn sau 5 phút. Gửi lại tối đa mỗi phút một lần.</p>
+                <button class="btn btn-outline-primary"><icon name="mail" />@(Model.Email ? "Tắt" : "Bật") mã qua email</button>
+            </form>
+        }
+        @if (Model.Enabled)
+        {
+            <form method="post" asp-action="RegenerateRecoveryCodes" data-action="RegenerateRecoveryCodes" data-confirm="Tạo lại 10 mã dự phòng? Toàn bộ mã cũ sẽ hết hiệu lực." class="acc-subcard">
+                <partial name="_TwoFactorReauth" model="Model" />
+                <button class="btn btn-outline-secondary"><icon name="plus" />Tạo lại mã dự phòng</button>
+            </form>
+            @if (!Model.Admin)
+            {
+                <form method="post" asp-action="DisableTwoFactor" data-action="DisableTwoFactor" data-confirm="Tắt xác thực 2 lớp? Tài khoản sẽ chỉ còn được bảo vệ bằng cách đăng nhập chính." class="acc-subcard">
+                    <partial name="_TwoFactorReauth" model="Model" />
+                    <button class="btn btn-outline-danger"><icon name="x" />Tắt xác thực 2 lớp</button>
+                </form>
+            }
+        }
+    </div>
+</section>

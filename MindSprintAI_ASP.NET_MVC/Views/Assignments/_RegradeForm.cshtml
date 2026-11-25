@@ -1,0 +1,31 @@
+@model RegradeFormModel
+@{
+    var q = Model.Question;
+    var prefix = $"regrade-{Model.AssignmentId}-{q.Id}";
+}
+<details class="mt-2">
+    <summary class="text-primary">Chấm lại câu này</summary>
+    <form method="post" asp-action="ApplyRegrade" asp-route-id="@Model.AssignmentId" class="border rounded p-3 mt-2" data-confirm="Chấm lại câu này cho mọi lượt của bài giao (cả lượt đang làm và lượt làm lại)? Điểm của học viên đổi ngay và không hoàn tác được: lần chấm lại sau chỉ cộng thêm điểm, không trừ lại.">
+        <input type="hidden" name="questionId" value="@q.Id" />
+        <input type="hidden" name="clientRequestId" value="@Guid.NewGuid()" />
+        <label class="form-label" for="@prefix-method">Cách chấm lại</label>
+        <select class="form-select mb-2" name="method" id="@prefix-method" required>
+            @if (q.Choice) { <option value="1">Đổi đáp án đúng (ai đã chọn đáp án cũ vẫn giữ điểm)</option> }
+            <option value="2">Cho mọi người đúng câu này (kể cả người bỏ trống)</option>
+            <option value="3">Hủy câu: bỏ câu khỏi bài, không tính vào điểm (không khôi phục được)</option>
+        </select>
+        @if (q.Choice)
+        {
+            <fieldset class="mb-2"><legend class="fs-6">Đáp án đúng mới (chỉ dùng khi chọn "Đổi đáp án đúng")</legend>
+            @foreach (var o in q.Options)
+            {
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="newCorrect" value="@o.Id" id="@prefix-option-@o.Id" />
+                    <label class="form-check-label" for="@prefix-option-@o.Id">@o.Text</label></div>
+            }
+            </fieldset>
+        }
+        <label class="form-label" for="@prefix-reason">Lý do chấm lại (học viên đọc được)</label>
+        <textarea class="form-control mb-2" name="reason" id="@prefix-reason" rows="2" required></textarea>
+        <button class="btn btn-outline-primary">Lưu chấm lại</button>
+    </form>
+</details>

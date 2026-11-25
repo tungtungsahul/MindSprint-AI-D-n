@@ -1,0 +1,49 @@
+@model AssignmentDetailsModel
+@if (Model.Ungraded)
+{
+    <p>Không chấm điểm</p>
+}
+else if (Model.Matrix is not { Columns.Count: > 0 } matrix)
+{
+    <div class="empty-state"><icon name="circle-help" /><h2 class="h5">Chưa có dữ liệu câu hỏi</h2><p class="mb-0">Chưa có câu hỏi được tính điểm trong bài này.</p></div>
+}
+else
+{
+    <p class="small b-matrix-description">Mỗi ô là kết quả một câu của một học viên, lấy theo lượt được tính điểm (@(Model.Assignment.Mode == AssignmentMode.Test ? "lượt mới nhất" : DisplayText.Of(Model.Assignment.ScoreSelection).ToLowerInvariant())); nếu tính điểm trung bình thì ô hiện từng lượt. Phần trăm dưới số câu là tỉ lệ đúng của cả lớp, người chưa làm vẫn được tính vào; câu đã hủy không có ở đây.</p>
+    <div class="b-matrix-search"><label for="matrix-search">Tìm học viên trong câu hỏi</label><input id="matrix-search" class="form-control" type="search" /></div>
+    <p class="small">Đúng: <icon name="check" /> · Sai: <icon name="x" /> · Chưa làm: – · Chờ chấm tay: …</p>
+    <div class="b-matrix-frame" tabindex="0" role="region" aria-label="Kết quả theo học viên và câu hỏi">
+    <table class="table b-matrix">
+        <thead><tr><th scope="col">Học viên</th><th scope="col">Điểm</th>
+        @foreach (var column in matrix.Columns)
+        {
+            <th scope="col"><details><summary>Câu @(column.Number)@if (column.Graded) { <span class="b-matrix-rate @(column.CorrectPercent >= 70 ? "is-ok" : column.CorrectPercent >= 40 ? "is-warn" : "is-bad")">@column.CorrectPercent.ToString("0.#")%</span> } else { <span>Không chấm điểm</span> }</summary><p>@column.Prompt</p></details></th>
+        }
+        </tr></thead>
+        <tbody>
+        @foreach (var row in matrix.Rows)
+        {
+            <tr data-matrix-name="@row.Learner.DisplayName" data-matrix-attention="@GradebookService.NeedsAttention(row.Learner).ToString().ToLowerInvariant()">
+                <th scope="row">@row.Learner.DisplayName</th>
+                <td>@(row.Learner.Score is { } score ? ScoreFormatter.Format(score.Raw, score.Max, Model.Assignment.ScoreScale, Model.Assignment.Rounding) : "—")</td>
+                @foreach (var cell in row.Cells)
+                {
+                    <td>
+                    @foreach (var mark in cell)
+                    {
+                        var label = mark.State switch { MatrixState.Correct => "Đúng", MatrixState.Incorrect => "Sai", MatrixState.Pending => "Chờ chấm tay", _ => "Chưa làm" };
+                        <span class="b-matrix-mark state-@mark.State.ToString().ToLowerInvariant()" title="Lượt @mark.AttemptNumber: @label @mark.Note">
+                            @if (mark.State is MatrixState.Correct or MatrixState.Incorrect) { <icon name="@(mark.State == MatrixState.Correct ? "check" : "x")" /><span class="visually-hidden">@label</span> }
+                            else { <span aria-hidden="true">@(mark.State == MatrixState.Pending ? "…" : "–")</span><span class="visually-hidden">@label</span> }
+                            @if (cell.Count > 1) { <small>@mark.AttemptNumber</small> }
+                            @if (mark.Note != null) { <small>@mark.Note</small> }
+                        </span>
+                    }
+                    </td>
+                }
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+}

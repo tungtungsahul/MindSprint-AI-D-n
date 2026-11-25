@@ -1,0 +1,184 @@
+﻿@model HomeDashboard?
+@{
+    ViewData["Title"] = "Trang chủ";
+    ViewData["Description"] = "Ôn tập bằng thẻ ghi nhớ và quiz, làm bài lớp giao, sắp xếp công việc học tập mỗi ngày trên MindSprint AI.";
+    ViewData["OgTitle"] = $"{Brand.Name} · Học mỗi ngày, tiến bộ một chút";
+    ViewData["OgImage"] = "~/img/landing/photo-d183.webp";
+    ViewData["PageKind"] = "software";
+    // Bố cục theo trang chủ nhóm (docs/giao-dien-nhom/01–03): lời chào · thẻ "Hôm nay học gì?" · tiến độ + việc hôm nay · bộ học · góc học tập.
+    string[] weekdays = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+    var today = Model?.Today ?? VnTime.Date(DateTime.UtcNow);
+    var next = Model?.Todo.FirstOrDefault();
+}
+<div class="home-dash">
+    <header class="home-greet">
+        <div>
+            <h1>@(Model == null ? "Chào bạn" : $"{Model.Greeting}, {Model.Name}")</h1>
+            <p>Mỗi ngày một chút tiến bộ · Hôm nay mình học gì nhỉ?</p>
+        </div>
+        <span class="home-date"><icon name="calendar" />@weekdays[(int)today.DayOfWeek] · @today.Day tháng @today.Month</span>
+    </header>
+
+    <section class="home-hero-card" aria-labelledby="home-hero-title">
+        <p class="eyebrow">Mỗi ngày, một chút tiến bộ</p>
+        <h2 id="home-hero-title">Hôm nay học gì?</h2>
+        <p>Ôn lại thẻ ghi nhớ, làm bài lớp giao và ghi những việc cần làm để không bỏ sót.</p>
+        <div class="home-hero-actions">
+            @if (Model == null)
+            {
+                <a class="btn btn-primary" asp-controller="Account" asp-action="Login"><icon name="log-in" />Đăng nhập để bắt đầu</a>
+                <a class="btn btn-secondary" asp-controller="Classrooms" asp-action="Join"><icon name="ticket" />Nhập mã vào lớp</a>
+            }
+            else if (Model.Lecturer)
+            {
+                @* 3 lối tắt của trang chủ giảng viên QuizEdu: Tạo bộ học · Tạo lớp · Giao bài (giao bài bắt đầu từ bộ học, nút "…" của mỗi bộ). *@
+                <a class="btn btn-primary" href="@Url.Action("Index", "StudySets")#tao-bo-hoc"><icon name="plus" />Tạo bộ học</a>
+                <a class="btn btn-secondary" href="@Url.Action("Index", "Classrooms")#new-class-name"><icon name="users" />Tạo lớp</a>
+                <a class="btn btn-secondary" asp-controller="StudySets" asp-action="Index"><icon name="send" />Giao bài</a>
+            }
+            else
+            {
+                @if (next != null) { <a class="btn btn-primary" asp-controller="Learn" asp-action="Assignment" asp-route-id="@next.Id"><icon name="play" />Làm bài: @(next.Quiz?.Title ?? next.PaperTitle ?? "Thẻ ghi nhớ")</a> }
+                else { <a class="btn btn-primary" asp-controller="Vocab" asp-action="Practice"><icon name="play" />Bắt đầu học 15 phút</a> }
+                <a class="btn btn-secondary" href="@Url.Action("Index", "StudySets")#tao-bo-hoc"><icon name="plus" />Tạo bộ học</a>
+            }
+        </div>
+        @* Người dùng góp ý 17/11: nhập mã 8 số ngay trên trang chủ, không phải đi tìm trang Tham gia. *@
+        <form method="post" asp-controller="Classrooms" asp-action="Join" class="home-join" aria-label="Tham gia lớp hoặc bài bằng mã">
+            <label class="form-label" for="home-join-code"><icon name="ticket" />Có mã 8 số của lớp hoặc bài?</label>
+            <div class="home-join-row">
+                <input id="home-join-code" name="code" class="form-control font-monospace" inputmode="numeric" autocomplete="off" maxlength="11" placeholder="Ví dụ: 1234 5678" required />
+                <button class="btn btn-primary">Vào ngay</button>
+            </div>
+        </form>
+    </section>
+
+    @if (Model != null)
+    {
+        <div class="home-row">
+            <section class="home-panel" aria-labelledby="home-progress-title">
+                @* Như nhóm: Chuỗi học · Thẻ đã ôn · Độ chính xác (của hôm nay), tính từ hoạt động thật (StudyStatsService). *@
+                <div class="home-panel-head"><h2 id="home-progress-title">Tiến độ hôm nay</h2><a asp-controller="Schedule" asp-action="Index">Lịch học</a></div>
+                <div class="home-progress">
+                    <div class="home-ring" id="home-goal-ring" style="--p: @Model.GoalPercent" role="img" aria-label="Hoàn thành @Model.GoalPercent% mục tiêu hôm nay"><strong id="home-goal-value">@Model.GoalPercent%</strong><span>Hoàn thành</span></div>
+                    <dl class="home-stats">
+                        <div><dt><icon name="sparkles" />Chuỗi học</dt><dd>@Model.Streak.Current ngày</dd></div>
+                        <div><dt><icon name="layers" />Thẻ đã ôn</dt><dd>@Model.Study.CardsReviewed thẻ</dd></div>
+                        <div><dt><icon name="target" />Độ chính xác</dt><dd>@(Model.Study.Answered == 0 ? "—" : $"{Model.Study.Accuracy}%")</dd></div>
+                    </dl>
+                </div>
+            </section>
+            @* "Mục tiêu hôm nay" của nhóm (3 ô tích, "x/3 xong", Bắt đầu ngay). Khác nhóm: ô tự tích khi đã có hoạt động thật hôm nay;
+               vẫn tích tay được (lưu theo ngày ở trình duyệt này, js/home.js). *@
+            <section class="home-panel" aria-labelledby="home-today-title" id="home-goals" data-day="@Model.Today.ToString("yyyy-MM-dd")">
+                <div class="home-panel-head"><h2 id="home-today-title">Mục tiêu hôm nay</h2><span id="home-goals-count">@Model.GoalsDone/3 xong</span></div>
+                <div class="home-goals">
+                    <label><input type="checkbox" data-daily-goal="review" checked="@(Model.Study.CardsReviewed > 0)" /> Ôn lại ít nhất 1 bộ thẻ</label>
+                    <label><input type="checkbox" data-daily-goal="quiz" checked="@(Model.Study.Answered > 0)" /> Làm một bài kiểm tra nhanh</label>
+                    <label><input type="checkbox" data-daily-goal="note" checked="@Model.NotedToday" /> Ghi chú điều muốn tìm hiểu</label>
+                </div>
+                <a class="home-go" asp-controller="Learn" asp-action="Index"><icon name="play" />Bắt đầu ngay<icon name="chevron-right" /></a>
+                @if (Model.Tasks.Count > 0) { <a class="home-tasks-link" asp-controller="Kanban" asp-action="Index">Công việc: @Model.Tasks.Count việc chưa xong →</a> }
+            </section>
+        </div>
+
+        @if (Model.Lecturer)
+        {
+            <section class="home-section" aria-labelledby="home-open-title">
+                <div class="home-section-head"><h2 id="home-open-title">Bài đang diễn ra</h2><a asp-controller="Reports" asp-action="Index">Xem tất cả (@Model.Teaching!.Open.Count)<icon name="chevron-right" /></a></div>
+                @if (Model.Teaching!.Open.Count == 0) { <p class="home-empty">Chưa có bài đang mở. Khi bạn giao bài cho lớp, bài sẽ hiện ở đây để theo dõi.</p> }
+                else
+                {
+                    <div class="home-cards">
+                        @foreach (var a in Model.Teaching.Open.Take(3))
+                        {
+                            <a class="home-card" asp-controller="Assignments" asp-action="Details" asp-route-id="@a.Id">
+                                <span class="home-card-tag"><span class="section-icon"><icon name="play" /></span>@a.Classroom</span>
+                                <strong>@a.Title</strong>
+                                <span class="home-card-due">@DisplayText.Of(a.Mode) · @(a.EndsAt == null ? "không có hạn" : (a.Mode == AssignmentMode.Test ? "kết thúc " : "hạn ") + VnTime.Format(a.EndsAt))</span>
+                                <span class="home-card-meta"><span>@a.Working đang làm · @a.Submitted đã nộp</span><b>Theo dõi</b></span>
+                            </a>
+                        }
+                    </div>
+                }
+            </section>
+            @* "Cần xem" của QuizEdu: từng lớp có việc chờ, bấm vào là tới lớp đó; ghi rõ loại việc (ReviewWork.Describe). *@
+            <section class="home-section" aria-labelledby="home-review-title">
+                <div class="home-section-head"><h2 id="home-review-title">Cần xem <span class="badge bg-secondary">@Model.Teaching.Review.Sum(c => c.Count)</span></h2></div>
+                @if (Model.Teaching.Review.Count == 0) { <p class="home-empty">Bạn đã xem hết các việc đang chờ.</p> }
+                else
+                {
+                    <ul class="home-review">
+                        @foreach (var room in Model.Teaching.Review)
+                        {
+                            <li><a asp-controller="Classrooms" asp-action="Details" asp-route-id="@room.Id"><icon name="circle-alert" /><span><strong>@room.Name</strong>
+                                @if (room.Work?.Describe().ToList() is { Count: > 0 } parts) { <small>@string.Join(" · ", parts)</small> }</span><b>@room.Count việc chờ</b></a></li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+        else
+        {
+            <section class="home-section" aria-labelledby="home-todo-title">
+                <div class="home-section-head"><h2 id="home-todo-title">Bài cần làm</h2><a asp-controller="Learn" asp-action="Index">Xem tất cả<icon name="chevron-right" /></a></div>
+                @if (Model.Todo.Count == 0) { <p class="home-empty">Không còn bài nào cần làm ngay. Vào lớp bằng mã để nhận bài mới.</p> }
+                else
+                {
+                    <div class="home-cards">
+                        @foreach (var a in Model.Todo.Take(3))
+                        {
+                            var deadline = a.Mode == AssignmentMode.Test ? a.TestEndsAt : a.DueAt;
+                            <a class="home-card" asp-controller="Learn" asp-action="Assignment" asp-route-id="@a.Id">
+                                <span class="home-card-tag"><span class="section-icon"><icon name="list-checks" /></span>@(a.Classroom?.Name ?? "Bài làm")</span>
+                                <strong>@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</strong>
+                                <span class="home-card-meta"><span>@(deadline == null ? "Không có hạn" : "Hạn " + VnTime.Format(deadline))</span><b>@DisplayText.Of(a.Mode)</b></span>
+                            </a>
+                        }
+                    </div>
+                }
+            </section>
+        }
+
+        <section class="home-section" aria-labelledby="home-sets-title">
+            <div class="home-section-head"><h2 id="home-sets-title">Bộ học của bạn</h2><a asp-controller="StudySets" asp-action="Index">Xem tất cả<icon name="chevron-right" /></a></div>
+            @if (Model.Sets.Count == 0) { <p class="home-empty">Bạn chưa có bộ học nào. Tạo bộ học đầu tiên để ôn bằng thẻ ghi nhớ và quiz.</p> }
+            else
+            {
+                <div class="home-cards">
+                    @foreach (var s in Model.Sets)
+                    {
+                        <a class="home-card" asp-controller="StudySets" asp-action="Details" asp-route-id="@s.Id">
+                            <span class="home-card-tag"><span class="section-icon"><icon name="layers" /></span>Bộ học</span>
+                            <strong>@s.Title</strong>
+                            <span class="home-card-meta"><span>@s.Quizzes bài quiz</span><b>@(s.Due > 0 ? $"{s.Due} thẻ cần ôn" : "Đã ôn hết")</b></span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+    }
+
+    <section class="home-section" aria-labelledby="home-corner-title">
+        <div class="home-section-head"><h2 id="home-corner-title">Góc học tập của bạn</h2></div>
+        <div class="home-corner">
+            <a class="home-card" asp-controller="StudySets" asp-action="Index"><span class="section-icon"><icon name="layers" /></span><strong>Thư viện</strong><span>Gom kiến thức thành những bộ học dễ ôn lại.</span><b>Mở thư viện →</b></a>
+            <a class="home-card" asp-controller="Learn" asp-action="Index"><span class="section-icon"><icon name="square-pen" /></span><strong>Luyện tập</strong><span>Làm bài lớp giao và xem lại câu cần chú ý.</span><b>Mở luyện tập →</b></a>
+            <a class="home-card" asp-controller="Classrooms" asp-action="Index"><span class="section-icon"><icon name="users" /></span><strong>Lớp học</strong><span>Vào lớp bằng mã, nhận bài và thông báo của lớp.</span><b>Mở lớp học →</b></a>
+            <a class="home-card" asp-controller="Schedule" asp-action="Index"><span class="section-icon"><icon name="calendar" /></span><strong>Lịch học</strong><span>Dành thời gian cho từng môn trong tuần.</span><b>Mở lịch học →</b></a>
+        </div>
+    </section>
+</div>
+
+
+@if (Model != null)
+{
+    @* Màn ăn mừng mốc chuỗi ngày học của nhóm (streak-milestone-modal): mỗi mốc chỉ hiện một lần trên trình duyệt này. *@
+    <dialog class="streak-dialog" id="streak-dialog" data-streak="@Model.Streak.Current" aria-labelledby="streak-title">
+        <span class="streak-badge" aria-hidden="true"><icon name="trophy" /></span>
+        <h2 id="streak-title">Chuỗi <span data-streak-days>@Model.Streak.Current</span> ngày học!</h2>
+        <p>Bạn đã học đều đặn <b>@Model.Streak.Current ngày liên tiếp</b>. Giữ nhịp này nhé — mỗi ngày một chút tiến bộ.</p>
+        <form method="dialog"><button class="btn btn-primary">Nhận thưởng tinh thần</button></form>
+    </dialog>
+}
+@section Scripts { <script src="~/js/home.js" asp-append-version="true"></script> }

@@ -1,0 +1,7 @@
+@model Notification
+@{ ViewData["Title"] = "Thông báo"; var payload = NotificationService.Payload(Model); }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Thông báo</a>
+<h1 class="h3">Thông báo</h1>
+<p>@payload.Text.Replace(" IP:", " địa chỉ mạng (IP):", StringComparison.Ordinal)</p>
+<p>@VnTime.Format(Model.CreatedAt) · @(Model.ReadAt == null ? "Chưa đọc" : "Đã đọc")</p>
+<form method="post" asp-action="Open" asp-route-id="@Model.Id"><button class="btn btn-primary">Mở thông báo</button></form>

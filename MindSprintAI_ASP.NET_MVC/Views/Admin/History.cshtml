@@ -1,0 +1,10 @@
+@model List<AdminRoleChange>
+@{ ViewData["Title"] = "Lịch sử quyền quản trị viên"; var names = (Dictionary<string, string>)ViewData["Names"]!; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Quản trị</a>
+<h1 class="h3 mt-2">Lịch sử quyền quản trị viên (100 lần gần nhất)</h1>
+<div class="table-responsive"><table class="table"><thead><tr><th>Thời điểm (VN)</th><th>Người thực hiện</th><th>Người nhận</th><th>Thay đổi</th><th>Lý do</th></tr></thead><tbody>
+@foreach (var row in Model)
+{
+    <tr><td>@VnTime.Format(row.At)</td><td>@names.GetValueOrDefault(row.AdminId, "(đã xóa)")</td><td>@names.GetValueOrDefault(row.TargetUserId, "(đã xóa)")</td><td>@(row.Granted ? "Cấp quyền" : "Gỡ quyền")</td><td>@row.Reason</td></tr>
+}
+</tbody></table></div>

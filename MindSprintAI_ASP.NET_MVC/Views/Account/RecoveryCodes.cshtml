@@ -1,0 +1,15 @@
+@model string[]
+@{ ViewData["Title"] = "Lưu mã dự phòng"; }
+<h1 class="h3">Lưu mã dự phòng</h1>
+<div class="card card-body col-lg-7">
+    <p class="alert alert-warning">10 mã chỉ hiện lần này. Mỗi mã dùng một lần. Cất ở nơi an toàn, tách khỏi điện thoại; tạo lại sẽ vô hiệu bộ cũ.</p>
+    <pre id="recovery-codes" class="border rounded p-3 user-select-all">@string.Join("\n", Model)</pre>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" id="copy-recovery" class="btn btn-outline-primary"><icon name="copy" />Sao chép mã</button>
+        <button type="button" id="download-recovery" class="btn btn-outline-primary">Tải mã về thiết bị (file văn bản)</button>
+    </div>
+    <p id="recovery-message" class="small mt-2" role="status" aria-live="polite"></p>
+    <p class="fw-bold">Các mã này chỉ hiện một lần. Hãy lưu lại trước khi rời trang.</p>
+    <a asp-action="Index" class="btn btn-primary mt-3">Đã cất mã, về tài khoản</a>
+</div>
+@section Scripts { <script src="~/js/two-factor.js" asp-append-version="true"></script> }

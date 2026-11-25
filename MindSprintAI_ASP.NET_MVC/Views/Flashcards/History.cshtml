@@ -1,0 +1,21 @@
+@model CardHistoryPage
+@{ ViewData["Title"] = "Lịch sử học thẻ"; }
+@if (Model.ParticipantId != null) { <a class="btn btn-sm b-back" asp-controller="Assignments" asp-action="Details" asp-route-id="@Model.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại Bảng điểm</a> }
+else { <a class="btn btn-sm b-back" asp-action="Study" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại Học thẻ</a> }
+<h1 class="h3 my-3">Lịch sử học thẻ — @Model.Title</h1>
+<p class="text-muted">Thời gian theo giờ Việt Nam. Học kiểu truyền thống xếp thẻ theo nhóm Nhớ/Chưa nhớ; ôn ngắt quãng xếp thẻ vào các hộp (hộp càng cao thì càng lâu mới ôn lại). Hai cách được ghi riêng.</p>
+<div class="table-responsive"><table class="table table-sm align-middle">
+    <thead><tr><th scope="col">Thời điểm</th><th scope="col">Thẻ</th><th scope="col">Chế độ / đánh giá</th><th scope="col">Nhóm trước → sau</th><th scope="col">Hộp trước → sau</th><th scope="col">Hạn trước → sau</th><th scope="col">Đến hạn</th></tr></thead>
+    <tbody>@foreach (var r in Model.Reviews)
+    {
+        <tr><td>@VnTime.Format(r.ReviewedAt)</td><td>@r.Flashcard.Front</td>
+            <td>@(r.Mode == FlashcardMode.Traditional ? "Truyền thống" : "Ôn ngắt quãng") · @(r.Rating == FlashcardRating.Remembered ? "Nhớ" : "Chưa nhớ")</td>
+            <td>@(r.BeforeRating == null ? "Chưa đánh giá" : r.BeforeRating == FlashcardRating.Remembered ? "Nhớ" : "Chưa nhớ") → @(r.AfterRating == null ? "Chưa đánh giá" : r.AfterRating == FlashcardRating.Remembered ? "Nhớ" : "Chưa nhớ")</td>
+            <td>@r.BeforeBox → @r.AfterBox</td><td>@(r.BeforeDueDate?.ToString("dd/MM/yyyy") ?? "Ngay") → @(r.AfterDueDate?.ToString("dd/MM/yyyy") ?? "Ngay")</td><td>@(r.WasDue ? "Có" : "Không")</td></tr>
+    }</tbody>
+</table></div>
+@if (Model.Reviews.Count == 0) { <p>Chưa có lịch sử học thẻ.</p> }
+<nav aria-label="Trang lịch sử">
+    @if (Model.Page > 1) { <a class="btn btn-outline-secondary" asp-action="History" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId" asp-route-participantId="@Model.ParticipantId" asp-route-page="@(Model.Page - 1)">Trang trước</a> }
+    @if (Model.HasNext) { <a class="btn btn-outline-secondary" asp-action="History" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId" asp-route-participantId="@Model.ParticipantId" asp-route-page="@(Model.Page + 1)">Trang sau</a> }
+</nav>

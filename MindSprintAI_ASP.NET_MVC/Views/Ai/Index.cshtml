@@ -1,0 +1,26 @@
+@model List<AiConversation>
+@{ var trash = ViewData["Trash"] is true; ViewData["Title"] = trash ? "Thùng rác trợ lý" : "Lịch sử trợ lý"; }
+<a class="btn btn-sm b-back" asp-controller="Account" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Tài khoản của tôi</a>
+<h1 class="h3 mt-2">@ViewData["Title"]</h1>
+@if (trash) { <p><a asp-action="Index">Lịch sử trợ lý</a></p> }
+else { <p><a asp-action="Index" asp-route-trash="true">Thùng rác trợ lý</a></p> }
+@if (trash) { <p class="text-muted">Hội thoại được giữ trong thùng rác 30 ngày trước khi xóa hẳn.</p> }
+@if (Model.Count == 0) { <p class="text-muted">Chưa có hội thoại.</p> }
+@foreach (var conversation in Model)
+{
+    <article class="card card-body mb-2">
+        <h2 class="h6 text-break">@conversation.Title</h2>
+        <p class="small text-muted mb-2">@VnTime.Format(conversation.CreatedAt)</p>
+        <div class="d-flex flex-wrap gap-2">
+            @if (trash)
+            {
+                <form method="post" asp-action="Restore"><input type="hidden" name="id" value="@conversation.Id" /><button class="btn btn-sm btn-outline-primary">Khôi phục</button></form>
+            }
+            else
+            {
+                <a class="btn btn-sm btn-outline-primary" asp-action="Open" asp-route-id="@conversation.Id">Mở hội thoại</a>
+                <form method="post" asp-action="Delete" data-confirm="Chuyển hội thoại vào thùng rác trong 30 ngày?"><input type="hidden" name="id" value="@conversation.Id" /><button class="btn btn-sm btn-outline-danger"><icon name="trash-2" />Xóa</button></form>
+            }
+        </div>
+    </article>
+}

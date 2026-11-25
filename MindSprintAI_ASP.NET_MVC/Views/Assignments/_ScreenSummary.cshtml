@@ -1,0 +1,12 @@
+@model ScreenSummary
+<div class="small" role="status">
+    @if (Model.Away) { <strong>Đang rời màn hình</strong> }
+    @if (Model.SignalLost) { <strong>Mất tín hiệu giám sát</strong> <span>(trình duyệt của học viên ngừng báo về, có thể do mất mạng; chưa chắc là gian lận)</span> }
+    <p class="mb-1">Rời màn hình @Model.Count lần, tổng @DisplayText.Duration(Model.TotalSeconds)@if (Model.OfflineCount > 0) { <span> (@Model.OfflineCount lần trong lúc tắt/mất mạng)</span> }@if (Model.LatestTime != null) { <span>; lần gần nhất @Model.LatestTime, @DisplayText.Duration(Model.LatestSeconds ?? 0)</span> }</p>
+    @if (Model.LossCount > 0)
+    {
+        @* (H11) vẫn hiện sau khi có mạng lại; không tính vào số lần rời. *@
+        <p class="mb-1 text-warning-emphasis"><strong>⚠ Mất mạng @Model.LossCount lần, tổng @DisplayText.Duration(Model.LossSeconds)</strong><br />
+            <span class="text-muted">Mất mạng chưa chắc là gian lận. Trong lúc mất mạng, đề bị ẩn và các lần rời màn hình vẫn được báo lại khi có mạng.</span></p>
+    }
+</div>

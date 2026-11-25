@@ -1,0 +1,107 @@
+@model List<TrashItem>
+@{
+    ViewData["Title"] = "Thùng rác";
+    var targets = ViewData["RestoreTargets"] as List<StudySet> ?? [];
+}
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <h1 class="h3 mb-0 me-auto">Thùng rác</h1>
+    <a class="btn btn-outline-secondary" asp-action="Index">Bộ học của tôi</a>
+</div>
+<p class="text-muted">Khôi phục trong 30 ngày. Với quiz/thẻ trong bộ đã xóa, chọn bộ học để khôi phục. Giờ hiển thị là giờ Việt Nam.</p>
+@if (Model.Count == 0)
+{
+    <div class="empty-state" role="status">
+        <span class="section-icon"><icon name="trash-2" /></span>
+        <h2 class="h4">Thùng rác trống.</h2>
+        <p class="mb-0">Bộ học, quiz, thẻ và hội thoại trợ lý bạn xóa sẽ nằm ở đây 30 ngày để khôi phục.</p>
+    </div>
+}
+<div class="c-trash-tabs d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Loại mục trong thùng rác" hidden data-empty="@(Model.Count == 0 ? "1" : null)">
+    <button class="btn" type="button" data-trash-filter="all" aria-pressed="true">Tất cả</button>
+    @foreach (var kind in Enum.GetValues<TrashKind>())
+    {
+        var label = kind switch { TrashKind.StudySet => "Bộ học", TrashKind.Quiz => "Quiz", TrashKind.Flashcard => "Thẻ ghi nhớ", TrashKind.Report => "Báo cáo bài giao", _ => "Hội thoại trợ lý" };
+        <button class="btn" type="button" data-trash-filter="@((int)kind)" aria-pressed="false">@label (@Model.Count(x => x.Kind == kind))</button>
+    }
+</div>
+<ul class="list-group">
+@foreach (var item in Model)
+{
+    <li class="list-group-item" data-trash-kind="@((int)item.Kind)">
+        <div class="d-flex flex-wrap align-items-start gap-3">
+            <div class="flex-grow-1" style="min-width: 0; overflow-wrap: anywhere">
+                <span class="badge bg-secondary">@item.KindLabel</span> <strong>@item.Title</strong>
+                <div class="small mt-1">Xóa lúc: @VnTime.Format(item.DeletedAt)</div>
+                @if (item.Archived) { <div class="small">Đã từng giao — chỉ lưu trữ, không tự xóa hẳn</div> }
+                else if (item.RetainedWithParent) { <div class="small">Đang giữ cùng bộ học lưu trữ, không tự xóa hẳn</div> }
+                else if (item.Kind == TrashKind.Report) { <div class="small">Không tự xóa hẳn bài giao/lượt làm. Học viên vẫn xem lịch sử và Review.</div> }
+                else { <div class="small">Tự xóa hẳn lúc: @VnTime.Format(item.PurgeAt)</div> }
+                @if (item.ParentDeleted && (item.CanRestoreWithParent || item.CanRelocate))
+                {
+                    <p class="small text-muted mb-0">Bộ học cũ còn trong thùng rác.</p>
+                    @if (!item.CanRelocate) { <p class="small text-warning mb-0">Mục đã từng giao hoặc thuộc bộ bị ẩn chỉ được khôi phục cùng bộ học cũ, để giữ liên kết bài giao và văn bản nguồn.</p> }
+                }
+                else if (!item.CanRestore) { <p class="small text-muted mb-0">Đã quá hạn khôi phục 30 ngày.</p> }
+            </div>
+            @if (item.CanRestore)
+            {
+                <form method="post" asp-action="Restore">
+                    <input type="hidden" name="kind" value="@((int)item.Kind)" />
+                    <input type="hidden" name="id" value="@item.Id" />
+                    <input type="hidden" name="restoreMode" value="" />
+                    <input type="hidden" name="targetStudySetId" value="" />
+                    <button class="btn btn-outline-primary" aria-label="Khôi phục @item.KindLabel @item.Title">Khôi phục</button>
+                </form>
+            }
+        </div>
+        @if (item.ParentDeleted && (item.CanRestoreWithParent || item.CanRelocate))
+        {
+            <fieldset class="mt-3">
+                <legend class="fs-6">Chọn nơi khôi phục @item.KindLabel</legend>
+                <div class="d-flex flex-wrap gap-3 align-items-start">
+                    @if (item.CanRelocate)
+                    {
+                        @if (targets.Count > 0)
+                        {
+                            <form method="post" asp-action="Restore" class="d-flex flex-wrap gap-2 align-items-end">
+                                <input type="hidden" name="kind" value="@((int)item.Kind)" />
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="hidden" name="restoreMode" value="@((int)TrashRestoreMode.Move)" />
+                                <div>
+                                    <label class="form-label" for="target-@((int)item.Kind)-@item.Id">Bộ học khác của tôi</label>
+                                    <select class="form-select" name="targetStudySetId" id="target-@((int)item.Kind)-@item.Id" required>
+                                        @foreach (var target in targets) { <option value="@target.Id">@target.Title</option> }
+                                    </select>
+                                </div>
+                                <button class="btn btn-outline-primary">Chuyển vào bộ học khác của tôi</button>
+                            </form>
+                        }
+                        else { <p class="small text-muted">Chưa có bộ học khác đang hoạt động.</p> }
+                        <form method="post" asp-action="Restore">
+                            <input type="hidden" name="kind" value="@((int)item.Kind)" />
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="restoreMode" value="@((int)TrashRestoreMode.NewStudySet)" />
+                            <input type="hidden" name="targetStudySetId" value="" />
+                            <button class="btn btn-outline-primary"><icon name="plus" />Tạo bộ học mới</button>
+                            <p class="small text-muted mt-1 mb-0">Tên bộ cũ + “(khôi phục)”, chỉ chứa mục này.</p>
+                        </form>
+                    }
+                    @if (item.CanRestoreWithParent)
+                    {
+                        <form method="post" asp-action="Restore">
+                            <input type="hidden" name="kind" value="@((int)item.Kind)" />
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="restoreMode" value="@((int)TrashRestoreMode.WithOldStudySet)" />
+                            <input type="hidden" name="targetStudySetId" value="" />
+                            <button class="btn btn-outline-primary">Khôi phục cùng bộ học cũ</button>
+                            <p class="small text-muted mt-1 mb-0">Khôi phục bộ và mọi mục còn trong đó; mục khác đã xóa riêng vẫn ở thùng rác.</p>
+                        </form>
+                    }
+                </div>
+            </fieldset>
+        }
+    </li>
+}
+</ul>
+
+@section Scripts { <script src="~/js/trash-tabs.js" asp-append-version="true"></script> }

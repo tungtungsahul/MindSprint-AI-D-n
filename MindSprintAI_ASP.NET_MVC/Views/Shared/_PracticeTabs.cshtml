@@ -1,0 +1,7 @@
+@model string
+@* Ba tab của trang Luyện tập (người dùng chọn 15/11): như nút chuyển chế độ của nhóm (Trắc nghiệm & Tự luận | Game ghép thẻ) + bài lớp giao. *@
+<nav class="practice-tabs" aria-label="Chế độ luyện tập">
+    <a class="@(Model == "assigned" ? "is-active" : "")" aria-current="@(Model == "assigned" ? "page" : null)" asp-controller="Learn" asp-action="Index" asp-route-tab="assigned"><icon name="list-checks" />Bài được giao</a>
+    <a class="@(Model == "practice" ? "is-active" : "")" aria-current="@(Model == "practice" ? "page" : null)" asp-controller="Vocab" asp-action="Practice"><icon name="square-pen" />Trắc nghiệm &amp; Tự luận</a>
+    <a class="@(Model == "game" ? "is-active" : "")" aria-current="@(Model == "game" ? "page" : null)" asp-controller="Vocab" asp-action="Game"><icon name="play" />Game ghép thẻ</a>
+</nav>

@@ -1,0 +1,213 @@
+@model AssignmentDetailsModel
+@{
+    var a = Model.Assignment;
+    var closed = a.Status == AssignmentStatus.Closed;
+    var classRows = Model.Rows.Where(r => !r.IsStranger).ToList();
+    var waitingCount = a.Mode == AssignmentMode.Test && a.TestStartedAt == null && !closed ? Model.Waiting.Count(p => !p.IsStranger) : 0;
+}
+<div class="b-live-board" data-live-counts data-participants="@classRows.Count" data-waiting="@waitingCount" data-working="@classRows.Count(r => r.Status == CompletionStatus.InProgress)" data-paused="@classRows.Count(r => r.Status == CompletionStatus.Paused)" data-completed="@classRows.Count(r => r.Status == CompletionStatus.Completed)" data-submitted="@classRows.Count(r => r.Status == CompletionStatus.SubmittedAwaitingScore)">
+<dl class="b-live-counts" aria-label="Tình hình học viên trong lớp">
+    <div><dt>Học viên</dt><dd>@classRows.Count</dd></div>
+    <div><dt>Đang chờ</dt><dd>@waitingCount</dd></div>
+    <div><dt>Đang làm</dt><dd>@classRows.Count(r => r.Status == CompletionStatus.InProgress)</dd></div>
+    <div><dt>Tạm dừng</dt><dd>@classRows.Count(r => r.Status == CompletionStatus.Paused)</dd></div>
+    <div><dt>Chờ công bố</dt><dd>@classRows.Count(r => r.Status == CompletionStatus.SubmittedAwaitingScore)</dd></div>
+    <div><dt>Hoàn thành</dt><dd>@classRows.Count(r => r.Status == CompletionStatus.Completed)</dd></div>
+</dl>
+
+@if (Model.Waiting.Any(p => p.IsStranger && p.ApprovalStatus == ApprovalStatus.Pending))
+{
+    <div class="card card-body mb-3">
+        <h2 class="h5">Chờ duyệt người ngoài lớp</h2>
+        <ul class="list-unstyled">
+        @foreach (var p in Model.Waiting.Where(p => p.IsStranger && p.ApprovalStatus == ApprovalStatus.Pending))
+        {
+            <li class="mb-2">@(p.GuestDisplayName ?? p.User?.DisplayName)
+                @if (p.GuestId != null) { <span class="badge bg-secondary">Khách</span> }
+                <partial name="_ApproveStranger" model="p" />
+            </li>
+        }
+        </ul>
+    </div>
+}
+@if (a.Mode == AssignmentMode.Test)
+{
+    @if (a.TestStartedAt == null && !closed)
+    {
+        <div class="card card-body mb-3">
+            <h2 class="h5">Phòng chờ (@waitingCount học viên trong lớp)</h2>
+            @if (Model.Waiting.Count == 0) { <p class="text-muted mb-2">Chưa có ai vào phòng chờ. Bạn vẫn bắt đầu được; người vào sau làm theo đồng hồ chung.</p> }
+            <ul>@foreach (var p in Model.Waiting) { <li>@(p.GuestDisplayName ?? p.User?.DisplayName) @if (p.GuestId != null) { <span class="badge bg-secondary">Khách</span> } @if (p.IsStranger) { <span>· Người ngoài lớp · @(p.ApprovalStatus == ApprovalStatus.Pending ? "Chờ giảng viên duyệt" : p.ApprovalStatus == ApprovalStatus.Rejected ? "Bị từ chối" : "Được vào")</span> }</li> }</ul>
+            <form method="post" asp-action="Start" asp-route-id="@a.Id" data-confirm="Bắt đầu đồng hồ chung cho bài Kiểm tra?">
+                <button class="btn btn-primary"><icon name="play" />Bắt đầu</button>
+            </form>
+        </div>
+    }
+}
+<h2 class="section-head"><span class="section-icon"><icon name="chart-column" /></span>Bảng điểm</h2>
+@if (Model.Ungraded) { <p>Không chấm điểm</p> }
+<div class="table-responsive">
+    <table class="table table-sm align-middle b-live-table b-grade-table @(a.ScoreRetries ? "b-grade-table-practice" : "")">
+        <colgroup><col class="b-col-name" /><col class="b-col-status" /><col class="b-col-progress" /><col class="b-col-attempts" /><col class="b-col-score" />@if (a.ScoreRetries) { <col class="b-col-score" /> }<col class="b-col-cards" /><col /></colgroup>
+        <thead><tr><th scope="col">Học viên</th><th scope="col">Trạng thái</th><th scope="col">Tiến độ</th><th scope="col">Số lượt</th><th scope="col">@(a.MasteryThreshold == null ? "Điểm" : "Điểm lần đầu")</th>@if (a.ScoreRetries) { <th scope="col">Điểm sau luyện</th> }<th scope="col">Thẻ</th><th scope="col">Bài làm / điều chỉnh</th></tr></thead>
+        <tbody>
+        @foreach (var r in classRows)
+        {
+            <tr class="@(r.Screen?.Highlight == true ? "table-warning" : "")" data-row="@r.UserId">
+                <td data-label="Học viên">@r.DisplayName
+                    <button type="button" class="b-row-toggle" aria-expanded="false" hidden>Xem chi tiết</button>
+                    @if (r.SelfReviewCount > 0)
+                    {
+                        <p class="small d-review-count">Đã tự ôn lại sau hạn: @r.SelfReviewCount lượt</p>
+                        @if (r.LatestSelfReviewId != null) { <a class="small" asp-action="Attempt" asp-route-id="@r.LatestSelfReviewId">Xem lượt tự ôn</a> }
+                    }
+                    @if (r.Warning != null) { <p class="text-warning">@r.Warning</p> }
+                    @if (r.ExtraMinutes > 0) { <span class="badge bg-info text-body">+@r.ExtraMinutes phút</span> }
+                    <br /><a class="small" asp-controller="Reports" asp-action="Create" asp-route-targetType="User" asp-route-targetId="@r.UserId" asp-route-assignmentId="@a.Id">Báo tên không phù hợp</a>
+                </td>
+                <td data-label="Trạng thái">
+                    @DisplayText.Of(r.Status)
+                    @if (r.EndText != null) { <p>@r.EndText</p> }
+                    @if (r.Screen != null) { <partial name="_ScreenSummary" model="r.Screen" /> }
+                    @if (r.DeviceChange != null) { <partial name="_DeviceChange" model="r.DeviceChange" /> }
+                    @if (r.BlankRegradeCredit) { <span class="badge text-wrap bg-info text-body">@RegradeRules.BlankCreditLabel</span> }
+                    @if (a.MasteryThreshold != null) { <span class="d-block">Làm chủ: @r.Mastery</span> }
+                    @if (r.Passed is { } passed) { <span class="badge bg-body-tertiary text-body border">@(passed ? "Đạt" : "Chưa đạt")</span> }
+                    @if (r.MissingCards != null) { <span class="badge bg-warning text-body">@r.MissingCards</span> }
+                    @foreach (var label in DisplayText.Of(r.Labels))
+                    {
+                        <span class="badge bg-body-tertiary text-body border">@label</span>
+                    }
+                </td>
+                <td data-label="Tiến độ">@(r.Progress ?? "—")</td>
+                <td data-label="Số lượt">@r.AttemptsUsed @if (r.ExtraAttempts > 0) { <span class="small">(+@r.ExtraAttempts lượt riêng)</span> }</td>
+                <td>@(r.Score == null ? "—" : ScoreFormatter.Format(r.Score.Raw, r.Score.Max, a.ScoreScale, a.Rounding))@if (r.Score?.CriticalText is { } criticalText) { <span class="badge bg-warning text-body text-wrap">@criticalText</span> }</td>
+                @if (a.ScoreRetries) { <td data-label="Điểm sau luyện">@(r.Score?.Practice is { } practice ? ScoreFormatter.Format(practice, r.Score.Max, a.ScoreScale, a.Rounding) : "—")</td> }
+                <td data-label="Thẻ">@(r.Cards?.ProgressLabel ?? "—")
+                    @if (r.ParticipantId != null && r.Cards != null) { <a asp-controller="Flashcards" asp-action="History" asp-route-id="@a.StudySetId" asp-route-assignmentId="@a.Id" asp-route-participantId="@r.ParticipantId">Lịch sử thẻ</a> }
+                </td>
+                <td data-label="Bài làm / điều chỉnh">
+                    @if (r.LatestAttemptId != null) { <a asp-action="Attempt" asp-route-id="@r.LatestAttemptId"><icon name="eye" /> Xem bài</a> }
+                    @if (r.CanAdjust)
+                    {
+                        <details class="mt-2"><summary class="b-adjust-toggle" aria-label="Giờ / lượt riêng cho @r.DisplayName"><icon name="clock" />Giờ / lượt riêng</summary>
+                            @if (!closed && a.AnswersPublishedAt == null)
+                            {
+                                <form method="post" asp-action="ChangeExtraMinutes" asp-route-id="@a.Id" class="mt-2">
+                                    <input type="hidden" name="learnerId" value="@r.UserId" />
+                                    <label for="minutes-@r.UserId" class="form-label">Tổng phút cộng riêng (0–600)</label>
+                                    <input id="minutes-@r.UserId" name="minutes" type="number" min="0" max="600" value="@r.ExtraMinutes" class="form-control form-control-sm" required />
+                                    <label for="minutes-reason-@r.UserId" class="form-label">Lý do bắt buộc</label>
+                                    <input id="minutes-reason-@r.UserId" name="reason" maxlength="500" class="form-control form-control-sm mb-2" required />
+                                    <button class="btn btn-sm btn-outline-primary">Lưu giờ riêng</button>
+                                    <p class="small">Cộng vào giờ kết thúc chung; 0 bỏ phần cộng. Không đổi khung làm lại.</p>
+                                </form>
+                            }
+                            else if (a.AnswersPublishedAt != null)
+                            {
+                                <p class="text-warning">Đáp án đã công bố, học viên có thể đã xem đáp án. Không thể cộng giờ riêng.</p>
+                            }
+                            @if (a.Mode == AssignmentMode.Practice && a.Form != AssignmentForm.FlashcardOnly)
+                            {
+                                <form method="post" asp-action="ChangeExtraAttempts" asp-route-id="@a.Id" class="mt-2">
+                                    <input type="hidden" name="learnerId" value="@r.UserId" />
+                                    <label for="extra-attempts-@r.UserId" class="form-label">Tổng lượt cộng riêng (cộng với lượt chung tối đa 100)</label>
+                                    <input id="extra-attempts-@r.UserId" name="extraAttempts" type="number" min="0" max="@(a.MaxAttempts.HasValue ? 100 - (a.MaxAttempts ?? 0) : (int?)null)" value="@r.ExtraAttempts" class="form-control form-control-sm" required />
+                                    <label for="extra-reason-@r.UserId" class="form-label">Lý do bắt buộc</label>
+                                    <input id="extra-reason-@r.UserId" name="reason" maxlength="500" class="form-control form-control-sm mb-2" required />
+                                    <button class="btn btn-sm btn-outline-primary">Lưu lượt riêng</button>
+                                </form>
+                            }
+                        </details>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (classRows.Count == 0)
+{
+    <p class="b-table-empty">Lớp chưa có học viên nào được giao bài này. Khi học viên tham gia, bạn có thể xem tiến độ và kết quả tại đây.</p>
+}
+<h2 class="section-head b-stranger-title"><span class="section-icon"><icon name="users" /></span>Người ngoài lớp</h2>
+<p class="small text-muted">Không tính vào số lượng và tỉ lệ của lớp. Khách chỉ xuất hiện sau khi bắt đầu.</p>
+<div class="table-responsive">
+<table class="table table-sm align-middle b-live-table b-grade-table b-grade-table-strangers @(a.ScoreRetries ? "b-grade-table-practice" : "")">
+    <colgroup><col class="b-col-name" /><col class="b-col-status" /><col class="b-col-attempts" /><col class="b-col-score" /><col /></colgroup>
+    <thead><tr><th scope="col">Tên</th><th scope="col">Trạng thái</th><th scope="col">Số lượt</th><th scope="col">Điểm</th><th scope="col">Bài làm / điều chỉnh</th></tr></thead>
+    <tbody>
+    @foreach (var r in Model.Rows.Where(r => r.IsStranger))
+    {
+        <tr class="@(r.Screen?.Highlight == true ? "table-warning" : "")" data-row="@r.UserId">
+            <td data-label="Tên">@r.DisplayName @if (r.IsGuest) { <span class="badge bg-secondary">Khách</span> }
+                @if (r.Warning != null) { <p class="text-warning">@r.Warning</p> }
+            </td>
+            <td data-label="Trạng thái">@(r.ApprovalStatus == ApprovalStatus.Pending ? "Chờ giảng viên duyệt" : r.ApprovalStatus == ApprovalStatus.Rejected ? "Bị từ chối" : DisplayText.Of(r.Status))
+                @foreach (var label in DisplayText.Of(r.Labels)) { <span class="badge bg-body-tertiary text-body border">@label</span> }
+                <span>@r.Progress @r.Mastery @r.Cards?.ProgressLabel @r.MissingCards</span>
+                @if (r.EndText != null) { <p>@r.EndText</p> }
+                @if (r.Screen != null) { <partial name="_ScreenSummary" model="r.Screen" /> }
+                @if (r.DeviceChange != null) { <partial name="_DeviceChange" model="r.DeviceChange" /> }
+            </td>
+            <td data-label="Số lượt">@r.AttemptsUsed</td>
+            @* Bài không chấm điểm: giữ đúng ô <td>Không chấm điểm</td> (test Tang4ViewTests); nhãn "Điểm" trên điện thoại do assignment-live.js gắn. *@
+            @if (Model.Ungraded)
+            {
+                <td>@("Không chấm điểm")@if (r.Score?.CriticalText is { } ungradedCritical) { <span class="badge bg-warning text-body text-wrap">@ungradedCritical</span> }@if (r.ParticipantId != null && r.Cards != null) { <a asp-controller="Flashcards" asp-action="History" asp-route-id="@a.StudySetId" asp-route-assignmentId="@a.Id" asp-route-participantId="@r.ParticipantId">Lịch sử thẻ</a> }</td>
+            }
+            else
+            {
+            <td>@(r.Score == null ? "—" : ScoreFormatter.Format(r.Score.Raw, r.Score.Max, a.ScoreScale, a.Rounding))@if (r.Score?.CriticalText is { } criticalText) { <span class="badge bg-warning text-body text-wrap">@criticalText</span> }@if (r.ParticipantId != null && r.Cards != null) { <a asp-controller="Flashcards" asp-action="History" asp-route-id="@a.StudySetId" asp-route-assignmentId="@a.Id" asp-route-participantId="@r.ParticipantId">Lịch sử thẻ</a> }</td>
+            }
+            <td data-label="Bài làm / điều chỉnh">
+                @if (r.LatestAttemptId != null) { <a asp-action="Attempt" asp-route-id="@r.LatestAttemptId"><icon name="eye" /> Xem bài / Hủy lượt</a> }
+                @if (r.CanKeepGuest)
+                {
+                    <form method="post" asp-action="KeepGuest" asp-route-id="@a.Id" class="mt-2" data-confirm="Giữ lượt khách cho tài khoản mới chỉ ở phòng chờ?">
+                        <input type="hidden" name="participantId" value="@r.ParticipantId" />
+                        <label class="form-label" for="guest-choice-@r.ParticipantId">Tài khoản mới chỉ ở phòng chờ. Lý do giữ lượt khách</label>
+                        <input class="form-control form-control-sm mb-2" id="guest-choice-@r.ParticipantId" name="reason" maxlength="500" required />
+                        <button class="btn btn-sm btn-outline-primary">Giữ lượt khách cho tài khoản</button>
+                    </form>
+                }
+                @if (r.CanAdjust && r.ApprovalStatus is ApprovalStatus.NotRequired or ApprovalStatus.Approved)
+                {
+                    <details><summary class="b-adjust-toggle" aria-label="Giờ / lượt riêng cho @r.DisplayName"><icon name="clock" />Giờ / lượt riêng</summary>
+                    @if (!closed && a.AnswersPublishedAt == null)
+                    {
+                        <form method="post" asp-action="ChangeExtraMinutes" asp-route-id="@a.Id" class="mt-2">
+                            <input type="hidden" name="learnerId" value="@r.UserId" />
+                            <label class="form-label" for="stranger-minutes-@r.ParticipantId">Tổng phút cộng riêng (0–600)</label>
+                            <input class="form-control form-control-sm" id="stranger-minutes-@r.ParticipantId" name="minutes" value="@r.ExtraMinutes" type="number" min="0" max="600" required />
+                            <label class="form-label" for="stranger-time-reason-@r.ParticipantId">Lý do bắt buộc</label>
+                            <input class="form-control form-control-sm mb-2" id="stranger-time-reason-@r.ParticipantId" name="reason" maxlength="500" required />
+                            <button class="btn btn-sm btn-outline-primary">Lưu giờ riêng</button>
+                        </form>
+                    }
+                    @if (a.Mode == AssignmentMode.Practice && a.Form != AssignmentForm.FlashcardOnly)
+                    {
+                        <form method="post" asp-action="ChangeExtraAttempts" asp-route-id="@a.Id" class="mt-2">
+                            <input type="hidden" name="learnerId" value="@r.UserId" />
+                            <label class="form-label" for="stranger-extra-@r.ParticipantId">Tổng lượt cộng riêng</label>
+                            <input class="form-control form-control-sm" id="stranger-extra-@r.ParticipantId" name="extraAttempts" value="@r.ExtraAttempts" type="number" min="0" required />
+                            <label class="form-label" for="stranger-attempt-reason-@r.ParticipantId">Lý do bắt buộc</label>
+                            <input class="form-control form-control-sm mb-2" id="stranger-attempt-reason-@r.ParticipantId" name="reason" maxlength="500" required />
+                            <button class="btn btn-sm btn-outline-primary">Lưu lượt riêng</button>
+                        </form>
+                    }
+                    </details>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>
+@if (!Model.Rows.Any(r => r.IsStranger))
+{
+    <p class="b-table-empty">Chưa có người ngoài lớp làm bài. Khi có người bắt đầu, tiến độ và kết quả sẽ hiện tại đây.</p>
+}
+</div>
+
+<template data-warning-template><partial name="_Warnings" model="Model" /></template>

@@ -1,0 +1,59 @@
+@model ExternalLoginPage
+<section class="acc-card" id="sec-external" aria-labelledby="external-logins-heading">
+    <div class="acc-card-top">
+        <h2 class="section-head" id="external-logins-heading"><span class="section-icon" style="--tint:var(--blue)"><icon name="link" /></span>Liên kết đăng nhập</h2>
+        @if (Model.Linked.Count > 0)
+        {
+            <span class="acc-state is-on"><icon name="check" />Đã liên kết @Model.Linked.Count tài khoản</span>
+        }
+        else
+        {
+            <span class="acc-state is-off"><icon name="x" />Chưa liên kết</span>
+        }
+    </div>
+    <p class="acc-desc">Nối tài khoản Google hoặc Microsoft để đăng nhập nhanh không cần nhập lại mật khẩu.</p>
+    @if (Model.Linked.Count == 0)
+    {
+        <p class="small text-muted">Chưa có liên kết Google/Microsoft.</p>
+    }
+    <div class="acc-stack">
+        @foreach (var linked in Model.Linked)
+        {
+            <div class="acc-subcard">
+                <div class="acc-subhead">
+                    <h3 class="h6"><icon name="globe" /> Đã nối với @linked.LoginProvider</h3>
+                    <span class="acc-state is-on"><icon name="check" />Đã liên kết</span>
+                </div>
+                <form method="post" asp-action="RemoveLogin" data-action="RemoveLogin" data-confirm="Gỡ liên kết đăng nhập này?">
+                    <input type="hidden" name="provider" value="@linked.LoginProvider" />
+                    <input type="hidden" name="providerKey" value="@linked.ProviderKey" />
+                    <partial name="_TwoFactorReauth" model="Model.Reauth" />
+                    <button class="btn btn-outline-danger"><icon name="x" />Gỡ liên kết <span class="visually-hidden">@linked.LoginProvider</span></button>
+                </form>
+            </div>
+        }
+        @foreach (var provider in Model.Available.Where(p => !Model.Linked.Any(l => l.LoginProvider == p)))
+        {
+            <form method="post" asp-action="LinkLogin" data-action="LinkLogin" class="acc-subcard">
+                <div class="acc-subhead">
+                    <h3 class="h6"><icon name="link" /> Nối với @provider</h3>
+                    <span class="acc-state is-off"><icon name="x" />Chưa liên kết</span>
+                </div>
+                <input type="hidden" name="provider" value="@provider" />
+                <partial name="_TwoFactorReauth" model="Model.Reauth" />
+                <button class="btn btn-outline-primary"><icon name="link" />Nối với @provider</button>
+            </form>
+        }
+        @if (!Model.HasPassword)
+        {
+            <form method="post" asp-action="SetPassword" data-action="SetPassword" class="acc-subcard">
+                <h3 class="h6 mb-2"><icon name="key-round" /> Đặt mật khẩu</h3>
+                <partial name="_TwoFactorReauth" model="Model.Reauth" />
+                <label for="external-new-password" class="form-label">Mật khẩu mới</label>
+                <input id="external-new-password" name="newPassword" type="password" autocomplete="new-password" minlength="8" required class="form-control mb-2" aria-describedby="external-password-policy" />
+                <p class="small text-muted" id="external-password-policy">Ít nhất 8 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</p>
+                <button class="btn btn-primary"><icon name="key-round" />Đặt mật khẩu</button>
+            </form>
+        }
+    </div>
+</section>

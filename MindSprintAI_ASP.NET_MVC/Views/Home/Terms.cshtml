@@ -1,0 +1,89 @@
+@model LegalInfo
+@{
+    ViewData["Title"] = "Điều khoản sử dụng";
+}
+@* Chữ chính thức: docs/PHAP_LY_VAN_BAN.md mục B. Sửa ở đó trước rồi chép sang đây. *@
+<a class="btn btn-sm b-back" href="@BackLink.Url(Context.Request, Url.Action("Index", "Home")!)"><icon name="chevron-right" class="b-back-icon" />Quay lại trang trước</a>
+<article class="legal-doc">
+    <h1 class="mindsprint-title">Điều khoản sử dụng</h1>
+    <p class="text-muted"><strong>Phiên bản @LegalPolicy.CurrentVersion</strong> · Có hiệu lực từ @Model.EffectiveDate</p>
+
+    <h2 class="h4">1. Dịch vụ</h2>
+    <ul>
+        <li>MindSprint AI là trang ôn tập miễn phí do @Model.OwnerName làm với tư cách cá nhân.</li>
+        <li>MindSprint AI không cam kết luôn chạy, không có lỗi hay không mất dữ liệu, và có thể dừng hoặc thay đổi mà không báo trước.</li>
+        <li>Hãy tự giữ bản sao của những nội dung quan trọng.</li>
+    </ul>
+
+    <h2 class="h4">2. Độ tuổi và lời khai của bạn</h2>
+    <p>Bạn xác nhận mình <strong>từ đủ 16 tuổi</strong>. Bạn chịu trách nhiệm trước pháp luật về tính trung thực của lời khai này và của các thông tin bạn cung cấp cho MindSprint AI.</p>
+
+    <h2 class="h4">3. Tài khoản</h2>
+    <ul>
+        <li>Bạn dùng email thật của mình.</li>
+        <li>Bạn tự giữ an toàn cho mật khẩu và mã dự phòng.</li>
+        <li>Bạn không dùng tài khoản của người khác và không cho người khác dùng tài khoản của mình.</li>
+    </ul>
+
+    <h2 class="h4">4. Nội dung bạn đưa lên</h2>
+    <p>"Nội dung" gồm bộ học, câu hỏi, thẻ, văn bản nguồn, và file Word, Excel, PDF…</p>
+    <ul>
+        <li>Bạn tự chịu trách nhiệm về nội dung mình đưa lên, và phải có quyền dùng nội dung đó.</li>
+        <li>Nội dung không được vi phạm pháp luật, không xúc phạm người khác.</li>
+        <li>Hạn chế đưa thông tin cá nhân của người khác (tên, mã số, số điện thoại…). Nếu cần đưa, bạn phải được họ cho phép.</li>
+        <li>Khi học viên hỏi trợ lý AI, các đoạn liên quan của văn bản nguồn được gửi sang Google Gemini.</li>
+        <li><strong>Cho phép dùng nội dung để cải thiện MindSprint AI:</strong> khi đưa nội dung lên, bạn cho phép MindSprint AI lưu và dùng phần nội dung học tập (câu hỏi, đáp án, cách trình bày đề) để vận hành MindSprint AI và cải thiện việc nhận dạng đề.
+            <ul>
+                <li>Phần nội dung này được giữ đến khi bạn xóa tài khoản. Riêng bộ học đã từng giao cho lớp được giữ ở dạng lưu trữ sau khi bạn xóa tài khoản, chỉ để bảng điểm cũ của lớp còn đọc được, và không được dùng để cải thiện MindSprint AI nữa.</li>
+                <li>MindSprint AI không dùng thông tin cá nhân có trong nội dung cho việc cải thiện này, và không bán hay công bố nội dung của bạn.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2 class="h4">5. Trợ lý AI</h2>
+    <ul>
+        <li>API key Gemini là của bạn. Bạn tuân theo điều khoản của Google, và tự chịu chi phí nếu bạn bật trả phí ở Google.</li>
+        <li>Câu trả lời do AI tạo ra nên có thể sai. Hãy đối chiếu với văn bản nguồn.</li>
+    </ul>
+
+    <h2 class="h4">6. Giảng viên</h2>
+    <ul>
+        <li>Bạn chịu trách nhiệm về cách mình dùng chức năng khóa 1 máy và giám sát rời màn hình.</li>
+        <li>Kết quả nhận ra máy chỉ để tham khảo. Hãy tự xem xét trước khi quyết định điều gì về học viên.</li>
+        <li>Học viên không đồng ý giám sát có thể liên hệ bạn để được sắp xếp cách khác.</li>
+    </ul>
+
+    <h2 class="h4">7. Những việc không được làm</h2>
+    <ul>
+        <li>Dò mã tham gia.</li>
+        <li>Tìm cách vượt qua chức năng giám sát.</li>
+        <li>Dùng tài khoản của người khác.</li>
+        <li>Tấn công hoặc làm quá tải trang web.</li>
+        <li>Dùng MindSprint AI để làm điều trái pháp luật.</li>
+    </ul>
+
+    <h2 class="h4">8. Xử lý vi phạm</h2>
+    <p>Quản trị viên có thể ẩn nội dung và khóa tài khoản vi phạm. Bạn được báo lý do và có thể liên hệ để hỏi lại.</p>
+
+    <h2 class="h4">9. Giới hạn trách nhiệm</h2>
+    <ul>
+        <li>MindSprint AI áp dụng các biện pháp bảo vệ hợp lý, nhưng không hệ thống nào an toàn tuyệt đối.</li>
+        <li>Trong phạm vi pháp luật cho phép, MindSprint AI không chịu trách nhiệm bồi thường thiệt hại phát sinh từ:
+            <ul>
+                <li>việc bị tấn công, hoặc sự cố của dịch vụ bên ngoài (Google, Cloudflare);</li>
+                <li>sự kiện bất khả kháng vượt quá khả năng phòng vệ hợp lý;</li>
+                <li>việc bạn để lộ mật khẩu, mã dự phòng hay API key Gemini của mình.</li>
+            </ul>
+        </li>
+        <li>Phần trên không áp dụng nếu thiệt hại do lỗi của MindSprint AI.</li>
+        <li>Khi có sự cố, MindSprint AI vẫn báo cho bạn theo Chính sách quyền riêng tư.</li>
+    </ul>
+
+    <h2 class="h4">10. Thay đổi điều khoản</h2>
+    <p>MindSprint AI báo trên trang web khi thay đổi điều khoản. Nếu thay đổi lớn, MindSprint AI hỏi bạn đồng ý lại khi bạn mở trang kế tiếp.</p>
+
+    <h2 class="h4">11. Liên hệ</h2>
+    <p>Email: @Model.ContactEmail. Điều khoản này tuân theo pháp luật Việt Nam.</p>
+
+    <p class="mt-4">Xem thêm: <a asp-controller="Home" asp-action="Privacy">Chính sách quyền riêng tư</a></p>
+</article>

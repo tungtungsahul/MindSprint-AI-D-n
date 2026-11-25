@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="MindSprintAI_ASP.NET_MVC/tests/MindSprintAI_ASP.NET_MVC.Tests/MindSprintAI_ASP.NET_MVC.Tests.csproj" />
+  </Folder>
+  <Project Path="MindSprintAI_ASP.NET_MVC/MindSprintAI_ASP.NET_MVC.csproj" />
+</Solution>

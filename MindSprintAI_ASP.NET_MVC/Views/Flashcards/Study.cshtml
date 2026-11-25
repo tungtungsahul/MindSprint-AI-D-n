@@ -1,0 +1,80 @@
+@model CardSession
+@{ ViewData["Title"] = "Học thẻ — " + Model.Title; }
+@if (Model.AssignmentId != null) { <a class="btn btn-sm b-back" asp-controller="Learn" asp-action="Assignment" asp-route-id="@Model.AssignmentId"><icon name="chevron-right" class="b-back-icon" />Quay lại bài này</a> }
+else { <a class="btn btn-sm b-back" asp-action="Editor" asp-route-id="@Model.StudySetId"><icon name="chevron-right" class="b-back-icon" />Quay lại Soạn thẻ</a> }
+@* Rà soát 10/11: thẻ lớn giữa màn, mặt sau nền Acid (DESIGN.md mục Flashcard); thông tin phụ gom thành một hàng chip. *@
+<div class="fc-study">
+<header class="fc-head">
+    <h1 class="mindsprint-title fc-title">@Model.Title</h1>
+    <div class="fc-meta">
+        <span class="fc-chip"><icon name="layers" />Thẻ bắt buộc: <b id="cards-studied">@Model.Studied/@Model.Required</b> đã học</span>
+        @if (Model.Status != null) { <span class="fc-chip">Trạng thái bài: <b id="cards-status">@DisplayText.Of(Model.Status.Value)</b></span> }
+        @if (!Model.CanChooseMode) { <span class="fc-chip">Chế độ: @(Model.Mode == FlashcardMode.SpacedRepetition ? "Ôn ngắt quãng" : "Truyền thống")</span> }
+        <a class="fc-history" asp-action="History" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId"><icon name="scroll-text" />Lịch sử học thẻ của bạn</a>
+    </div>
+    <p class="fc-note">Tự đánh giá không tính thành điểm.</p>
+</header>
+@if (Model.Mode == FlashcardMode.SpacedRepetition)
+{
+    <p id="srs-due-summary" role="status">Hôm nay có @Model.DueCount thẻ đến hạn ôn</p>
+}
+@if (Model.CanChooseMode)
+{
+    <form method="post" asp-action="ChangeMode" class="d-flex flex-wrap gap-2 align-items-end mb-3" data-autosave="reload">
+        <input type="hidden" name="studySetId" value="@Model.StudySetId" />
+        <input type="hidden" name="assignmentId" value="@Model.AssignmentId" />
+        <div><label for="card-mode" class="form-label">Chế độ học</label>
+        <select class="form-select" id="card-mode" name="mode">
+            <option value="0" selected="@(Model.Mode == FlashcardMode.Traditional)">Truyền thống</option>
+            <option value="1" selected="@(Model.Mode == FlashcardMode.SpacedRepetition)">Ôn ngắt quãng</option>
+        </select></div><button class="btn btn-outline-primary">Lưu chế độ</button>
+    </form>
+}
+@if (Model.AfterDue && Model.CanStudy) { <p class="alert alert-info">Bài đã hết hạn: bạn vẫn học được, nhưng kết quả hoàn thành của bài không đổi.</p> }
+@if (!Model.CanStudy) { <p class="alert alert-secondary">Bài không cho học thẻ sau hạn.</p> }
+else
+{
+    @Html.AntiForgeryToken()
+    @if (Model.Mode == FlashcardMode.SpacedRepetition)
+    {
+        <a id="due-cards-link" class="btn btn-outline-primary mb-3" asp-action="Study" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId" asp-route-dueOnly="true">Ôn thẻ đến hạn hôm nay (@Model.DueCount thẻ)</a>
+        <p id="next-due-date" role="status">@if (Model.DueCount == 0 && Model.NextDueDate is { } date) { <text>Lần đến hạn gần nhất: @date.ToString("dd/MM/yyyy") (giờ Việt Nam).</text> }</p>
+    }
+    <div id="cards" class="fc-stage" data-start="@Model.StartIndex" data-mode="@((int)Model.Mode)" data-rate-url="@Url.Action("Rate")" data-study-set="@Model.StudySetId" data-assignment="@Model.AssignmentId" data-offline="@(Model.OfflineAllowed ? "true" : "false")">
+        <p id="card-position" class="fc-position" aria-live="polite"></p>
+        <p id="offline-status" class="fc-offline" role="status" hidden></p>
+        @foreach (var card in Model.Cards)
+        {
+            var reviewDays = 1 << (card.Box - 1);
+            <section class="card card-body d-none study-card fc-card" data-id="@card.Id" tabindex="0" aria-label="Thẻ học" aria-describedby="card-instructions" style="touch-action: pan-y">
+                <div class="fc-badges">@if (card.IsNew) { <span class="badge bg-info text-body">Thẻ mới thêm, học thêm tùy ý</span> } @if (card.Edited) { <span class="badge bg-secondary">Đã sửa</span> }
+                    @* Bút chì trên thẻ như nhóm (ảnh 14): tự học = bộ học của chính mình → mở đúng thẻ ở trang Soạn thẻ (sửa/xóa có hỏi lại). *@
+                    @if (Model.AssignmentId == null) { <a class="fc-edit" href="@Url.Action("Editor", new { id = Model.StudySetId })#card-@card.Id"><icon name="square-pen" />Sửa thẻ</a> }</div>
+                @if (Model.Mode == FlashcardMode.SpacedRepetition) { <p class="small text-muted text-center">Hộp @card.Box (ôn lại sau @reviewDays ngày) · @(card.Due ? "Đến hạn" : "Chưa tới lúc ôn lại; học thêm chỉ để xem lại") @(card.DueDate?.ToString("dd/MM/yyyy"))</p> }
+                <p class="fc-front">@card.Front</p>
+                <button type="button" class="btn btn-outline-primary flip fc-flip"><icon name="repeat-2" />Lật thẻ</button>
+                <div class="card-back d-none fc-back">
+                    <p class="fc-back-text">@card.Back</p>
+                    @if (card.Example != null) { <p class="fc-example"><b>Ví dụ:</b> @card.Example</p> }
+                    <div class="fc-rate"><button type="button" class="btn btn-outline-danger rate" data-rating="2">← Chưa nhớ</button><button type="button" class="btn btn-success rate" data-rating="1">Đã nhớ →</button></div>
+                </div>
+            </section>
+        }
+        <p id="card-error" class="text-danger" role="alert"></p>
+        @* Không có thẻ nào để học thì nói đúng lý do, không giả như vừa học xong. *@
+        @{
+            var endedText = "Đã hết thẻ trong buổi học. Tiến độ được cộng dồn qua các buổi.";
+            if (Model.Cards.Count == 0) { endedText = ViewData["Forgotten"] is true ? "Không có thẻ nào đang ở mức Chưa nhớ." : ViewData["DueOnly"] is true ? "Hôm nay không có thẻ nào đến hạn ôn." : "Bộ học chưa có thẻ ghi nhớ nào."; }
+        }
+        <div id="cards-ended" class="d-none alert alert-success" role="status">@endedText
+            @if (Model.Mode == FlashcardMode.SpacedRepetition) { <a asp-action="Study" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId" asp-route-dueOnly="true">Xem số thẻ đến hạn và ngày ôn tiếp</a> }
+        </div>
+    </div>
+    <p class="fc-help" id="card-instructions">Bấm <b>Lật thẻ</b> để xem mặt sau, rồi chọn <b>Đã nhớ</b> hoặc <b>Chưa nhớ</b>. Trên điện thoại có thể vuốt thẻ sang phải (nhớ) hoặc sang trái (chưa nhớ); trên máy tính dùng phím → hoặc ←.</p>
+    <div class="fc-actions">
+        <a class="btn btn-outline-primary" asp-action="Study" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId" asp-route-forgotten="true"><icon name="rotate-ccw" />Ôn lại các thẻ chưa nhớ</a>
+        @if (Model.ReviewForgotten || Model.DueOnly) { <a class="btn btn-link" asp-action="Study" asp-route-id="@Model.StudySetId" asp-route-assignmentId="@Model.AssignmentId">Tất cả thẻ</a> }
+    </div>
+}
+</div>
+@section Scripts { <script src="~/js/flashcards.js" asp-append-version="true"></script> }

@@ -1,0 +1,27 @@
+@model AssignmentDetailsModel
+@{ var warnings = Model.Rows.Where(GradebookService.NeedsAttention).ToList(); }
+<div data-warning-count="@warnings.Count">
+@if (warnings.Count == 0)
+{
+    <div class="empty-state"><icon name="shield-check" /><h2 class="h5">Không có việc cần xem</h2><p class="mb-0">Chưa có cảnh báo nào trong bài này.</p></div>
+}
+else
+{
+    <div class="b-warning-list">
+    @foreach (var row in warnings)
+    {
+        <article class="card card-body">
+            <h3 class="h5"><icon name="triangle-alert" /> @row.DisplayName</h3>
+            @if (row.IsStranger) { <p>Người ngoài lớp</p> }
+            @if (row.Screen != null) { <partial name="_ScreenSummary" model="row.Screen" /> }
+            @if (row.EndText != null) { <p><icon name="circle-alert" /> @row.EndText</p> }
+            @if (row.DeviceChange != null)
+            {
+                <p>1 yêu cầu đang chờ · Gần nhất: @VnTime.Format(row.DeviceChange.RequestedAt)</p>
+                <partial name="_DeviceChange" model="row.DeviceChange" />
+            }
+        </article>
+    }
+    </div>
+}
+</div>

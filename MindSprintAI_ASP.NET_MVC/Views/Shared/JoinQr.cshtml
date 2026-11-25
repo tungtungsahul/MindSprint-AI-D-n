@@ -1,0 +1,42 @@
+@model JoinQrModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#FFFEFA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#191721" media="(prefers-color-scheme: dark)" />
+    <title>Mã QR tham gia</title>
+    <script type="text/javascript">
+        (() => {
+            let theme;
+            try { theme = localStorage.getItem('mindsprint-theme'); } catch { }
+            if (theme !== 'light' && theme !== 'dark') theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.querySelectorAll('meta[name="theme-color"]').forEach(meta => meta.setAttribute('content', theme === 'dark' ? '#191721' : '#FFFEFA'));
+        })();
+    </script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/mindsprint-fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mindsprint.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/join-qr.css" asp-append-version="true" />
+    <script src="~/lib/qrcode-generator/qrcode.js" defer></script>
+    <script src="~/js/join-qr.js" asp-append-version="true" defer></script>
+</head>
+<body>
+    <div class="print-help p-3"><button class="btn" type="button" data-theme-toggle aria-pressed="false">Giao diện tối</button></div>
+    <main data-join-url="@Model.JoinUrl" data-code="@Model.Code">
+        <h1>Quét mã để tham gia</h1>
+        <div id="join-qr" role="img" aria-label="Mã QR tham gia bằng mã @Model.Code"></div>
+        <p id="qr-error" role="status" hidden>Chưa tạo được QR. Bạn vẫn có thể nhập mã hoặc mở link bên dưới.</p>
+        <p>Trang tham gia: <a href="@Model.JoinPageUrl">@Model.JoinPageUrl</a></p>
+        <p class="join-code" aria-label="Mã 8 số">@Model.Code</p>
+        <p><a href="@Model.JoinUrl">@Model.JoinUrl</a></p>
+        <p class="print-help">In trang này bằng Ctrl+P hoặc chức năng In của trình duyệt.</p>
+    </main>
+    <script src="~/js/theme.js" asp-append-version="true"></script>
+</body>
+</html>

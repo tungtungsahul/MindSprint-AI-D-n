@@ -1,0 +1,18 @@
+@model LearnerAssignmentModel
+@{ ViewData["Title"] = Model.CannotStartReason ?? "Chờ giảng viên bắt đầu"; }
+<a class="btn btn-sm b-back" asp-action="Assignment" asp-route-id="@Model.Assignment.Id"><icon name="chevron-right" class="b-back-icon" />Quay lại bài này</a>
+<div class="card card-body mt-3" id="test-waiting"
+     data-assignment="@Model.Assignment.Id" data-hub-url="@Url.Content("~/hubs/learn")"
+     data-status-url="@Url.Action("TestStatus", new { id = Model.Assignment.Id })">
+    <h1 class="h4">@ViewData["Title"]</h1>
+    @* Ôn tập chờ duyệt không có thời lượng phiên; chỉ Kiểm tra mới hiện số phút. *@
+    <p>@(Model.Assignment.Quiz?.Title ?? Model.Assignment.PaperTitle ?? "Thẻ ghi nhớ")@(Model.Assignment.Mode == AssignmentMode.Test ? $" · {Model.Assignment.DurationMinutes} phút" : "")</p>
+    <p id="waiting-status" role="status">@(Model.CannotStartReason == "Chờ giảng viên duyệt" ? "Trang sẽ tự vào bài khi giảng viên duyệt." : "Trang sẽ tự vào bài khi giảng viên bắt đầu.")</p>
+    <form method="post" asp-action="Start" asp-route-id="@Model.Assignment.Id" id="waiting-start">
+        <button class="btn btn-primary d-none" id="waiting-button">Vào bài</button>
+    </form>
+</div>
+@section Scripts {
+    <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+    <script src="~/js/test-waiting.js" asp-append-version="true"></script>
+}

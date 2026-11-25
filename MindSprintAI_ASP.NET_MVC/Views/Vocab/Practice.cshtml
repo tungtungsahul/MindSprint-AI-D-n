@@ -1,0 +1,52 @@
+@using System.Text.Json
+@using MindSprintAI_ASP.NET_MVC.Controllers
+@model VocabPracticePage
+@{
+    ViewData["Title"] = "Luyện tập";
+    // "Luyện tập & Ôn luyện" của nhóm (docs/giao-dien-nhom/05): khung "Cài đặt bài ôn tập" (danh mục, chủ đề, chế độ, số câu) → câu hỏi từng câu.
+}
+<header class="page-head">
+    <div>
+        <h1>Luyện tập &amp; ôn luyện</h1>
+        <p>Kiểm tra mức độ ghi nhớ từ vựng của bạn bằng trắc nghiệm hoặc tự luận.</p>
+    </div>
+</header>
+
+<partial name="_PracticeTabs" model="@("practice")" />
+<form class="practice-setup" method="get" asp-action="Practice">
+    <h2>Cài đặt bài ôn tập</h2>
+    <div class="practice-grid">
+        <div><label class="form-label" for="pr-pick">Danh mục / chủ đề</label>
+            <select class="form-select" id="pr-pick" name="pick">
+                <option value="all|">Tất cả danh mục</option>
+                @foreach (var (key, name) in Model.Categories) { <option value="@key|" selected="@(Model.Category == key && Model.Topic == null)">@name (tất cả chủ đề)</option> }
+                @foreach (var group in Model.Topics.GroupBy(t => t.CategoryName))
+                {
+                    <optgroup label="@group.Key">@foreach (var t in group) { <option value="@t.Category|@t.Topic" selected="@(Model.Topic == t.Topic && Model.Category == t.Category)">@t.Topic (@t.Count)</option> }</optgroup>
+                }
+            </select></div>
+        <div><label class="form-label" for="pr-mode">Chế độ kiểm tra</label>
+            <select class="form-select" id="pr-mode" name="mode"><option value="choice" selected="@(Model.Mode == "choice")">Trắc nghiệm (4 đáp án)</option><option value="write" selected="@(Model.Mode == "write")">Tự luận (nhập từ vựng)</option></select></div>
+        <div><label class="form-label" for="pr-count">Số lượng câu hỏi</label>
+            <select class="form-select" id="pr-count" name="count">@foreach (var n in new[] { 5, 10, 20, 30 }) { <option value="@n" selected="@(Model.Count == n)">@n câu</option> }</select></div>
+    </div>
+    <button class="btn btn-primary w-100"><icon name="play" />Bắt đầu ôn tập</button>
+</form>
+
+@if (Model.Deck != null)
+{
+    <section class="practice-board" id="practice" data-mode="@Model.Mode" aria-label="Bài ôn tập">
+        <div class="practice-bar"><span id="pr-num"></span><span>Điểm: <b id="pr-score">0</b></span></div>
+        <div class="practice-progress"><span id="pr-bar"></span></div>
+        <p class="practice-label" id="pr-label"></p>
+        <h2 class="practice-word" id="pr-word"></h2>
+        <p class="practice-hint" id="pr-hint"></p>
+        <div class="practice-options" id="pr-options"></div>
+        <form class="practice-write" id="pr-write" hidden><label class="visually-hidden" for="pr-input">Từ vựng tiếng Anh</label><input class="form-control" id="pr-input" autocomplete="off" /><button class="btn btn-primary">Kiểm tra</button></form>
+        <p class="practice-feedback" id="pr-feedback" role="status" aria-live="polite"></p>
+        <button type="button" class="btn btn-primary" id="pr-next" hidden>Câu tiếp theo</button>
+        <div class="practice-result" id="pr-result" hidden></div>
+    </section>
+    <script type="application/json" id="practice-deck">@Html.Raw(JsonSerializer.Serialize(Model.Deck, new JsonSerializerOptions(JsonSerializerDefaults.Web)))</script>
+}
+@section Scripts { <script src="~/js/vocab-practice.js" asp-append-version="true"></script> }

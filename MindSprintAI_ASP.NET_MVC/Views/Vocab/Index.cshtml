@@ -1,0 +1,45 @@
+@using MindSprintAI_ASP.NET_MVC.Controllers
+@model VocabIndexPage
+@{
+    ViewData["Title"] = "Thư viện từ vựng";
+    // Như trang Thư viện của nhóm (docs/giao-dien-nhom/04): lọc danh mục, lưới thẻ chủ đề pastel, mỗi thẻ "Xem thẻ" + "Luyện tập".
+}
+<div class="c-library">
+<a class="btn btn-sm b-back" asp-controller="StudySets" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Thư viện</a>
+<header class="page-head">
+    <div>
+        <h1>Thư viện từ vựng</h1>
+        <p>@Model.Topics.Sum(t => t.Count) thẻ trong @Model.Topics.Count chủ đề. Xem thẻ, chơi ghép thẻ hoặc lưu chủ đề vào thư viện của bạn để ôn.</p>
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-primary" asp-action="Game"><icon name="play" />Game ghép thẻ</a>
+    </div>
+</header>
+
+<nav class="library-toolbar" aria-label="Danh mục từ vựng">
+    <a class="btn btn-sm @(Model.Category == null ? "btn-primary" : "btn-secondary")" aria-current="@(Model.Category == null ? "page" : null)" asp-action="Index">Tất cả</a>
+    @foreach (var (key, name) in Model.Categories)
+    {
+        <a class="btn btn-sm @(Model.Category == key ? "btn-primary" : "btn-secondary")" aria-current="@(Model.Category == key ? "page" : null)" asp-action="Index" asp-route-category="@key">@name</a>
+    }
+    <a class="btn btn-sm btn-secondary ms-auto" asp-controller="StudySets" asp-action="Index"><icon name="layers" />Bộ học của tôi</a>
+</nav>
+
+<div class="set-grid">
+    @foreach (var t in Model.Topics)
+    {
+        <article class="set-card">
+            <div class="set-card-top">
+                <span class="section-icon" aria-hidden="true"><icon name="layers" /></span>
+                <span class="set-card-tag">@t.CategoryName</span>
+            </div>
+            <h2 class="set-card-title">@t.Topic</h2>
+            <div class="set-card-meta"><span>@t.Count thẻ học</span></div>
+            <div class="set-card-actions">
+                <a class="btn btn-secondary" asp-action="Topic" asp-route-category="@t.Category" asp-route-topic="@t.Topic">Xem thẻ</a>
+                <a class="btn btn-primary" asp-action="Game" asp-route-category="@t.Category" asp-route-topic="@t.Topic">Luyện tập</a>
+            </div>
+        </article>
+    }
+</div>
+</div>

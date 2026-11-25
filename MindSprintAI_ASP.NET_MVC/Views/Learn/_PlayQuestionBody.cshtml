@@ -1,0 +1,66 @@
+@model OpenQuestionResult
+@{
+    var q = Model.Question;
+    string Ids(IEnumerable<int>? ids) => ids == null ? "" : string.Join(",", ids);
+}
+<div class="card-body" tabindex="-1" data-seconds-left="@Model.SecondsLeft" data-clock-locked="@(Model.Locked ? "1" : "0")" data-clock-expired="@(Model.Expired ? "1" : "0")">
+    @if (q.CorrectIds != null)
+    {
+        <span class="d-none result" data-correct="@Ids(q.CorrectIds)" data-is-correct="@(q.IsCorrect == true ? "1" : "0")" data-blank-correct="@(q.BlankCorrect == null ? "" : string.Join(",", q.BlankCorrect.Select(x => x ? "1" : "0")))"></span>
+    }
+    <span class="question-rules d-none" data-required="@(q.IsRequired ? "1" : "0")" data-can-retry="@(q.CanRetry ? "1" : "0")" data-answer-count="@q.AnswerCount" data-question-version="@q.QuestionVersion"></span>
+    <div class="d-flex gap-2 mb-2">
+        <span class="badge bg-body-tertiary text-body border">Câu @q.Number/@Model.Total</span>
+        <span class="badge bg-body-tertiary text-body border">@DisplayText.Of(q.Type)</span>
+        @if (q.IsRequired) { <span class="badge bg-warning text-body">Bắt buộc trả lời</span> }
+        <span class="question-countdown badge bg-dark" role="timer" aria-label="Giờ riêng còn lại" hidden></span>
+    </div>
+    @if (q.BodyHidden)
+    {
+        <p class="question-placeholder">Câu có giờ riêng @q.TimeLimitSeconds giây. Nội dung hiện khi bạn mở câu.</p>
+    }
+    else
+    {
+        <p class="fs-5" style="white-space: pre-wrap">@q.Prompt</p>
+        <div class="d-grid gap-2 options">
+            @foreach (var o in q.Options)
+            {
+                <button type="button" class="btn btn-outline-secondary text-start option" data-option="@o.Id" aria-pressed="false">@o.Text</button>
+            }
+        </div>
+        @if (q.Type == QuestionType.TextInput)
+        {
+            <p class="small">Điền vào từng chỗ trống bên dưới.</p>
+            @for (var i = 0; i < q.BlankCount; i++)
+            {
+                <label class="form-label mt-2" for="input-@q.Id-@i">Chỗ trống @(i + 1)</label>
+                <input class="form-control answer-input" id="input-@q.Id-@i" value="@(q.Values?.ElementAtOrDefault(i))" autocomplete="off" />
+            }
+        }
+        @if (q.Type == QuestionType.NumberInput)
+        {
+            <label class="form-label mt-2" for="input-@q.Id">Câu trả lời</label>
+            <input class="form-control answer-input" id="input-@q.Id" inputmode="decimal" value="@(q.Values?.FirstOrDefault())" autocomplete="off" />
+            <p class="small text-muted">Viết liền, ví dụ 1234. Dùng dấu chấm hoặc phẩy cho phần thập phân.</p>
+        }
+        @if (q.Type == QuestionType.SurveyText)
+        {
+            <label class="form-label mt-2" for="input-@q.Id">Ý kiến (tối đa 500 ký tự)</label>
+            <textarea class="form-control answer-input" id="input-@q.Id" rows="3" maxlength="500">@(q.Values?.FirstOrDefault())</textarea>
+        }
+        @if (q.Type is QuestionType.MultipleChoice or QuestionType.TextInput or QuestionType.NumberInput or QuestionType.SurveyMultiple or QuestionType.SurveyText)
+        {
+            <button type="button" class="btn btn-primary mt-3 confirm">Xác nhận</button>
+        }
+    }
+    <div class="feedback mt-3 fw-bold" role="status"></div>
+    <button type="button" class="btn btn-outline-primary mt-2 retry d-none">Trả lời lại câu sai</button>
+    <ul class="input-solutions mt-2 text-success">@if (q.CorrectAnswers != null) { foreach (var answer in q.CorrectAnswers) { <li>@answer</li> } }</ul>
+    <div class="explanation mt-1 text-muted" style="white-space: pre-wrap">@q.Explanation</div>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary prev">← Câu trước</button>
+        <button type="button" class="btn btn-outline-warning flag">Đánh dấu để xem lại</button>
+        <button type="button" class="btn btn-outline-secondary skip">Bỏ qua</button>
+        <button type="button" class="btn btn-primary next ms-auto">Câu tiếp theo →</button>
+    </div>
+</div>

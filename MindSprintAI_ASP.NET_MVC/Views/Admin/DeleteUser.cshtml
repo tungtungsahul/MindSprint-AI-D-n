@@ -1,0 +1,22 @@
+@model AdminDeleteUserModel
+@{ ViewData["Title"] = "Xóa tài khoản"; }
+@* Pháp lý C9: quản trị viên xóa thay khi người dùng gửi yêu cầu qua email. *@
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Quản trị</a>
+<div class="col-lg-6">
+    <h1 class="h3 mt-2">Xóa tài khoản: @Model.DisplayName</h1>
+    <p>@Model.Email</p>
+    <p>Email, tên, ảnh, các cách đăng nhập, API key Gemini, danh sách máy, lịch sử hỏi trợ lý AI, thông báo và bộ học của người này bị xóa. Bài làm và điểm trong các lớp vẫn còn, với tên "Người dùng đã xóa". <b>Không khôi phục được.</b></p>
+    @if (ViewData["Block"] is string block)
+    {
+        <p class="alert alert-warning">@block</p>
+    }
+    else
+    {
+        <form method="post" asp-action="DeleteUser" data-confirm="Xóa vĩnh viễn tài khoản này?">
+            <input type="hidden" asp-for="UserId" />
+            <label asp-for="Reason" class="form-label">Lý do (bắt buộc), ví dụ "Người dùng gửi email yêu cầu ngày 12/11"</label>
+            <textarea asp-for="Reason" class="form-control mb-3" maxlength="500" required></textarea>
+            <button class="btn btn-danger">Xóa tài khoản này</button>
+        </form>
+    }
+</div>

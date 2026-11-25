@@ -1,0 +1,50 @@
+@using System.Text.Json
+@using MindSprintAI_ASP.NET_MVC.Controllers
+@inject MindSprintAI_ASP.NET_MVC.Services.VocabCatalog Catalog
+@model VocabTopicPage?
+@{
+    ViewData["Title"] = "Game ghép thẻ";
+    // Game ghép cặp của nhóm (script.js startGame/handleGameCardClick): 3–6 cặp ngẫu nhiên, cột từ / cột nghĩa, đồng hồ 0,1 giây, kỷ lục theo chủ đề.
+    var cards = Model?.Cards.Select(c => new { q = c.Question, a = c.Answer }).ToList();
+}
+<header class="page-head">
+    <div>
+        <h1>Game ghép thẻ</h1>
+        <p>Ghép mỗi từ với nghĩa đúng của nó, càng nhanh càng tốt.</p>
+    </div>
+</header>
+
+<partial name="_PracticeTabs" model="@("game")" />
+<form class="game-setup" method="get" asp-action="Game">
+    <label class="form-label" for="game-topic">Chủ đề</label>
+    <div class="game-setup-row">
+        <select class="form-select" id="game-topic" name="pick">
+            @foreach (var group in Catalog.Topics.GroupBy(t => t.CategoryName))
+            {
+                <optgroup label="@group.Key">
+                    @foreach (var t in group) { <option value="@t.Category|@t.Topic" selected="@(Model?.Topic == t.Topic && Model?.Category == t.Category)">@t.Topic (@t.Count)</option> }
+                </optgroup>
+            }
+        </select>
+        <button class="btn btn-primary"><icon name="play" />Chơi</button>
+    </div>
+</form>
+
+@if (Model != null)
+{
+    <section class="game-board" id="game" data-key="@Model.Category|@Model.Topic" aria-label="Bàn ghép thẻ @Model.Topic">
+        <div class="game-bar">
+            <span>Thời gian: <b id="game-time">0.0</b>s</span>
+            <span>Kỷ lục: <b id="game-best">--</b></span>
+            <button type="button" class="btn btn-sm btn-secondary" id="game-restart"><icon name="rotate-ccw" />Chơi lại</button>
+        </div>
+        <div class="game-columns">
+            <div class="game-col" id="game-left" aria-label="Từ"></div>
+            <div class="game-col" id="game-right" aria-label="Nghĩa"></div>
+        </div>
+        <p class="game-result" id="game-result" role="status" aria-live="polite"></p>
+    </section>
+    <script type="application/json" id="game-cards">@Html.Raw(JsonSerializer.Serialize(cards).Replace("<", "\\u003c"))</script>
+}
+
+@section Scripts { <script src="~/js/vocab-game.js" asp-append-version="true"></script> }

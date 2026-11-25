@@ -1,0 +1,71 @@
+@model LoginModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@{
+    ViewData["Title"] = "Đăng nhập";
+}
+@* Thẻ đăng nhập theo hộp đăng nhập của bản nhóm (người dùng chốt 16/11/2026): logo, lời chào, 2 tab, ô nhập có biểu tượng. *@
+<div class="auth-shell">
+    <section class="auth-card" aria-labelledby="auth-title">
+        <header class="auth-card-header">
+            <div class="auth-logo-row"><span class="auth-logo-icon"><icon name="copy" /></span><span class="auth-logo-name">MindSprint AI</span></div>
+            <h1 class="auth-title" id="auth-title">Chào mừng trở lại!</h1>
+            <p class="auth-sub">Đăng nhập để tiếp tục hành trình học tập.</p>
+        </header>
+        <div class="auth-card-body">
+            <nav class="auth-tabs" aria-label="Đăng nhập hoặc tạo tài khoản">
+                <a class="auth-tab active" asp-action="Login" aria-current="page"><icon name="log-in" />Đăng nhập</a>
+                <a class="auth-tab" asp-action="Register"><icon name="user-plus" />Đăng ký</a>
+            </nav>
+            <form method="post" data-machine-light="true">
+                <div asp-validation-summary="All" class="auth-errors"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <label asp-for="Email" class="visually-hidden">Email</label>
+                <div class="auth-field">
+                    <icon name="mail" class="auth-field-icon" />
+                    <input asp-for="Email" class="form-control auth-input" autocomplete="username" placeholder="Địa chỉ email" />
+                </div>
+                <label asp-for="Password" class="visually-hidden"></label>
+                <div class="auth-field">
+                    <icon name="lock" class="auth-field-icon" />
+                    <input asp-for="Password" class="form-control auth-input" autocomplete="current-password" placeholder="Mật khẩu" />
+                    <button type="button" class="auth-eye" data-toggle-password aria-label="Hiện mật khẩu" aria-pressed="false"><icon name="eye" /></button>
+                </div>
+                <div class="auth-row">
+                    <div class="form-check mb-0">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label"></label>
+                    </div>
+                    <a asp-action="ForgotPassword">Quên mật khẩu?</a>
+                </div>
+                <partial name="_Turnstile" />
+                <button class="btn btn-primary w-100 auth-submit"><icon name="log-in" />Đăng nhập</button>
+            </form>
+            @if (!string.IsNullOrWhiteSpace(Model.Email))
+            {
+                <a asp-action="ResendConfirmation" asp-route-email="@Model.Email" class="btn btn-link mt-2 p-2">Gửi lại email xác minh</a>
+            }
+            <div class="auth-divider"><span>hoặc</span></div>
+            <partial name="_ExternalLoginButtons" model="Model" />
+            <form method="post" asp-action="PasskeyLogin" data-action="PasskeyLogin" data-passkey="get" data-options="@Url.Content("~/Account/PasskeyRequestOptions")" class="mt-2">
+                <input type="hidden" name="credentialJson" value="" />
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <input type="hidden" name="rememberMe" value="false" />
+                <div data-passkey-controls hidden><button class="btn btn-outline-primary w-100"><icon name="fingerprint" />Đăng nhập bằng Passkey</button>
+                <p class="small text-muted text-center mt-1 mb-0">Dùng vân tay, khuôn mặt hoặc mã PIN của thiết bị.</p></div>
+                <p class="small mt-2 mb-0" role="status" aria-live="polite" data-passkey-status></p>
+                <noscript>Trình duyệt đang tắt JavaScript (phần giúp trang web hoạt động). Hãy bật lại JavaScript trong cài đặt trình duyệt để đăng nhập bằng Passkey.</noscript>
+            </form>
+            @* Dùng thử như nhóm (nút demo): chỉ hiện khi chạy thử trên chính máy (Development + localhost). *@
+            @if (MindSprintAI_ASP.NET_MVC.Controllers.AccountController.CanUseDemo(Env.IsDevelopment(), Context.Connection.RemoteIpAddress))
+            {
+                <form method="post" asp-action="DemoLogin" class="mt-2"><button class="btn btn-secondary w-100"><icon name="sparkles" />Dùng thử tài khoản demo</button></form>
+            }
+            <p class="auth-foot">Chưa có tài khoản? <a asp-action="Register">Đăng ký miễn phí</a></p>
+            <p class="auth-note">Để báo cho bạn khi có đăng nhập từ máy lạ, MindSprint AI ghi nhận địa chỉ mạng (IP), vị trí ước tính và một số đặc điểm chung của máy. <a asp-controller="Home" asp-action="Privacy">Xem chi tiết</a></p>
+        </div>
+    </section>
+</div>
+@section Scripts {
+    <script src="~/js/passkey.js" asp-append-version="true"></script>
+    <script src="~/js/password-toggle.js" asp-append-version="true"></script>
+}

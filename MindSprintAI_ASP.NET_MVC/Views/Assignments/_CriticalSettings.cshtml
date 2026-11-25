@@ -1,0 +1,30 @@
+@model CriticalSettingsView
+<fieldset class="critical-settings">
+    <legend class="h5">Điểm liệt</legend>
+    <p class="small text-muted">Con số điểm giữ nguyên. Nếu bật cả hai cách bên dưới, học viên chỉ cần vướng một cách là bị tính là liệt. Câu khảo sát không chọn được.</p>
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="ThresholdEnabled" name="ThresholdEnabled" value="true" checked="@Model.Settings.ThresholdEnabled" />
+        <input type="hidden" name="ThresholdEnabled" value="false" />
+        <label class="form-check-label" for="ThresholdEnabled">Bật ngưỡng điểm liệt</label>
+    </div>
+    <label class="form-label" for="CriticalThreshold">Điểm từ ngưỡng này trở xuống bị tính là liệt (theo thang điểm của bài)</label>
+    <input class="form-control mb-3" id="CriticalThreshold" name="CriticalThreshold" type="number" min="0" step="0.0001" value="@(Model.Settings.CriticalThreshold?.ToString(System.Globalization.CultureInfo.InvariantCulture))" />
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="CriticalQuestionsEnabled" name="CriticalQuestionsEnabled" value="true" checked="@Model.Settings.CriticalQuestionsEnabled" />
+        <input type="hidden" name="CriticalQuestionsEnabled" value="false" />
+        <label class="form-check-label" for="CriticalQuestionsEnabled">Bật câu điểm liệt</label>
+    </div>
+    <p class="small">Nếu học viên làm sai, bỏ trống hoặc chỉ đúng một phần ở bất kỳ câu nào được chọn bên dưới, bài bị tính là liệt. Câu đang chờ giảng viên chấm thì hiện "Chờ chấm".</p>
+    @foreach (var (quizId, questions) in Model.Questions)
+    {
+        <div data-critical-quiz="@quizId">
+            @foreach (var q in questions)
+            {
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="critical-@q.Id" name="CriticalQuestionIds" value="@q.Id" checked="@(Model.Settings.CriticalQuestionIds?.Contains(q.Id) == true)" />
+                    <label class="form-check-label" for="critical-@q.Id">Câu @q.Number: @q.Prompt</label>
+                </div>
+            }
+        </div>
+    }
+</fieldset>

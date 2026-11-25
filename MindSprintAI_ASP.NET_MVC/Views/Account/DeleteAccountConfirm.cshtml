@@ -1,0 +1,14 @@
+@model LockConfirmationModel
+@{ ViewData["Title"] = "Xóa tài khoản vĩnh viễn?"; }
+@* Pháp lý C9. Hộp xác nhận: nút "Giữ tài khoản" thay cho nút Quay lại. *@
+<div class="col-lg-6">
+    <h1 class="h3">Xóa tài khoản vĩnh viễn?</h1>
+    <p>Tài khoản @ViewData["Email"] sẽ bị xóa và không khôi phục được.</p>
+    <div class="d-flex flex-wrap gap-2">
+        <form method="post" asp-action="DeleteAccountConfirm">
+            <input type="hidden" asp-for="UserId" /><input type="hidden" asp-for="Code" /><input type="hidden" asp-for="Nonce" />
+            <button class="btn btn-danger">Xóa vĩnh viễn</button>
+        </form>
+        <a class="btn btn-outline-secondary" href="/">Giữ tài khoản</a>
+    </div>
+</div>

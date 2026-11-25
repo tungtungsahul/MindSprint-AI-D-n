@@ -1,313 +1,57 @@
-# 🧠 MindSprintAI
+# MindSprint AI
 
-[![Release](https://img.shields.io/badge/Release-v0.2.0-brightgreen.svg)](RELEASE-0.2.md)
-[![Build](https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/tungtungsahul/MindSprint-AI-D-n/actions)
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![SQL Server](https://img.shields.io/badge/Database-SQL_Server-CC2927)](docs/SQL-SERVER.md)
-[![Gemini AI](https://img.shields.io/badge/Gemini-AI-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Vercel](https://img.shields.io/badge/Vercel-Frontend%20Live-black?logo=vercel)](https://mindsprint-ai-d-n-frontend.vercel.app/)
-[![Render](https://img.shields.io/badge/Render-Backend%20Live-46E3B7?logo=render)](https://mindsprint-api-zyur.onrender.com)
+Ứng dụng học tập của nhóm MindSprint: thư viện bộ học (thẻ ghi nhớ + quiz), luyện tập từ vựng, lớp học và giao bài, Sổ tay AI (hỏi đáp có trích dẫn, Studio, Gia sư), lịch học, công việc (Kanban), tổng quan và điểm yếu.
 
-> 🌐 **Bản triển khai trực tiếp (Live Production):** [https://mindsprint-ai-d-n-frontend.vercel.app/](https://mindsprint-ai-d-n-frontend.vercel.app/)
-> ⚡ **Backend API (Render Cloud):** [https://mindsprint-api-zyur.onrender.com](https://mindsprint-api-zyur.onrender.com)
+ASP.NET Core MVC (.NET 10) · Razor Views · EF Core + SQL Server · ASP.NET Core Identity · SignalR.
 
-Giao diện Study Cockpit (nền kem/xanh chanh) đã được tích hợp vào frontend chức năng
-HTML/CSS/JS hiện có. Đăng nhập, flashcard/SRS, Sổ tay/Gia sư AI, giọng nói, Kanban
-và thống kê dùng API ASP.NET Core, mặc định kết nối SQL Server. Chạy frontend ở cổng 5500
-theo hướng dẫn bên dưới; không cần server Node/Vite riêng.
+## 1. Cần cài
 
-Phần việc Đình Hùng: [báo cáo #16/#37 và NFR #45/#51/#54](docs/HUNG-ISSUES-REPORT.md), [bàn giao hiện tại](docs/AI_HANDOFF.md). Sổ tay có nhập tiếng Việt bằng giọng nói, sửa trước khi gửi và tùy chọn đọc/dừng trả lời; luôn giữ bàn phím.
+- [.NET SDK 10](https://dotnet.microsoft.com/download)
+- SQL Server (bản Developer hoặc Express) chạy trên máy, đăng nhập bằng tài khoản Windows
+- Trình duyệt Chrome/Edge
 
-**MindSprint AI** là ứng dụng web giáo dục giúp sinh viên và người học tự chủ ôn tập hiệu quả hơn. Ứng dụng kết hợp **Flashcards thông minh** (Spaced Repetition), **Sổ tay AI**, **Gia sư AI** và **Kanban quản lý công việc** — tất cả trong một nền tảng duy nhất, hỗ trợ cả online và offline.
----
+## 2. Chạy lần đầu
 
-## ✨ Tính năng chính
-
-| Tính năng | Mô tả |
-|-----------|-------|
-| 📇 **Flashcards & SRS** | Thư viện 1.814 từ Oxford seed sẵn · CRUD thẻ cá nhân · Thuật toán Spaced Repetition tự tính lịch ôn |
-| 📓 **Sổ tay AI** | Lưu nguồn văn bản, URL, ảnh/PDF gốc · Hỏi đáp có trích dẫn · Tạo nội dung học tập · Mở rộng khung chat |
-| 🤖 **Gia sư AI** | Giải bài, kiểm tra bài làm, gợi ý theo mức và [phân tích code Python/JavaScript](backend/TutorChecks/PROGRAMMING.md) · Dùng chung nguồn ảnh/PDF trong sổ tay |
-| 📋 **Kanban Board** | Quản lý công việc kéo thả 3 cột · Lọc ưu tiên · Tìm kiếm · Hạn hoàn thành |
-| 📊 **Thống kê học tập** | Dashboard theo dõi tiến trình ôn tập và hoạt động |
-| 🔐 **Xác thực** | Email/mật khẩu + Google Sign-In · JWT + Refresh Token · Liên kết tài khoản |
-| 📱 **PWA** | Service Worker + Manifest · Cài như app trên mobile · Chạy offline bằng localStorage |
-
-Xem [hướng dẫn nguồn ảnh/PDF](backend/TutorChecks/OCR.md) để biết giới hạn tệp và cách sử dụng.
-
----
-
-## 🎬 Video nghiệm thu kiểm tra giữa kỳ
-
-[![Xem video nghiệm thu kiểm tra giữa kỳ](frontend/design-reference/home-desktop-v39.png)](docs/media/video-nghiem-thu-kiem-tra-giua-ky.mp4)
-
-[Xem hoặc tải video nghiệm thu kiểm tra giữa kỳ (MP4 · 11 phút 44 giây)](docs/media/video-nghiem-thu-kiem-tra-giua-ky.mp4)
-
----
-## 📸 Screenshots
-
-<!-- Thay bằng ảnh thật của dự án. Ảnh có sẵn trong frontend/design-reference/ -->
-
-| Trang chủ | Flashcards | Sổ tay AI | Kanban |
-|-----------|------------|-----------|--------|
-| ![Home](frontend/design-reference/home-desktop-v39.png) | ![Flashcards](frontend/design-reference/flashcards-desktop-v39.png) | ![Notebook](frontend/design-reference/notebook-desktop-v39.png) | ![Kanban](frontend/design-reference/kanban-desktop-v39.png) |
-
----
-
-## 🛠️ Tech Stack
-
-| Lớp | Công nghệ |
-|-----|-----------|
-| **Frontend** | HTML / CSS / JavaScript (Fetch API) |
-| **Backend** | C# ASP.NET Core 8 Web API |
-| **Database** | SQL Server (EF Core Code First); Render cũ chọn PostgreSQL riêng |
-| **Auth** | JWT + Refresh Token + Google Identity Services |
-| **AI** | Google Gemini API (`gemini-3.8-flash`) |
-| **CI/CD** | GitHub Actions |
-| **Deploy** | Docker trên Render (API) · Vercel (Frontend) |
-
----
-
-## 📋 Yêu cầu hệ thống
-
-| Công cụ | Phiên bản |
-|---------|-----------|
-| [.NET SDK](https://dotnet.microsoft.com/download) | 8.0 trở lên |
-| [SQL Server](https://www.microsoft.com/sql-server/sql-server-downloads) | 2019 trở lên; Express/Developer cho local |
-| [Node.js](https://nodejs.org/) *(chỉ cần cho build Vercel)* | 20 trở lên |
-| [Git](https://git-scm.com/) | Bất kỳ |
-
----
-
-## 🚀 Cài đặt & Chạy
-
-**Dùng máy cá nhân làm server, chỉ truy cập trên chính máy đó:** xem
-[hướng dẫn vận hành Docker cục bộ](docs/SELF-HOST-DEMO.md), gồm backup/restore SQL Server,
-kiểm tra database, tự khởi động lại và các lệnh nghiệm thu.
-Để người khác truy cập qua Internet: xem [chia sẻ HTTPS và bảo vệ API key/IP gốc](docs/PUBLIC-ACCESS.md).
-
-### 1. Clone dự án
+Mở terminal ở thư mục chứa `MindSprintAI_ASP.NET_MVC.slnx`:
 
 ```bash
-git clone https://github.com/tungtungsahul/MindSprint-AI-D-n.git
-cd MindSprint-AI-D-n
+dotnet tool restore                                   # cài dotnet-ef đúng phiên bản của project
+dotnet ef database update --project MindSprintAI_ASP.NET_MVC   # tạo database "MindSprintAI" trên localhost
+dotnet run --project MindSprintAI_ASP.NET_MVC          # mở địa chỉ in ra trong terminal
 ```
 
-### 2. Cài đặt Database
+Chuỗi kết nối nằm ở `MindSprintAI_ASP.NET_MVC/appsettings.Development.json` (`Server=localhost`). Máy dùng SQL Express thì đổi thành `Server=localhost\\SQLEXPRESS`.
 
-Mặc định dùng SQL Server tại `localhost`, database `mindsprint`, xác thực Windows.
-Tài khoản Windows chạy backend cần quyền tạo database trong lần khởi động đầu.
-Xem [hướng dẫn SQL Server](docs/SQL-SERVER.md) để dùng instance khác, SQL Login hoặc SSMS.
+## 3. Xem nhanh bằng tài khoản demo (một cú bấm)
 
-> Backend sẽ **tự chạy EF Core Migrations** và **seed 1.814 từ Oxford** khi khởi động lần đầu.
+Ở trang **Đăng nhập** bấm **Dùng thử tài khoản demo**. Lần đầu, tài khoản demo được tạo kèm dữ liệu mẫu:
 
-### 3. Cấu hình biến môi trường
+- Bộ học "Demo — Sinh học tế bào": 6 thẻ ghi nhớ + 5 câu quiz
+- Sổ tay AI "Demo — Sinh học" có một nguồn và một ghi chú
+- 3 việc trên bảng Công việc, 2 buổi trong Lịch học
 
-Sửa `backend/MindSprint.Api/appsettings.json` hoặc dùng biến môi trường:
+Nút demo **chỉ hiện khi chạy ở chế độ phát triển và mở từ chính máy đó** — bản triển khai thật không có.
 
-| Biến | Bắt buộc | Mặc định | Mô tả |
-|------|:--------:|----------|-------|
-| `Database__Provider` | ❌ | `SqlServer` | `SqlServer` hoặc `PostgreSQL` (Render cũ) |
-| `ConnectionStrings__Default` | ✅ | `Server=localhost;Database=mindsprint;Integrated Security=True;Encrypt=True;TrustServerCertificate=True` | Chuỗi kết nối của provider đã chọn |
-| `Jwt__Key` | ✅ | *(placeholder)* | Khóa bí mật JWT, ≥ 32 ký tự |
-| `Gemini__ApiKey` | ✅ | — | API key từ [Google AI Studio](https://aistudio.google.com/apikey) |
-| `Cors__Origins` | ✅ | — | Origin của frontend, vd: `http://127.0.0.1:5500` |
-| `Google__ClientId` | ❌ | — | OAuth Client ID cho Google Sign-In |
+## 4. Tài khoản thật và vai trò
 
-> ⚠️ **Không commit khóa bí mật.** Dùng biến môi trường (vd: `Gemini__ApiKey`) hoặc User Secrets.
+- Đăng ký tài khoản mới ở trang Đăng ký. Khi chạy trên máy, thư xác nhận được lưu thành tệp trong `App_Data/emails` (trang Đăng ký có link mở thư thử).
+- Đổi **Học viên ⇄ Giảng viên** ở menu tài khoản. Giảng viên tạo lớp, giao bài, xem báo cáo; học viên vào lớp bằng mã.
+- Email trong `Admin:Emails` của `appsettings.Development.json` có thêm trang **Quản trị**.
 
-### 4. Chạy backend
+## 5. Dùng tính năng AI
+
+Các tính năng AI (tạo câu hỏi, Sổ tay AI, Gia sư) dùng **API key Gemini của chính người dùng**: vào trang **Tài khoản → API key Gemini**, đọc thông báo và dán key (lấy miễn phí ở Google AI Studio). Không có key thì mọi phần khác vẫn chạy bình thường.
+
+## 6. Chạy test
 
 ```bash
-cd backend/MindSprint.Api
-dotnet run          # Tự Migrate + Seed, Swagger tại /swagger
-```
-Sửa cấu hình cục bộ: chuỗi kết nối SQL Server, `Jwt:Key` (>= 32 ký tự), `Gemini:ApiKey`, `Cors:Origins`. Giữ khóa API ngoài commit; có thể dùng biến môi trường `Gemini__ApiKey`.
-
-Để bật tạo flashcard AI khi chạy local, dùng .NET User Secrets (không đặt key trong frontend hoặc commit vào Git):
-```powershell
-dotnet user-secrets set "Gemini:ApiKey" "<YOUR_GEMINI_API_KEY>" --project backend/MindSprint.Api
-```
-Sau khi cấu hình, khởi động lại backend để nạp key. Thay `<YOUR_GEMINI_API_KEY>` bằng key tạo tại Google AI Studio; tránh lưu key thật trong lịch sử terminal. `.env` không được ASP.NET Core nạp mặc định.
-Khi chạy local, `frontend/api.js` tự dùng `http://localhost:5000`; khi triển khai Vercel, biến `API_BASE` được nhúng lúc build. Xem [hướng dẫn triển khai](CI-CD-SETUP.md).
-
-Backend chạy tại `http://localhost:5000` (HTTP) và `https://localhost:5100` (HTTPS).
-
-### 5. Chạy frontend
-
-**Cách 1** — VS Code Live Server (khuyên dùng):
-> Mở thư mục `frontend/` bằng Live Server ở cổng 5500 (đã có sẵn trong CORS).
-
-**Cách 2** — Python HTTP Server:
-```bash
-# Từ thư mục gốc dự án, mở terminal thứ hai:
-python -m http.server 5500 --bind 127.0.0.1
+bash MindSprintAI_ASP.NET_MVC/tools/run-tests.sh            # hoặc tools/run-tests.ps1 trên PowerShell
 ```
 
-Mở trình duyệt tại **`http://127.0.0.1:5500/frontend/`**.
+Test dùng database riêng `MindSprintAI_Tests` (tự tạo). Máy ít RAM: tắt app đang chạy trước khi chạy test.
 
-> Khi chạy local, `frontend/api.js` tự dùng `http://localhost:5000`. Khi triển khai Vercel, biến `API_BASE` được nhúng lúc build.
+## 7. Tài liệu cho nhóm
 
----
-
-## 🔑 Đăng nhập Google
-
-Hộp đăng nhập/đăng ký hỗ trợ **Google Identity Services**, dùng chung JWT và refresh session với đăng nhập email.
-
-1. Đặt `Google__ClientId` và cấu hình Authorized JavaScript origins trong Google Cloud Console.
-2. Xem chi tiết tại [hướng dẫn cấu hình Google](backend/GOOGLE_SIGN_IN.md).
-3. Email đã có tài khoản cần nhập mật khẩu MindSprintAI hiện tại trước khi liên kết, để giữ nguyên dữ liệu học tập.
-
-> Khi chưa cấu hình Google, đăng nhập bằng email và tài khoản Demo vẫn hoạt động bình thường.
-
----
-
-## 📋 Kanban tích hợp
-
-Tab **Công việc** dùng chung hệ thống auth (`MindSprintAuth`) và API (`MindSprintApi`) với Sổ tay AI, thư viện và lịch học:
-
-- ➕ Thêm / ✏️ Sửa / 🗑️ Xóa công việc
-- 🖱️ Kéo thả hoặc nút chuyển cột
-- 🔍 Tìm kiếm, lọc ưu tiên và hạn hoàn thành
-- 💾 Lưu vào database theo tài khoản; khi lỗi kết nối, form giữ nguyên để thử lại
-- 📌 Thả ở nửa trên/dưới thẻ để chọn vị trí chèn; vạch màu đánh dấu vị trí đích
-
----
-
-## 📁 Cấu trúc dự án
-
-```
-MindSprint-AI-D-n/
-├── frontend/                          # Giao diện (HTML/CSS/JS thuần)
-│   ├── index.html                     # Trang chính
-│   ├── style.css                      # CSS chính
-│   ├── tokens.css                     # Design tokens
-│   ├── script.js                      # Logic chính
-│   ├── api.js                         # Client gọi API backend
-│   ├── auth.js                        # Xử lý đăng nhập/đăng ký
-│   ├── notebook.js                    # Module Sổ tay AI
-│   ├── kanban.js                      # Module Kanban
-│   ├── sw.js                          # Service Worker (PWA)
-│   └── design-reference/             # Mockup & ảnh tham chiếu
-│
-├── backend/
-│   ├── MindSprint.Api/                # ASP.NET Core Web API
-│   │   ├── Controllers/
-│   │   │   ├── AuthController.cs          # Đăng nhập/đăng ký email
-│   │   │   ├── GoogleAuthController.cs    # Đăng nhập Google
-│   │   │   ├── FlashcardsController.cs    # CRUD flashcards
-│   │   │   ├── ReviewController.cs        # SRS review
-│   │   │   ├── TasksController.cs         # Kanban CRUD + move
-│   │   │   ├── AiController.cs            # Gemini AI endpoint
-│   │   │   ├── NotebooksController.cs     # Sổ tay AI
-│   │   │   ├── StudyStatsController.cs    # Thống kê học tập
-│   │   │   └── TutorController.cs         # Gia sư AI
-│   │   ├── Models/Entities.cs         # User, Flashcard, CardProgress, KanbanTask
-│   │   ├── Data/
-│   │   │   ├── AppDbContext.cs        # EF Core DbContext
-│   │   │   ├── DataSeeder.cs          # Seed 1.814 từ Oxford
-│   │   │   └── vocab_seed.json        # Dữ liệu seed
-│   │   ├── Services/
-│   │   │   ├── SpacedRepetitionService.cs   # Thuật toán SRS
-│   │   │   ├── GeminiService.cs             # Gọi Gemini API
-│   │   │   ├── TokenService.cs              # JWT token
-│   │   │   ├── TutorService.cs              # Logic gia sư AI
-│   │   │   └── NotebookAi.cs               # AI cho sổ tay
-│   │   └── Migrations/               # EF Core migrations
-│   │
-│   ├── GoogleAuthChecks/              # Test – Google Auth
-│   ├── KanbanChecks/                  # Test – Kanban
-│   ├── TutorChecks/                   # Test – Tutor AI
-│   └── UrlImportChecks/              # Test – URL import
-│
-└── docs/
-    ├── architecture/                  # Tài liệu kiến trúc
-    │   ├── software-architecture.md   # Kiến trúc phần mềm
-    │   ├── non-functional-requirements.md  # 14 NFR
-    │   ├── erd.md                     # ERD (12 bảng, 91 cột)
-    │   └── sprint-4-test-plan.md      # Kế hoạch kiểm thử
-    └── decisions/                     # Architecture Decision Records
-        ├── 0001-layered-monolith.md
-        ├── 0002-postgresql-and-deployment.md
-        ├── 0003-identity-and-account-isolation.md
-        └── 0004-ai-and-source-boundaries.md
-```
-
----
-
-## 🧪 Chạy test
-
-Dự án có 4 test project riêng:
-
-```bash
-# Google Auth checks
-dotnet run --project backend/GoogleAuthChecks
-
-# Kanban checks
-dotnet run --project backend/KanbanChecks
-
-# Tutor AI checks
-dotnet run --project backend/TutorChecks
-
-# URL Import checks
-dotnet run --project backend/UrlImportChecks
-```
-
-Frontend test (Node.js):
-```bash
-cd backend/TutorChecks
-node browser.test.cjs
-node frontend-tutor.test.cjs
-```
-
----
-
-## 🌐 Triển khai
-
-| Thành phần | Nền tảng | Ghi chú |
-|------------|----------|---------|
-| **API** | [Render](https://render.com) | Docker · PostgreSQL managed · Auto migration |
-| **Frontend** | [Vercel](https://vercel.com) | Git integration · Biến `API_BASE` nhúng lúc build |
-
-Xem hướng dẫn chi tiết tại [CI-CD-SETUP.md](CI-CD-SETUP.md).
-
----
-
-## 📐 Kiến trúc và yêu cầu phi chức năng
-
-[Bộ tài liệu kiến trúc](docs/architecture/README.md) bao gồm:
-
-| Tài liệu | Nội dung |
-|-----------|----------|
-| [Ghi chú phát hành 0.2](RELEASE-0.2.md) | Báo cáo phát hành v0.2.0, tóm tắt tính năng mới và kết quả kiểm thử 230/230 test pass |
-| [Đặc tả yêu cầu 0.2](docs/requirements/software-requirements-0.2.md) | 25 FR, 14 NFR nghiệm thu 100%, giải quyết triệt để các GAP từ v0.1 |
-| [Đặc tả yêu cầu 0.1](docs/requirements/software-requirements.md) | Phạm vi, 23 FR, 14 NFR, truy vết và các điểm chưa nghiệm thu (#58) |
-| [Kiến trúc phần mềm](docs/architecture/software-architecture.md) | Bối cảnh, thành phần, dữ liệu, luồng xử lý, triển khai |
-| [UML hiện trạng](docs/architecture/uml.md) | ERD, 18 use case, Activity/Sequence và bản SVG (#20) |
-| [Test case và kết quả ban đầu](docs/testing/sprint-3-results.md) | 46 case, log thực thi, phân biệt mock/live và phần chưa chạy (#17) |
-| [ERD](docs/architecture/erd.md) | 12 bảng, 91 cột, khóa ngoại và quan hệ nghiệp vụ; sơ đồ Mermaid cập nhật theo migrations PostgreSQL hiện tại |
-| [Yêu cầu phi chức năng](docs/architecture/non-functional-requirements.md) | 14 NFR có tiêu chí đo được |
-| [Kế hoạch kiểm thử Sprint 4](docs/architecture/sprint-4-test-plan.md) | Issues #42–#55, thứ tự và điều kiện nghiệm thu |
-| [ADR-001](docs/decisions/0001-layered-monolith.md) | Backend theo tầng trong một ứng dụng |
-| [ADR-002](docs/decisions/0002-postgresql-and-deployment.md) | PostgreSQL và triển khai frontend/API riêng |
-| [ADR-003](docs/decisions/0003-identity-and-account-isolation.md) | JWT, refresh token và ranh giới tài khoản |
-| [ADR-004](docs/decisions/0004-ai-and-source-boundaries.md) | Cô lập Gemini và nguồn tài liệu ngoài |
-
-> Các ngưỡng NFR là mục tiêu đề xuất; chưa có kết quả nghiệm thu.
-
----
-
-## 🤝 Đóng góp
-
-1. Fork repository
-2. Tạo branch tính năng (`git checkout -b feature/ten-tinh-nang`)
-3. Commit thay đổi (`git commit -m "Thêm tính năng XYZ"`)
-4. Push lên branch (`git push origin feature/ten-tinh-nang`)
-5. Tạo Pull Request vào `main`
-
----
-
-## 📄 License
-
-Dự án được phân phối theo giấy phép [MIT](LICENSE).
+- `docs/KICH_BAN_DEMO.md` — kịch bản trình diễn 10 phút
+- `docs/DOI_CHIEU_CHUC_NANG.md` — đối chiếu tính năng với bản nhóm cũ và QuizEdu
+- `docs/GIAO_DIEN_NHOM.md` + `docs/giao-dien-nhom/` — giao diện chuẩn của nhóm

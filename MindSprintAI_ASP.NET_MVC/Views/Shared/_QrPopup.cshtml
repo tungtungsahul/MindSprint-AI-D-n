@@ -1,0 +1,23 @@
+@model QrPopupModel
+@* Popup cỡ vừa như hộp thông báo: có nút ✕ và nút Đóng, không phủ cả trang. QR vẽ khi mở (js/qr-popup.js). *@
+<div class="modal fade qr-popup" id="@Model.Id" tabindex="-1" aria-labelledby="@(Model.Id)-title" aria-hidden="true"
+     data-join-url="@Model.Join.JoinUrl" data-code="@Model.Join.Code">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="@(Model.Id)-title">@Model.Title</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="qr-popup-code" role="img" aria-label="Mã QR tham gia bằng mã @Model.Join.Code"></div>
+                <p class="qr-popup-error text-danger" role="status" hidden>Chưa tạo được mã QR. Học viên vẫn nhập được mã bên dưới.</p>
+                <p class="qr-popup-number mb-1">@(Model.Join.Code.Length == 8 ? Model.Join.Code.Insert(4, " ") : Model.Join.Code)</p>
+                <p class="small text-muted mb-0">Quét bằng camera điện thoại, hoặc vào <span class="qr-popup-link">@Model.Join.JoinPageUrl</span> rồi nhập mã.</p>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-outline-secondary" href="@Model.PrintUrl" target="_blank" rel="noopener"><icon name="external-link" />Mở trang in<span class="visually-hidden"> (tab mới)</span></a>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,16 @@
+@model List<Classroom>
+@{ ViewData["Title"] = "Chuyển lớp cho giảng viên khác"; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Quản trị</a>
+<h1 class="h3">Chuyển lớp cho giảng viên khác</h1>
+<p>Chỉ các lớp có giảng viên chính bị khóa quá 30 ngày và không có giảng viên phụ. Người nhận phải xác nhận; quản trị viên không xem điểm.</p>
+@if (Model.Count == 0) { <p>Chưa có lớp đủ điều kiện.</p> }
+@foreach (var room in Model)
+{
+    <section class="card card-body mb-3"><h2 class="h5">@room.Name</h2>
+        <form method="post" asp-action="TransferClass" asp-route-id="@room.Id" class="row g-2">
+            <div class="col-md-8"><label for="receiver-@room.Id" class="form-label">Email người nhận</label><input type="email" class="form-control" id="receiver-@room.Id" name="email" required /></div>
+            <div class="col-md-4 d-flex align-items-end"><button class="btn btn-primary">Chuyển lớp cho giảng viên khác</button></div>
+        </form>
+    </section>
+}
+<a asp-action="Index">Về quản trị</a>

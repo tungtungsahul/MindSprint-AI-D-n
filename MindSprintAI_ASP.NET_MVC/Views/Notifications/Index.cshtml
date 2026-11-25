@@ -1,0 +1,119 @@
+@model NotificationPage
+@{
+    ViewData["Title"] = "Thông báo";
+    var unreadOnPage = Model.Items.Count(n => n.ReadAt == null);
+}
+<div class="learn-head">
+    <div>
+        <h1 class="mindsprint-title mb-2">Thông báo của bạn</h1>
+        <p class="learn-summary mb-0">
+            @if (Model.Items.Count == 0)
+            {
+                <span>Mọi cập nhật về lớp học, bài làm và tài khoản sẽ hiện tại đây.</span>
+            }
+            else if (unreadOnPage > 0)
+            {
+                <span>Đang có <b>@unreadOnPage</b> thông báo chưa đọc trên trang này.</span>
+            }
+            else
+            {
+                <span>Bạn đã xem hết thông báo trên trang này.</span>
+            }
+        </p>
+    </div>
+    <div class="notif-toolbar">
+        <a class="btn btn-outline-secondary" asp-controller="Invitations" asp-action="Index"><icon name="mail" />Xem lời mời</a>
+        <form method="post" asp-action="ReadAll"><button class="btn btn-primary"><icon name="check" />Đánh dấu tất cả đã đọc</button></form>
+    </div>
+</div>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="empty-state dot-grid mb-4">
+        <span class="section-icon" style="--tint:var(--acid)"><icon name="inbox" /></span>
+        <h2>Chưa có thông báo</h2>
+        <p>Khi có lời nhắc ôn bài, điểm mới công bố hoặc cập nhật từ lớp học, bạn sẽ thấy ngay tại đây.</p>
+        <a class="btn btn-outline-primary" asp-controller="Invitations" asp-action="Index"><icon name="mail" />Xem lời mời vào lớp</a>
+    </div>
+}
+else
+{
+    <ul class="notif-list">
+    @foreach (var item in Model.Items)
+    {
+        var payload = NotificationService.Payload(item);
+        var unread = item.ReadAt == null;
+        var (iconName, tint, kindLabel) = item.Type switch
+        {
+            NotificationType.Assistant => ("user-plus", "var(--pink)", "Giảng viên phụ"),
+            NotificationType.Transfer => ("repeat-2", "var(--blue)", "Chuyển lớp"),
+            NotificationType.Promotion => ("graduation-cap", "var(--acid)", "Vai trò lớp"),
+            NotificationType.Retake => ("rotate-ccw", "var(--warn)", "Làm lại bài"),
+            NotificationType.Regrade => ("book-check", "var(--ok)", "Chấm lại"),
+            NotificationType.AccountLock => ("lock", "var(--bad)", "Bảo vệ tài khoản"),
+            NotificationType.ExtraMinutes => ("timer", "var(--acid)", "Thêm giờ làm bài"),
+            NotificationType.ExtraAttempts => ("plus", "var(--ok)", "Thêm lượt làm"),
+            NotificationType.Reminder => ("clock", "var(--warn)", "Nhắc học tập"),
+            NotificationType.NewDevice => ("smartphone", "var(--bad)", "Thiết bị mới"),
+            NotificationType.DeviceChange => ("monitor-smartphone", "var(--warn)", "Xin chuyển thiết bị"),
+            NotificationType.ScreenLeave => ("eye", "var(--pink)", "Rời màn hình"),
+            NotificationType.ContentReview => ("book-check", "var(--blue)", "Xem xét bộ học"),
+            _ => ("bell", "var(--acid)", "Thông báo")
+        };
+        <li class="notif-item @(unread ? "is-unread" : "is-read")">
+            <span class="section-icon" style="--tint:@tint"><icon name="@iconName" /></span>
+            <div class="notif-body">
+                <div class="notif-meta">
+                    <span class="notif-badge @(unread ? "is-unread" : "is-read")">
+                        @if (unread)
+                        {
+                            <span class="notif-dot" aria-hidden="true"></span>
+                        }
+                        else
+                        {
+                            <icon name="check" />
+                        }
+                        @(unread ? "Chưa đọc" : "Đã đọc")
+                    </span>
+                    <span class="notif-kind">@kindLabel</span>
+                    <time class="notif-time"><icon name="clock" />@VnTime.Format(item.CreatedAt)</time>
+                </div>
+                <form method="post" asp-action="Open" asp-route-id="@item.Id" id="notif-open-@item.Id">
+                    <button class="notif-open text-break">@payload.Text.Replace(" IP:", " địa chỉ mạng (IP):", StringComparison.Ordinal)</button>
+                </form>
+                @{ var hasTarget = !string.IsNullOrEmpty(payload.Url); }
+                @if (item.Type == NotificationType.NewDevice || unread || hasTarget)
+                {
+                    <div class="notif-foot">
+                        @* Chữ thông báo bấm được nhưng trông như đoạn văn; nút này cho thấy rõ chỗ đi tới việc cần xử lý. *@
+                        @if (hasTarget)
+                        {
+                            <button class="btn btn-sm btn-primary" form="notif-open-@item.Id"><icon name="external-link" />Xem chi tiết</button>
+                        }
+                        @if (item.Type == NotificationType.NewDevice)
+                        {
+                            <p class="small mb-0"><a href="https://db-ip.com" rel="noopener noreferrer">Vị trí ước tính theo DB-IP.com</a></p>
+                        }
+                        @if (unread)
+                        {
+                            <form method="post" asp-action="Read" asp-route-id="@item.Id"><button class="btn btn-sm btn-outline-secondary"><icon name="check" />Đánh dấu đã đọc</button></form>
+                        }
+                    </div>
+                }
+            </div>
+        </li>
+    }
+    </ul>
+}
+
+<nav aria-label="Trang thông báo" class="notif-pager">
+    @if (Model.Page > 1)
+    {
+        <a class="btn btn-outline-secondary notif-prev" asp-action="Index" asp-route-page="@(Model.Page - 1)"><icon name="chevron-right" />Trang trước</a>
+    }
+    <span class="notif-page-num">Trang @Model.Page</span>
+    @if (Model.HasNext)
+    {
+        <a class="btn btn-outline-secondary notif-next" asp-action="Index" asp-route-page="@(Model.Page + 1)">Trang sau<icon name="chevron-right" /></a>
+    }
+</nav>

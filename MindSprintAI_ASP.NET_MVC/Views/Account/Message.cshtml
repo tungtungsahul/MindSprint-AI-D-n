@@ -1,0 +1,8 @@
+@model string
+@{
+    ViewData["Title"] = "Thông báo";
+}
+<div class="alert alert-info">@Model</div>
+@* Trang này còn được dùng ngoài AccountController (vd. gửi báo cáo), nên ghi rõ controller; người đã đăng nhập không cần nút Đăng nhập. *@
+@if (User.Identity?.IsAuthenticated == true && ViewData["ShowLoginLink"] is not true) { <a class="btn btn-primary" href="~/">Về trang chính</a> }
+else { <a class="btn btn-primary" asp-controller="Account" asp-action="Login">Đăng nhập</a> }

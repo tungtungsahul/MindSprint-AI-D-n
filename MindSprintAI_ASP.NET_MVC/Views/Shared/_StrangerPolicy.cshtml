@@ -1,0 +1,8 @@
+@model StrangerPolicy
+<label class="form-label" for="StrangerPolicy">Người ngoài lớp</label>
+<select class="form-select" id="StrangerPolicy" name="StrangerPolicy">
+    <option value="1" selected="@(Model == StrangerPolicy.Reject)">Từ chối</option>
+    <option value="2" selected="@(Model == StrangerPolicy.RequireApproval)">Chờ giảng viên duyệt</option>
+    <option value="3" selected="@(Model == StrangerPolicy.Allow)">Vào ngay</option>
+</select>
+<p class="small text-muted mt-1">Áp dụng cho khách và tài khoản ngoài lớp; không tính vào tỉ lệ của lớp. Người đã tham gia giữ quyền khi đổi cài đặt này.</p>

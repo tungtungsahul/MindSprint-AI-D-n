@@ -1,0 +1,156 @@
+@model List<StudySet>
+@{
+    ViewData["Title"] = "Thư viện";
+    var pendingUnhideSetIds = ViewData["PendingUnhideSetIds"] as List<int> ?? new();
+    var srsDueCounts = ViewData["SrsDueCounts"] as Dictionary<int, int> ?? new();
+    var dueTotal = ViewData["SrsDueTotal"] is int total ? total : 0;
+    var counts = ViewData["Counts"] as Dictionary<int, StudySetCounts> ?? new();
+    var categories = Model.Select(s => s.Category).OfType<string>().Distinct().Order().ToList();
+    // Bố cục trang Thư viện của nhóm (docs/giao-dien-nhom/04): tiêu đề trang · hàng công cụ · lưới thẻ pastel 4 cột, mỗi thẻ hai nút chính.
+}
+<div class="c-library">
+<header class="page-head">
+    <div>
+        <h1>Thư viện</h1>
+        <p>@(Model.Count == 0 ? "Tạo bộ học đầu tiên để soạn thẻ ghi nhớ, văn bản nguồn và quiz." : $"Bạn có {Model.Count} bộ học. Mở để soạn, ôn thẻ hoặc giao cho lớp.")</p>
+    </div>
+    <div class="page-head-actions">
+        <p class="set-due-pill @(dueTotal > 0 ? "has-due" : "")" role="status"><icon name="clock" />Hôm nay có @dueTotal thẻ đến hạn ôn</p>
+        <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#ai-card-modal"><icon name="sparkles" />Tạo thẻ bằng AI</button>
+        <a class="btn btn-primary" href="#new-set-title"><icon name="plus" />Tạo bộ học</a>
+    </div>
+</header>
+
+<nav class="library-toolbar" aria-label="Thư viện bộ học">
+    <a class="btn btn-primary btn-sm" aria-current="page" asp-action="Index"><icon name="layers" />Tất cả bộ học (@Model.Count)</a>
+    <a class="btn btn-secondary btn-sm" href="@Url.Content("~/StudySets/Trash")"><icon name="trash-2" />Thùng rác
+        @if (ViewData["TrashCount"] is int trashCount) { <text> (@trashCount)</text> }
+    </a>
+    <a class="btn btn-secondary btn-sm" asp-controller="Vocab" asp-action="Index"><icon name="book-open-text" />Thư viện từ vựng</a>
+    <div class="c-library-tools" hidden>
+        <label class="visually-hidden" for="library-search">Tìm bộ học</label>
+        <input class="form-control" type="search" id="library-search" placeholder="Tìm bộ học..." />
+        <label class="visually-hidden" for="library-sort">Sắp xếp</label>
+        <select class="form-select" id="library-sort"><option value="new">Mới tạo</option><option value="name">Tên A–Z</option></select>
+        @if (categories.Count > 0)
+        {
+            <label class="visually-hidden" for="library-category">Lọc theo danh mục</label>
+            <select class="form-select" id="library-category"><option value="">Mọi danh mục</option>@foreach (var c in categories) { <option value="@c">@c</option> }<option value="-">Chưa xếp danh mục</option></select>
+        }
+    </div>
+    <datalist id="set-categories">@foreach (var c in StudyLibraryService.SuggestedCategories.Union(categories)) { <option value="@c"></option> }</datalist>
+</nav>
+
+<details class="c-library-create" id="tao-bo-hoc"><summary><icon name="plus" />Tạo bộ học mới</summary>
+<form method="post" asp-action="Create" class="set-create">
+    <label for="new-set-title" class="form-label">Tên bộ học mới</label>
+    <div class="set-create-row">
+        <input id="new-set-title" name="title" maxlength="200" class="form-control" placeholder="Ví dụ: C# — Chương 1" required />
+        <label class="visually-hidden" for="new-set-category">Danh mục (không bắt buộc)</label>
+        <input id="new-set-category" name="category" maxlength="@StudyLibraryService.MaxCategory" list="set-categories" class="form-control set-category-input" placeholder="Danh mục (không bắt buộc)" />
+        <button class="btn btn-primary"><icon name="plus" />Tạo bộ học</button>
+    </div>
+</form>
+</details>
+
+@if (Model.Count == 0)
+{
+    <div class="empty-state">
+        <span class="section-icon"><icon name="notebook-pen" /></span>
+        <h2 class="h5">Chưa có bộ học nào</h2>
+        <p>Đặt tên bộ học ở khung phía trên để bắt đầu soạn thẻ ghi nhớ, lưu tài liệu nguồn và tạo quiz cho lớp.</p>
+        <a class="btn btn-primary" href="#new-set-title"><icon name="plus" />Đặt tên bộ học đầu tiên</a>
+    </div>
+}
+else
+{
+    <div class="set-grid">
+    @for (var i = 0; i < Model.Count; i++)
+    {
+        var set = Model[i];
+        var quizzes = set.Quizzes.OrderBy(q => q.CreatedAt).ToList();
+        var readyCount = quizzes.Count(q => q.Status == QuizStatus.Ready);
+        var dueCount = srsDueCounts.GetValueOrDefault(set.Id);
+        counts.TryGetValue(set.Id, out var tally);
+        <article class="set-card c-library-row" data-library-name="@set.Title" data-library-created="@set.CreatedAt.Ticks" data-library-category="@(set.Category ?? "-")">
+            <div class="set-card-top">
+                <span class="section-icon" aria-hidden="true"><icon name="layers" /></span>
+                <span class="set-card-tag">@quizzes.Count quiz · @readyCount sẵn sàng</span>
+                <div class="dropdown">
+                    <button class="btn set-more-btn" type="button" id="set-menu-@set.Id" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Thao tác khác cho @set.Title" title="Thao tác khác">
+                        <icon name="ellipsis" />
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end set-dropdown" aria-labelledby="set-menu-@set.Id">
+                        @if (set.HiddenByAdminAt == null) { <a class="dropdown-item" asp-controller="Assignments" asp-action="ChooseClass" asp-route-studySetId="@set.Id"><icon name="send" />Giao bài</a> }
+                        <form method="post" asp-action="Rename" asp-route-id="@set.Id" class="set-rename-form">
+                            <label for="set-title-@set.Id" class="form-label small mb-1">Tên bộ học</label>
+                            <div class="d-flex gap-2">
+                                <input id="set-title-@set.Id" name="title" maxlength="200" value="@set.Title" class="form-control form-control-sm fw-bold set-rename-input" aria-label="Tên bộ học" required />
+                                <button class="btn btn-sm btn-outline-secondary text-nowrap"><icon name="pencil" />Lưu</button>
+                            </div>
+                            <label for="set-category-@set.Id" class="form-label small mb-1 mt-2">Danh mục</label>
+                            <input id="set-category-@set.Id" name="category" maxlength="@StudyLibraryService.MaxCategory" value="@set.Category" list="set-categories" class="form-control form-control-sm" placeholder="Chưa xếp danh mục" />
+                        </form>
+                        @if (set.HiddenByAdminAt == null)
+                        {
+                            <a class="dropdown-item" asp-action="Clone" asp-route-id="@set.Id"><icon name="copy" />Nhân bản bộ học</a>
+                        }
+                        <form method="post" asp-action="Delete" asp-route-id="@set.Id" data-confirm="Xóa bộ học này?">
+                            <button class="dropdown-item set-delete-btn"><icon name="trash-2" />Xóa</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            @if (set.Category != null) { <span class="set-card-category">@set.Category</span> }
+            <h2 class="set-card-title">@set.Title</h2>
+            <div class="set-card-meta">
+                <span>@(tally == null ? $"{quizzes.Count} quiz" : $"{tally.Questions} câu hỏi · {tally.Cards} thẻ")</span>
+                @if (set.FlashcardMode == FlashcardMode.SpacedRepetition && set.HiddenByAdminAt == null)
+                {
+                    <b class="@(dueCount > 0 ? "is-due" : "")">@(dueCount > 0 ? $"{dueCount} thẻ cần ôn" : "Đã ôn hết")</b>
+                }
+            </div>
+
+            @if (set.HiddenByAdminAt != null)
+            {
+                <div class="alert alert-danger py-2 px-3 mb-0" role="status">
+                    <icon name="triangle-alert" /> Bị quản trị viên ẩn, không giao bài được. Lý do: @set.HiddenReason
+                    <a asp-action="Details" asp-route-id="@set.Id">Xin xem xét lại</a>
+                    @if (pendingUnhideSetIds.Contains(set.Id)) { <span>· Đang chờ xem xét lại</span> }
+                </div>
+            }
+
+            <div class="set-card-actions">
+                <a class="btn btn-secondary" asp-action="Details" asp-route-id="@set.Id">Mở</a>
+                <a class="btn btn-primary" asp-controller="Flashcards" asp-action="Editor" asp-route-id="@set.Id">Ôn thẻ</a>
+            </div>
+
+            @* Quiz, thẻ, văn bản nguồn và "Thêm quiz" nằm trong trang bộ học (nút Mở): mục xổ ở đây từng kéo cao cả hàng thẻ (góp ý 18/11). *@
+        </article>
+    }
+    </div>
+    @* Kiểm thử 19/11 (rubric: báo khi không tìm thấy kết quả): library-tools.js bật/tắt câu này khi tìm/lọc ra 0 bộ học. *@
+    <p class="empty-state c-library-empty" role="status" hidden>Không có bộ học nào khớp từ khóa hoặc danh mục đang chọn.</p>
+}
+</div>
+
+@* "Tạo thẻ bằng AI" của nhóm (ai-card-modal): dán bài học hoặc tải tài liệu → AI soạn bản nháp → trang xem trước, bộ học mới chỉ tạo khi bấm Lưu. *@
+<div class="modal fade" id="ai-card-modal" tabindex="-1" aria-labelledby="ai-card-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+        <form method="post" asp-controller="Import" asp-action="AiPreview" asp-route-id="0" enctype="multipart/form-data">
+            <div class="modal-header"><h2 class="modal-title fs-5" id="ai-card-title"><icon name="sparkles" />Tạo thẻ bằng AI</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+            <div class="modal-body">
+                <p class="small text-muted">Dán nội dung bài học hoặc tải tài liệu để AI tạo thẻ ghi nhớ hoặc câu trắc nghiệm. Bạn xem và chọn từng dòng trước khi lưu. AI dùng API key Gemini của bạn (trang Tài khoản).</p>
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label" for="ai-set-title">Tên bộ học mới</label><input class="form-control" id="ai-set-title" name="newSetTitle" maxlength="200" required placeholder="Ví dụ: Sinh học — Chương 3" /></div>
+                    <div class="col-md-3"><label class="form-label" for="ai-lib-kind">Tạo</label><select class="form-select" id="ai-lib-kind" name="kind"><option value="cards">Thẻ ghi nhớ</option><option value="quiz">Câu trắc nghiệm</option></select></div>
+                    <div class="col-md-3"><label class="form-label" for="ai-lib-count">Số lượng (1–@AiGenerateService.MaxCount)</label><input class="form-control" id="ai-lib-count" name="count" data-estimate-from="ai-lib-text" type="number" min="1" max="@AiGenerateService.MaxCount" value="10" /></div>
+                    <div class="col-12"><label class="form-label" for="ai-lib-file">Tệp tài liệu (PDF, Word, PowerPoint, Excel hoặc tệp chữ, tối đa 10 MB)</label><input class="form-control" id="ai-lib-file" name="file" type="file" accept="@string.Join(",", AiGenerateService.FileTypes)" data-max-bytes="@AiGenerateService.MaxFileBytes" /></div>
+                    <div class="col-12"><label class="form-label" for="ai-lib-text">Hoặc dán nội dung</label><textarea class="form-control" id="ai-lib-text" name="text" rows="6" maxlength="@AiGenerateService.MaxChars"></textarea></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary"><icon name="sparkles" />Tạo bản nháp</button></div>
+        </form>
+    </div></div>
+</div>
+@section Scripts { <script src="~/js/library-tools.js" asp-append-version="true"></script><script src="~/js/ai-count.js" asp-append-version="true"></script> }

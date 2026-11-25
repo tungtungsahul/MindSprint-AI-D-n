@@ -1,0 +1,81 @@
+@model Attempt
+@{
+    var submission = (PaperSubmission)ViewData["Submission"]!;
+    var a = Model.Participant.Assignment;
+    ViewData["Title"] = a.PaperTitle ?? "Làm bài";
+    var exitMessage = Model.DeadlineAt != null
+        ? "Thoát ra ngoài? Đồng hồ làm bài vẫn chạy trong lúc bạn ra ngoài. Bài viết và tệp đã lưu được giữ."
+        : "Thoát ra ngoài? Bài viết và tệp đã lưu được giữ.";
+}
+@Html.AntiForgeryToken()
+@* Bài làm theo đề: #play giữ đúng các thuộc tính mà learn-live.js (hết giờ, chuyển máy) và screen-monitor.js (rời màn hình) đọc. *@
+<div id="play" class="paper-play" data-attempt="@Model.Id"
+     data-screen-url="@(Model.MonitorScreen && Model.DeviceConsentAt != null ? Url.Action("ScreenEvent", new { id = Model.Id }) : "")"
+     data-mode="@((int)a.Mode)"
+     data-deadline="@(Model.DeadlineAt?.ToString("O") ?? "")"
+     data-state-url="@Url.Action("State", new { id = Model.Id })"
+     data-assignment-url="@Url.Action("Assignment", new { id = a.Id })"
+     data-hub-url="@Url.Content("~/hubs/learn")"
+     data-save-url="@Url.Action("Save", "Papers", new { id = Model.Id })"
+     data-upload-url="@Url.Action("Upload", "Papers", new { id = Model.Id })"
+     data-delete-url="@Url.Action("DeleteFile", "Papers", new { id = Model.Id })"
+     data-max-files="@PaperTestService.MaxFiles">
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2 play-top">
+        <h1 class="h5 mb-0 me-auto">@a.PaperTitle</h1>
+        <span id="countdown" class="badge bg-dark fs-6 d-none" role="timer" aria-label="Thời gian còn lại"></span>
+        <form method="post" asp-action="Exit" asp-route-id="@Model.Id" data-confirm="@exitMessage"><button class="btn btn-sm btn-outline-secondary"><icon name="log-out" />Thoát</button></form>
+    </div>
+    <p class="small text-muted" id="connection-status" role="status"></p>
+    <p id="screen-return" class="alert alert-warning d-none" role="status" aria-live="polite"></p>
+
+    <div class="paper-layout">
+        <section class="paper-exam" aria-labelledby="paper-exam-title">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <h2 class="h6 mb-0 me-auto" id="paper-exam-title">Đề bài</h2>
+                <a class="btn btn-sm btn-outline-secondary" asp-controller="Papers" asp-action="Exam" asp-route-id="@a.Id" target="_blank" rel="noopener"><icon name="external-link" />Mở đề ở tab mới</a>
+            </div>
+            <iframe class="paper-frame" src="@Url.Action("Exam", "Papers", new { id = a.Id })" title="Đề bài: @a.PaperTitle"></iframe>
+        </section>
+
+        <section class="paper-answer" aria-labelledby="paper-answer-title">
+            <h2 class="h6" id="paper-answer-title">Bài làm của bạn</h2>
+            <label class="visually-hidden" for="paper-text">Bài làm</label>
+            <textarea id="paper-text" class="form-control paper-text" maxlength="@PaperTestService.MaxText" placeholder="Viết bài làm ở đây. Bài tự lưu sau vài giây.">@submission.Text</textarea>
+            <p class="small text-muted mt-1" id="paper-save-status" role="status" aria-live="polite">@(submission.SavedAt != null ? $"Đã lưu lúc {VnTime.Format(submission.SavedAt)}" : "Chưa lưu")</p>
+
+            <h3 class="h6 mt-3">Tệp đính kèm <span class="text-muted fw-normal small">(tối đa @PaperTestService.MaxFiles tệp PDF, Word, ảnh; mỗi tệp tối đa 20 MB)</span></h3>
+            <ul class="list-unstyled paper-files" id="paper-files">
+                @foreach (var f in submission.Files.OrderBy(f => f.UploadedAt))
+                {
+                    <li data-file-id="@f.Id"><a href="@Url.Action("File", "Papers", new { id = f.Id })" target="_blank" rel="noopener">@f.FileName</a>
+                        <span class="text-muted small">(@(Math.Max(1, (f.SizeBytes + 1023) / 1024)) KB)</span>
+                        <button type="button" class="btn btn-sm btn-link text-danger" data-delete-file="@f.Id" aria-label="Xóa tệp @f.FileName">Xóa</button></li>
+                }
+            </ul>
+            <label class="form-label small" for="paper-upload">Thêm tệp</label>
+            <input type="file" id="paper-upload" class="form-control" accept="@string.Join(",", PaperFileStore.AnswerTypes)" data-max-bytes="@PaperFileStore.MaxBytes" />
+            <p class="small text-danger mt-1" id="paper-upload-error" role="alert"></p>
+
+            <form method="post" asp-action="Finish" asp-route-id="@Model.Id" class="mt-3" id="finish-form"
+                  data-confirm="Nộp bài? Sau khi nộp bạn không sửa bài viết và tệp được nữa.">
+                <button class="btn btn-primary"><icon name="send" />Nộp bài</button>
+            </form>
+        </section>
+    </div>
+</div>
+
+<div class="modal fade" id="learn-notice" tabindex="-1" role="alertdialog" aria-labelledby="learn-notice-title" aria-describedby="learn-notice-message">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="learn-notice-title">Thông báo bài làm</h2></div>
+        <div class="modal-body" id="learn-notice-message"></div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="learn-notice-ok">Đã hiểu</button></div>
+    </div></div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/microsoft-signalr/signalr.min.js" asp-append-version="true"></script>
+    <script src="~/js/paper.js" asp-append-version="true"></script>
+    <script src="~/js/learn-live.js" asp-append-version="true"></script>
+    @if (Model.MonitorScreen && Model.DeviceConsentAt != null) { <script src="~/js/screen-monitor.js" asp-append-version="true"></script> }
+}

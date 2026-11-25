@@ -1,0 +1,6 @@
+@model Participant
+<form method="post" asp-action="DecideStranger" asp-route-id="@Model.AssignmentId" class="d-inline-flex gap-2">
+    <input type="hidden" name="participantId" value="@Model.Id" />
+    <button class="btn btn-sm btn-success" name="approve" value="true"><icon name="check" />Duyệt</button>
+    <button class="btn btn-sm btn-outline-danger" name="approve" value="false" data-confirm="Từ chối người này? Họ sẽ không vào làm bài được."><icon name="x" />Từ chối</button>
+</form>

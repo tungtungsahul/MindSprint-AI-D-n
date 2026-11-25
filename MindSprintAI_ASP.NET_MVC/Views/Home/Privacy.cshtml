@@ -1,0 +1,179 @@
+@model LegalInfo
+@{
+    ViewData["Title"] = "Chính sách quyền riêng tư";
+}
+@* Chữ chính thức: docs/PHAP_LY_VAN_BAN.md mục A. Sửa ở đó trước rồi chép sang đây. *@
+<a class="btn btn-sm b-back" href="@BackLink.Url(Context.Request, Url.Action("Index", "Home")!)"><icon name="chevron-right" class="b-back-icon" />Quay lại trang trước</a>
+<article class="legal-doc">
+    <h1 class="mindsprint-title">Chính sách quyền riêng tư</h1>
+    <p class="text-muted"><strong>Phiên bản @LegalPolicy.CurrentVersion</strong> · Có hiệu lực từ @Model.EffectiveDate</p>
+
+    <h2 class="h4">1. Ai chịu trách nhiệm về dữ liệu của bạn</h2>
+    <p>MindSprint AI (@Model.Domain) là trang ôn tập miễn phí do @Model.OwnerName làm và vận hành với tư cách cá nhân. MindSprint AI không thu tiền và không chạy quảng cáo. @Model.OwnerName là người chịu trách nhiệm về dữ liệu cá nhân mà MindSprint AI thu.</p>
+    <p>Mọi câu hỏi và yêu cầu về dữ liệu, bạn gửi về email: @Model.ContactEmail.</p>
+
+    <h2 class="h4">2. MindSprint AI thu gì và để làm gì</h2>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Dữ liệu</th><th>Khi nào</th><th>Để làm gì</th></tr></thead>
+        <tbody>
+            <tr><td>Email, tên hiển thị</td><td>Khi bạn đăng ký</td><td>Tạo tài khoản, đăng nhập, gửi thư cần thiết (đặt mật khẩu, xác minh, cảnh báo đăng nhập lạ, nhắc việc)</td></tr>
+            <tr><td>Mật khẩu</td><td>Khi bạn đặt mật khẩu</td><td>Đăng nhập. MindSprint AI chỉ lưu mật khẩu ở dạng đã biến đổi, không ai đọc lại được mật khẩu gốc, kể cả quản trị viên</td></tr>
+            <tr><td>Ảnh đại diện</td><td>Khi bạn đăng nhập bằng Google</td><td>Hiện ảnh Google của bạn. MindSprint AI chỉ lưu đường dẫn tới ảnh, ảnh được tải thẳng từ Google. Bạn ẩn hoặc gỡ được ảnh trong trang Tài khoản</td></tr>
+            <tr><td>Cách đăng nhập bạn chọn: tài khoản Google, passkey (đăng nhập bằng vân tay, khuôn mặt hoặc mã PIN của máy), ứng dụng xác thực, mã dự phòng</td><td>Khi bạn bật</td><td>Giữ an toàn tài khoản</td></tr>
+            <tr><td>Địa chỉ mạng (IP), vị trí ước tính (thành phố, quốc gia), loại máy và trình duyệt (ví dụ "Chrome trên Windows")</td><td>Mỗi lần đăng nhập</td><td>Báo cho bạn khi có đăng nhập từ máy lạ. Vị trí được tra ngay trên máy của MindSprint AI bằng dữ liệu của DB-IP.com, không gửi đi đâu</td></tr>
+            <tr><td>Một số đặc điểm chung của máy (kích thước màn hình, múi giờ, ngôn ngữ…)</td><td>Khi bạn mở trang Đăng nhập</td><td>Nhận ra máy quen để bớt cảnh báo nhầm. MindSprint AI chỉ lưu một dãy mã rút ra từ các đặc điểm này, không lưu đặc điểm gốc</td></tr>
+            <tr><td>Câu trả lời, điểm, số lần làm, tiến độ ôn thẻ</td><td>Khi bạn học và làm bài</td><td>Chấm điểm, lưu tiến độ, cho giảng viên xem kết quả</td></tr>
+            <tr><td>Lịch sử hỏi trợ lý AI</td><td>Khi bạn hỏi</td><td>Để bạn xem lại. Chỉ bạn xem được nội dung; giảng viên chỉ thấy số lượt hỏi</td></tr>
+            <tr><td>API key Gemini (mã riêng do Google cấp cho bạn)</td><td>Khi bạn nhập</td><td>Gọi trợ lý AI cho bạn. Mã được mã hóa khi lưu, MindSprint AI chỉ hiện 4 ký tự cuối</td></tr>
+            <tr><td>Nội dung bạn tạo: bộ học, câu hỏi, thẻ ghi nhớ, văn bản nguồn</td><td>Khi bạn tạo hoặc nhập từ file</td><td>Cho bạn và học viên của bạn dùng; cải thiện việc nhận dạng đề (xem mục 3)</td></tr>
+            <tr><td>Báo cáo vi phạm bạn gửi</td><td>Khi bạn báo cáo</td><td>Để quản trị viên xử lý</td></tr>
+            <tr><td>Email của người bạn mời làm giảng viên phụ hoặc nhận chuyển lớp</td><td>Khi bạn gửi lời mời</td><td>Gửi lời mời</td></tr>
+        </tbody>
+    </table></div>
+
+    <p><strong>Khi làm bài có giám sát.</strong> Chỉ áp dụng khi giảng viên bật giám sát cho bài đó, và chỉ sau khi bạn bấm "Tôi đồng ý". Khi đó:</p>
+    <ul>
+        <li>MindSprint AI thu thêm đặc điểm của máy và trình duyệt để biết bài đang được làm trên đúng một máy.</li>
+        <li>MindSprint AI ghi lại mỗi lần bạn rời màn hình làm bài: lúc nào, trong bao lâu.</li>
+        <li>Giảng viên của bài xem được các thông tin này.</li>
+    </ul>
+    <p>Nếu không đồng ý, bạn liên hệ giảng viên để được sắp xếp cách khác.</p>
+
+    <p><strong>Khách vào bài bằng mã</strong> (không có tài khoản):</p>
+    <ul>
+        <li>MindSprint AI lưu tên bạn nhập, câu trả lời và điểm.</li>
+        <li>Trình duyệt của bạn giữ một mã ngẫu nhiên (cookie) để MindSprint AI nhận ra bạn khi quay lại.</li>
+        <li>Khi bạn tạo tài khoản và đăng nhập trên cùng trình duyệt đó, kết quả được chuyển vào tài khoản.</li>
+    </ul>
+    <p>MindSprint AI không dùng dữ liệu của bạn vào việc nào khác ngoài các việc ở trên mà chưa hỏi bạn.</p>
+
+    <h2 class="h4">3. File và nội dung bạn tải lên</h2>
+    <ul>
+        <li>Hiện tại, khi bạn nhập câu hỏi từ file Excel, MindSprint AI đọc file để tạo câu hỏi rồi bỏ file đi, không giữ lại file gốc.</li>
+        <li>Theo Điều khoản sử dụng, bạn cho phép MindSprint AI dùng <strong>nội dung học tập</strong> bạn đưa lên (câu hỏi, đáp án, cách trình bày đề) để cải thiện việc nhận dạng đề.</li>
+        <li>MindSprint AI <strong>không dùng</strong> thông tin cá nhân có trong file hay nội dung (tên, mã số, số điện thoại…) cho việc cải thiện này.</li>
+        <li>Khi MindSprint AI bắt đầu giữ lại file gốc, chính sách này sẽ được cập nhật và bạn sẽ được báo trước.</li>
+    </ul>
+
+    <h2 class="h4">4. Ai thấy dữ liệu của bạn</h2>
+    <ul>
+        <li><strong>Giảng viên của lớp hoặc bài bạn tham gia</strong> thấy:
+            <ul>
+                <li>tên hiển thị và email của bạn (học viên khác không thấy email);</li>
+                <li>câu trả lời và điểm;</li>
+                <li>các lần rời màn hình và yêu cầu chuyển máy trong bài của họ.</li>
+            </ul>
+        </li>
+        <li><strong>Học viên cùng lớp:</strong> chỉ thấy tên hiển thị.</li>
+        <li><strong>Quản trị viên:</strong> xử lý báo cáo vi phạm và khóa tài khoản vi phạm. Mỗi lần quản trị viên mở một báo cáo đều được ghi lại.</li>
+        <li>MindSprint AI <strong>không bán</strong> dữ liệu của bạn và <strong>không dùng quảng cáo hay công cụ theo dõi</strong> nào.</li>
+    </ul>
+
+    <h2 class="h4">5. Dịch vụ bên ngoài mà MindSprint AI dùng (đều có máy ở nước ngoài)</h2>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Dịch vụ</th><th>Nhận gì</th><th>Để làm gì</th></tr></thead>
+        <tbody>
+            <tr><td>Cloudflare (đường hầm đưa trang web ra Internet)</td><td>Mọi dữ liệu giữa trình duyệt của bạn và MindSprint AI đều đi qua Cloudflare</td><td>Đưa MindSprint AI ra Internet an toàn mà không cần mở máy ra ngoài</td></tr>
+            <tr><td>Cloudflare Turnstile (ô xác minh "bạn là người thật")</td><td>Địa chỉ mạng (IP) và thông tin trình duyệt, ở các trang Đăng ký, Đăng nhập, Quên mật khẩu, Gửi lại email, Tham gia bằng mã</td><td>Chặn máy tự động</td></tr>
+            <tr><td>Gmail của Google</td><td>Email của bạn và nội dung thư (thư cảnh báo có kèm địa chỉ mạng và vị trí ước tính)</td><td>Gửi thư cho bạn</td></tr>
+            <tr><td>Google (đăng nhập bằng Google)</td><td>Google gửi cho MindSprint AI email, tên và ảnh của bạn</td><td>Đăng nhập nhanh</td></tr>
+            <tr><td>Google Gemini (trợ lý AI của Google)</td><td>Câu hỏi bạn gõ, các đoạn văn bản nguồn liên quan, đề của câu bạn chọn hỏi</td><td>Trả lời câu hỏi. Chỉ gửi khi bạn bấm Gửi, bằng API key Gemini của chính bạn</td></tr>
+        </tbody>
+    </table></div>
+    <p>Gửi dữ liệu sang các dịch vụ này là chuyển dữ liệu cá nhân ra nước ngoài.</p>
+    <ul>
+        <li>Google xử lý nội dung gửi sang Gemini theo điều khoản của Google mà bạn đã đồng ý khi tạo API key Gemini. Nếu API key Gemini của bạn dùng gói miễn phí, Google có thể dùng nội dung đó để cải thiện sản phẩm của Google.</li>
+        <li>Vì vậy, đừng gõ thông tin riêng tư (số điện thoại, địa chỉ nhà, số căn cước…) vào ô hỏi trợ lý.</li>
+    </ul>
+
+    <h2 class="h4">6. Dữ liệu được lưu ở đâu và bao lâu</h2>
+    <p>Máy chạy MindSprint AI đặt tại Việt Nam.</p>
+    <div class="table-responsive"><table class="table">
+        <thead><tr><th>Dữ liệu</th><th>Lưu bao lâu</th></tr></thead>
+        <tbody>
+            <tr><td>Tài khoản, bài làm, tiến độ, lịch sử hỏi trợ lý AI</td><td>Đến khi bạn xóa tài khoản</td></tr>
+            <tr><td>Tài khoản đăng ký nhưng chưa đặt mật khẩu</td><td>7 ngày, sau đó tự xóa</td></tr>
+            <tr><td>Máy đã đăng nhập</td><td>Đến khi bạn xóa, hoặc tự xóa sau 6 tháng kể từ lần đăng nhập cuối trên máy đó (khi đó máy đó cần đăng nhập lại)</td></tr>
+            <tr><td>Nhật ký kỹ thuật (có địa chỉ mạng)</td><td>30 ngày</td></tr>
+            <tr><td>Nhật ký hoạt động (ai làm gì, lúc nào)</td><td>1 năm</td></tr>
+            <tr><td>Nội dung trong thùng rác</td><td>30 ngày, sau đó xóa hẳn</td></tr>
+            <tr><td>Các lần nhập sai mã tham gia</td><td>30 ngày</td></tr>
+        </tbody>
+    </table></div>
+    <p><strong>Khi bạn xóa tài khoản:</strong></p>
+    <ul>
+        <li>MindSprint AI xóa:
+            <ul>
+                <li>email, tên, ảnh và các cách đăng nhập;</li>
+                <li>API key Gemini;</li>
+                <li>danh sách máy;</li>
+                <li>lịch sử hỏi trợ lý AI;</li>
+                <li>thông báo;</li>
+                <li>bộ học bạn tạo (nằm trong thùng rác 30 ngày rồi xóa hẳn; riêng bộ học đã từng giao cho lớp được giữ ở dạng lưu trữ, chỉ để bảng điểm cũ của lớp còn đọc được).</li>
+            </ul>
+        </li>
+        <li>Bài làm và điểm của bạn trong các lớp <strong>vẫn nằm trong bảng điểm của giảng viên</strong>, nhưng tên hiện là "Người dùng đã xóa", không còn email hay thông tin nào khác của bạn.</li>
+        <li>Giảng viên phải chuyển lớp cho người khác hoặc xóa hết lớp của mình trước khi xóa tài khoản.</li>
+    </ul>
+
+    <h2 class="h4">7. Tệp nhỏ trình duyệt lưu (cookie)</h2>
+    <p>MindSprint AI chỉ dùng loại tệp nhỏ này cho những việc cần để trang web chạy:</p>
+    <ul>
+        <li>giữ đăng nhập;</li>
+        <li>chống giả mạo form;</li>
+        <li>nhận ra máy (lưu 1 năm);</li>
+        <li>nhận ra khách (lưu 1 năm);</li>
+        <li>ghi nhớ máy lúc đăng nhập (lưu 24 giờ).</li>
+    </ul>
+    <p>Giao diện sáng/tối được lưu ngay trên trình duyệt của bạn. MindSprint AI không dùng loại tệp nhỏ này để quảng cáo hay thống kê.</p>
+
+    <h2 class="h4">8. Quyền của bạn</h2>
+    <p>Bạn có quyền:</p>
+    <ul>
+        <li>biết MindSprint AI đang xử lý dữ liệu nào của bạn;</li>
+        <li>đồng ý, không đồng ý, hoặc rút lại sự đồng ý;</li>
+        <li>xem và sửa dữ liệu;</li>
+        <li>yêu cầu cung cấp, xóa, hạn chế xử lý, hoặc phản đối việc xử lý dữ liệu;</li>
+        <li>khiếu nại, tố cáo, khởi kiện theo quy định của pháp luật.</li>
+    </ul>
+    <p>Bạn tự làm được ngay trong trang Tài khoản:</p>
+    <ul>
+        <li>sửa tên;</li>
+        <li>xóa API key Gemini;</li>
+        <li>ẩn hoặc gỡ ảnh;</li>
+        <li>tắt email nhắc việc;</li>
+        <li>xóa máy đã đăng nhập;</li>
+        <li><strong>xóa tài khoản</strong>.</li>
+    </ul>
+    <p>Muốn tải bản sao dữ liệu của mình hoặc làm việc khác, bạn gửi email tới @Model.ContactEmail. MindSprint AI sẽ:</p>
+    <ul>
+        <li>xác nhận đã nhận yêu cầu trong 2 ngày làm việc;</li>
+        <li>cho xem, sửa hoặc gửi bản sao dữ liệu trong 10 ngày;</li>
+        <li>xử lý việc rút đồng ý, hạn chế hoặc phản đối trong 15 ngày;</li>
+        <li>xóa dữ liệu trong 20 ngày.</li>
+    </ul>
+    <p>Yêu cầu phức tạp có thể được gia hạn một lần; khi đó MindSprint AI báo lý do cho bạn.</p>
+
+    <h2 class="h4">9. Độ tuổi</h2>
+    <p>MindSprint AI dành cho người <strong>từ đủ 16 tuổi</strong>. Khi đăng ký hoặc vào bài bằng mã, bạn tự xác nhận mình đủ tuổi. Nếu biết một tài khoản thuộc về người dưới 16 tuổi, MindSprint AI sẽ khóa và xóa tài khoản đó.</p>
+
+    <h2 class="h4">10. Khi có sự cố</h2>
+    <ul>
+        <li>MindSprint AI áp dụng các biện pháp bảo vệ hợp lý, nhưng không hệ thống nào an toàn tuyệt đối.</li>
+        <li>Nếu dữ liệu cá nhân bị lộ hoặc mất, MindSprint AI báo cho cơ quan chuyên trách bảo vệ dữ liệu cá nhân theo quy định.</li>
+        <li>MindSprint AI cũng <strong>báo cho bạn qua email trong vòng 72 giờ</strong> kể từ khi phát hiện, nếu sự cố ảnh hưởng tới dữ liệu của bạn.</li>
+    </ul>
+
+    <h2 class="h4">11. Thay đổi chính sách</h2>
+    <p>Khi thay đổi mục đích hoặc loại dữ liệu xử lý, MindSprint AI báo trên trang web. Nếu thay đổi lớn, MindSprint AI hỏi bạn đồng ý lại khi bạn mở trang kế tiếp.</p>
+
+    <h2 class="h4" id="nguon-anh">12. Nguồn ảnh</h2>
+    <p>Ảnh và tranh minh họa trên MindSprint AI:</p>
+    <ul class="home-photo-credits">
+        <li>Tranh minh họa tạo bằng AI: <a href="~/img/landing/study-ai-solo.webp">tranh ở trang Luyện tập</a>.</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Tabel_day_1_(Unsplash).jpg">Sổ tay · Jan Kahánek</a> · <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a> · <a href="~/img/landing/photo-d183.webp">ảnh hiện khi chia sẻ link</a>.</li>
+        <li><a href="https://commons.wikimedia.org/wiki/File:Minimal_pencils_on_yellow_(Unsplash).jpg">Bút chì · Joanna Kosinska</a> · <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a> · <a href="~/img/landing/photo-c822.webp">ảnh ở trang Đăng nhập và Đăng ký</a>.</li>
+    </ul>
+
+    <p class="mt-4">Xem thêm: <a asp-controller="Home" asp-action="Terms">Điều khoản sử dụng</a></p>
+</article>

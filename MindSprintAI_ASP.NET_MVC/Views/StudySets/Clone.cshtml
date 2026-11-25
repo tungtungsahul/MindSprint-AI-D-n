@@ -1,0 +1,20 @@
+@model StudySet
+@{ ViewData["Title"] = "Nhân bản bộ học"; }
+<a class="btn btn-sm b-back" asp-action="Details" asp-route-id="@Model.Id"><icon name="chevron-right" class="b-back-icon" />Quay lại chi tiết bộ học</a>
+<h1 class="h3 text-break">Nhân bản @Model.Title</h1>
+<p>Chọn phần muốn sao chép. Bản sao không chứa bài giao, kết quả hoặc lịch sử chat AI. Quiz sao chép trở về Nháp.</p>
+<form method="post" asp-action="Clone" asp-route-id="@Model.Id">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <fieldset class="mb-3"><legend class="h5">Quiz</legend>
+    @foreach (var q in Model.Quizzes.OrderBy(q => q.CreatedAt))
+    {
+        <div class="form-check"><input class="form-check-input" type="checkbox" name="quizIds" value="@q.Id" id="quiz-@q.Id" checked />
+            <label class="form-check-label" for="quiz-@q.Id">@q.Title</label></div>
+    }
+    </fieldset>
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="flashcards" value="true" id="clone-cards" checked /><label class="form-check-label" for="clone-cards">Thẻ ghi nhớ</label></div>
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="sourceText" value="true" id="clone-source" checked /><label class="form-check-label" for="clone-source">Văn bản nguồn</label></div>
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="matchingSettings" value="true" id="clone-matching" checked /><label class="form-check-label" for="clone-matching">Cách chấm câu điền chữ (phân biệt hoa thường, chấp nhận không dấu…)</label></div>
+    <p class="small text-muted">Bỏ chọn thì các câu điền chữ trong bản sao dùng cách chấm mặc định.</p>
+    <button class="btn btn-primary">Nhân bản bộ học</button> <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a>
+</form>

@@ -1,0 +1,69 @@
+@model DevicePage
+@* (T6–T9) danh sách và nút do service quyết định; Razor mã hóa mọi giá trị. *@
+<section class="acc-card" id="sec-devices" aria-labelledby="devices-title">
+    <div class="acc-card-top">
+        <h2 class="section-head" id="devices-title"><span class="section-icon" style="--tint:var(--blue)"><icon name="monitor-smartphone" /></span>Thiết bị đã đăng nhập</h2>
+        @if (Model.Devices.Count > 0)
+        {
+            <span class="acc-state is-on"><icon name="check" />@Model.Devices.Count thiết bị</span>
+        }
+        else
+        {
+            <span class="acc-state is-off"><icon name="x" />Chưa có thiết bị nào</span>
+        }
+    </div>
+    <p class="acc-desc">Xem lại những thiết bị đang đăng nhập và đăng xuất từ xa thiết bị bạn không còn dùng.</p>
+    <p class="small text-muted mb-2">@Brand.Name lưu tên trình duyệt/hệ điều hành, các thời điểm, địa chỉ mạng (IP) và vị trí ước tính của lần đăng nhập cuối trên mỗi thiết bị, chỉ để giúp bạn kiểm tra an toàn tài khoản. Xóa thiết bị sẽ xóa các dữ liệu này. Thiết bị không đăng nhập quá 180 ngày sẽ tự động bị xóa.</p>
+    <p class="small text-muted mb-3" id="devices-help">Thiết bị bị xóa sẽ được đăng xuất trong khoảng 1 phút. Nếu nghi mật khẩu bị lộ, hãy đổi mật khẩu.</p>
+    @if (Model.Devices.Count == 0)
+    {
+        <div class="empty-state dot-grid">
+            <span class="section-icon" style="--tint:var(--blue)"><icon name="monitor-smartphone" /></span>
+            <h3>Chưa có thiết bị được ghi nhận</h3>
+            <p class="mb-0">Thiết bị sẽ hiện ở đây ngay sau lần đăng nhập tiếp theo.</p>
+        </div>
+    }
+    else
+    {
+        <ul class="acc-device-list">
+        @foreach (var device in Model.Devices)
+        {
+            <li class="acc-subcard">
+                <div class="acc-subhead">
+                    <span class="d-inline-flex align-items-center gap-2">
+                        <icon name="@(device.Label.Contains("Android") || device.Label.Contains("iOS") ? "smartphone" : "monitor-smartphone")" />
+                        <strong>@device.Label</strong>
+                    </span>
+                    @if (device.IsCurrent)
+                    {
+                        <span class="acc-state is-on"><icon name="check" />Thiết bị này</span>
+                    }
+                </div>
+                <dl class="acc-device-meta">
+                    <dt>Lần đầu thấy (giờ Việt Nam)</dt><dd>@VnTime.Format(device.FirstSeenAt)</dd>
+                    <dt>Đăng nhập cuối (giờ Việt Nam)</dt><dd>@VnTime.Format(device.LastSeenAt)</dd>
+                    <dt>Địa chỉ mạng lần cuối (IP)</dt><dd class="text-break">@(device.LastSignInIp == null ? "Chưa ghi nhận" : NewDeviceService.NetworkText(device.LastSignInIp))</dd>
+                    <dt>Vị trí ước tính lần cuối</dt><dd class="text-break">@(device.LastLocation ?? "Chưa ghi nhận")</dd>
+                </dl>
+                @if (!device.IsCurrent)
+                {
+                    <form method="post" asp-action="DeleteDevice" data-action="DeleteDevice" data-confirm="Xóa và đăng xuất thiết bị này?" aria-describedby="devices-help">
+                        <input type="hidden" name="deviceId" value="@device.Id" />
+                        <button class="btn btn-sm btn-outline-danger" aria-label="Xóa và đăng xuất @device.Label"><icon name="log-out" />Xóa và đăng xuất</button>
+                    </form>
+                }
+            </li>
+        }
+        </ul>
+        @if (Model.Devices.Any(d => d.LastLocation != null))
+        {
+            <p class="small text-muted"><a href="https://db-ip.com">@GeoIpLocation.Attribution</a>. Vị trí theo địa chỉ mạng (IP) có thể không chính xác.</p>
+        }
+        @if (Model.Devices.Any(d => !d.IsCurrent))
+        {
+            <form method="post" asp-action="SignOutOtherDevices" data-action="SignOutOtherDevices" data-confirm="Đăng xuất tất cả thiết bị khác?" aria-describedby="devices-help">
+                <button class="btn btn-outline-danger"><icon name="log-out" />Đăng xuất tất cả thiết bị khác</button>
+            </form>
+        }
+    }
+</section>

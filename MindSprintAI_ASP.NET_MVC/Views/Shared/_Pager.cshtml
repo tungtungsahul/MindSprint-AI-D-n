@@ -1,0 +1,33 @@
+@model PagerModel
+@if (Model.TotalPages > 1)
+{
+    <nav class="b-grade-pages d-flex flex-wrap gap-2 align-items-center" aria-label="@Model.Label">
+        @if (Model.Page <= 1)
+        {
+            <span class="btn disabled" aria-disabled="true" aria-label="Trang trước"><icon name="chevron-right" class="b-back-icon" /></span>
+        }
+        else
+        {
+            <a class="btn" href="@Model.Url(Model.Page - 1)" aria-label="Trang trước"><icon name="chevron-right" class="b-back-icon" /></a>
+        }
+        @foreach (var number in PagerModel.Numbers(Model.Page, Model.TotalPages))
+        {
+            if (number is { } n)
+            {
+                <a class="btn" href="@Model.Url(n)" aria-current="@(n == Model.Page ? "page" : null)">@n</a>
+            }
+            else
+            {
+                <span aria-hidden="true">…</span>
+            }
+        }
+        @if (Model.Page >= Model.TotalPages)
+        {
+            <span class="btn disabled" aria-disabled="true" aria-label="Trang sau"><icon name="chevron-right" /></span>
+        }
+        else
+        {
+            <a class="btn" href="@Model.Url(Model.Page + 1)" aria-label="Trang sau"><icon name="chevron-right" /></a>
+        }
+    </nav>
+}

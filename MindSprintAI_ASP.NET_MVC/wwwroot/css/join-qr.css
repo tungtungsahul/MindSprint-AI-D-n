@@ -1,0 +1,15 @@
+body { text-align: center; }
+body > .print-help { padding-top: max(16px, var(--safe-top)) !important; padding-left: max(16px, var(--safe-left)) !important; padding-right: max(16px, var(--safe-right)) !important; }
+main { width: 100%; max-width: 64rem; margin: 2rem auto; padding: var(--safe-top) max(16px, var(--safe-right)) var(--safe-bottom) max(16px, var(--safe-left)); }
+h1 { font-size: clamp(2.25rem, 4vw, 3.5rem); }
+/* QR remains black on a white quiet zone for scanning in both themes and on paper. */
+#join-qr { width: min(70vw, 55svh, 36rem); margin: auto; background: #FFFFFF; color: #09090B; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+#join-qr svg { display: block; width: 100%; height: auto; }
+main .join-code { margin: 1rem 0; font-size: clamp(1.5rem, 4vw, 2.25rem); font-weight: 700; letter-spacing: .12em; }
+@media print {
+    :root, [data-bs-theme] { --bg: #FFFFFF; --text: #09090B; --ink: #09090B; }
+    main { margin: 0; }
+    #join-qr { width: 11cm; max-width: 90%; }
+    .print-help { display: none; }
+    a { color: var(--text); text-decoration: none; }
+}

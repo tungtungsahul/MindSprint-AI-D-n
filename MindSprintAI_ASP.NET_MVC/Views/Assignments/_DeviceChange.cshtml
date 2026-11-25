@@ -1,0 +1,16 @@
+@model DeviceChangeCard
+<div class="border rounded p-3 mt-2 device-change-note b-device-change">
+    <p class="fw-bold mb-1"><icon name="monitor-smartphone" /> Xin chuyển thiết bị</p>
+    @if (!string.IsNullOrWhiteSpace(Model.Reason)) { <p>@Model.Reason</p> }
+    @if (Model.Note != null)
+    {
+        <p class="mb-1">@Model.Note.Title</p>
+        <p class="small text-muted">@Model.Note.Detail</p>
+    }
+    <form method="post" asp-controller="Assignments" asp-action="DecideDeviceChange" asp-route-id="@Model.AttemptId" asp-fragment="chong-gian-lan" class="d-flex flex-wrap gap-2">
+        <input type="hidden" name="id" value="@Model.AttemptId" />
+        <input type="hidden" name="requestId" value="@Model.Id" />
+        <button class="btn btn-sm btn-primary" name="approve" value="true"><icon name="check" />Cho chuyển</button>
+        <button class="btn btn-sm btn-outline-secondary" name="approve" value="false" data-confirm="Từ chối cho chuyển thiết bị? Học viên vẫn phải làm tiếp trên thiết bị cũ."><icon name="x" />Từ chối</button>
+    </form>
+</div>

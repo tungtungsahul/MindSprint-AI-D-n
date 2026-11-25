@@ -1,0 +1,19 @@
+@model Assignment
+@{
+    ViewData["Title"] = "Đóng bài giao";
+    var extra = ViewData["ExtraTimeOpenAttempts"] as int? ?? 0;
+}
+<div class="card card-body mx-auto" style="max-width: 36rem" role="alertdialog" aria-labelledby="close-title" aria-describedby="close-message">
+    <h1 id="close-title" class="h4">Đóng bài giao</h1>
+    <p id="close-message">Còn @ViewData["OpenAttempts"] học viên đang làm bài <b>@(Model.Quiz?.Title ?? Model.PaperTitle ?? "Thẻ ghi nhớ")</b>.@(extra > 0 ? $" Trong đó {extra} học viên được cộng thêm giờ riêng." : "")</p>
+    @* Đúng như AssignmentService: Đóng ngay kết thúc lượt dở như hết giờ; Đóng sau 15 phút chỉ rút hạn chung. *@
+    <ul>
+        <li><b>Đóng ngay:</b> bài đang làm được nộp luôn với các câu đã trả lời, câu chưa làm tính 0 điểm. Học viên thấy ghi chú "Kết thúc do giảng viên đóng bài".</li>
+        <li><b>Đóng sau 15 phút:</b> học viên còn 15 phút để làm nốt, sau đó bài tự đóng.@(extra > 0 ? " Ai được cộng thêm giờ riêng vẫn có thêm phần giờ đó." : "")</li>
+    </ul>
+    <form method="post" asp-action="Close" asp-route-id="@Model.Id" class="d-flex flex-wrap gap-2">
+        <button name="delayed" value="false" class="btn btn-danger">Đóng ngay</button>
+        <button name="delayed" value="true" class="btn btn-primary" autofocus>Đóng sau 15 phút</button>
+        <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Hủy</a>
+    </form>
+</div>

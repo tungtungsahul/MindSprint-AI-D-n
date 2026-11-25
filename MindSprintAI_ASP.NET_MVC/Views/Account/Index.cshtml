@@ -1,0 +1,383 @@
+@model ApplicationUser
+@{
+    ViewData["Title"] = "Tài khoản của tôi";
+    var initial = Model.DisplayName?.Trim().FirstOrDefault() is var c && c != default ? c.ToString() : "R";
+    var roleLabel = Model.IsSystemAdmin ? "Quản trị viên" : Model.IsGuest ? "Khách" : "Thành viên";
+    var roleIcon = Model.IsSystemAdmin ? "shield-check" : Model.IsGuest ? "user" : "user-check";
+    var modeLabel = Model.CurrentMode == UserMode.Lecturer ? "Giảng viên" : "Học viên";
+    var modeIcon = Model.CurrentMode == UserMode.Lecturer ? "graduation-cap" : "book-open-text";
+    var reminderCount = (Model.EmailRemindersEnabled ? 1 : 0) + (Model.SrsBellEnabled ? 1 : 0);
+    var teachingBellCount = (Model.DeviceChangeBellEnabled ? 1 : 0) + (Model.ScreenLeaveBellEnabled ? 1 : 0);
+    var geminiLastFour = ViewData["GeminiLastFour"] as string;
+}
+<div class="learn-head mb-3">
+    <div>
+        <h1 class="mindsprint-title mb-0">Tài khoản của tôi</h1>
+    </div>
+</div>
+
+<section class="acc-profile" aria-label="Thông tin tài khoản">
+    <span class="acc-avatar" style="--tint:var(--acid)" aria-hidden="true">@initial</span>
+    <div>
+        <p class="acc-name">@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "Tài khoản học tập" : Model.DisplayName)</p>
+        @if (!string.IsNullOrWhiteSpace(Model.Email))
+        {
+            <p class="acc-email"><icon name="mail" />@Model.Email</p>
+        }
+        <div class="acc-pills">
+            <span class="acc-pill @(Model.IsSystemAdmin ? "is-admin" : "")"><icon name="@roleIcon" />Vai trò: @roleLabel</span>
+            <span class="acc-pill is-mode"><icon name="@modeIcon" />Đang dùng: @modeLabel</span>
+        </div>
+    </div>
+    <p class="acc-privacy small text-muted">
+        <icon name="shield-check" />
+        <span>@Brand.Name chỉ lưu kết quả nhận diện thiết bị đã được bảo vệ để giảm cảnh báo đăng nhập nhầm. Với bài có khóa thiết bị hoặc giám sát rời màn hình, bạn sẽ được giải thích và đồng ý trước khi làm bài; các đặc điểm gốc của thiết bị không được lưu.</span>
+    </p>
+</section>
+
+<div class="acc-grid">
+    <div class="acc-rail">
+        <nav class="acc-toc" aria-label="Mục lục cài đặt">
+            <p class="acc-toc-title"><icon name="list-ordered" />Mục lục nhanh</p>
+            <ul class="acc-toc-list">
+                @if (!Model.IsGuest)
+                {
+                    <li><a class="acc-toc-link" href="#sec-profile"><icon name="user-check" />Thông tin cá nhân</a></li>
+                    @if (ViewData["HasPassword"] is true)
+                    {
+                        <li><a class="acc-toc-link" href="#sec-password"><icon name="key-round" />Đổi mật khẩu</a></li>
+                    }
+                }
+                <li><a class="acc-toc-link" href="#sec-avatar"><icon name="user" />Ảnh đại diện</a></li>
+                <li><a class="acc-toc-link" href="#sec-appearance"><icon name="sun" />Giao diện</a></li>
+                @if (ViewData["Devices"] is DevicePage)
+                {
+                    <li><a class="acc-toc-link" href="#sec-devices"><icon name="monitor-smartphone" />Thiết bị đã đăng nhập</a></li>
+                }
+                <li><a class="acc-toc-link" href="#sec-reminders"><icon name="bell" />Nhắc việc</a></li>
+                @if (!Model.IsGuest && Model.CurrentMode == UserMode.Lecturer)
+                {
+                    <li><a class="acc-toc-link" href="#sec-teaching-bell"><icon name="graduation-cap" />Chuông giảng dạy</a></li>
+                }
+                @if (ViewData["ExternalLogins"] is ExternalLoginPage)
+                {
+                    <li><a class="acc-toc-link" href="#sec-external"><icon name="link" />Liên kết đăng nhập</a></li>
+                }
+                @if (ViewData["Passkeys"] is PasskeyPage)
+                {
+                    <li><a class="acc-toc-link" href="#sec-passkeys"><icon name="fingerprint" />Passkey</a></li>
+                }
+                @if (ViewData["TwoFactor"] is TwoFactorStatus)
+                {
+                    <li><a class="acc-toc-link" href="#sec-two-factor"><icon name="shield-check" />Xác thực 2 lớp</a></li>
+                }
+                <li><a class="acc-toc-link" href="#sec-gemini"><icon name="sparkles" />API key Gemini</a></li>
+                <li><a class="acc-toc-link" asp-controller="Invitations" asp-action="Index"><icon name="mail" />Lời mời</a></li>
+                <li><a class="acc-toc-link" href="#protective-lock"><icon name="lock" />Khóa bảo vệ</a></li>
+                <li><a class="acc-toc-link" href="#sec-delete-account"><icon name="trash-2" />Xóa tài khoản</a></li>
+            </ul>
+        </nav>
+        <aside class="sticky-note is-acid">
+            <b>Mẹo bảo mật</b>
+            Bật Passkey hoặc ứng dụng xác thực (ví dụ Google Authenticator) và cất bộ mã dự phòng ở nơi an toàn để không lo gián đoạn việc học khi đổi thiết bị.
+        </aside>
+    </div>
+
+    <div class="acc-main">
+        @if (!Model.IsGuest)
+        {
+            @* Tự cập nhật hồ sơ (19/11): quy tắc ở ProfileService — tên như lúc đăng ký, mỗi lần đổi cách nhau 7 ngày. *@
+            <section class="acc-card" id="sec-profile" aria-labelledby="profile-title">
+                <h2 class="section-head" id="profile-title"><span class="section-icon" style="--tint:var(--acid)"><icon name="user-check" /></span>Thông tin cá nhân</h2>
+                <dl class="acc-facts">
+                    <dt>Email đăng nhập</dt><dd>@Model.Email</dd>
+                    <dt>Ngày tạo tài khoản</dt><dd>@VnTime.Format(Model.CreatedAt)</dd>
+                </dl>
+                @if (ViewData["NextRenameAt"] is DateTime nextRename)
+                {
+                    <p class="acc-desc">Tên hiển thị: <b>@Model.DisplayName</b>. Bạn vừa đổi tên; đổi lại được từ @VnTime.Format(nextRename).</p>
+                }
+                else
+                {
+                    <form method="post" asp-action="ChangeName" class="acc-inline-form">
+                        <label class="form-label" for="profile-name">Tên hiển thị</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input class="form-control" id="profile-name" name="displayName" value="@Model.DisplayName" maxlength="@ProfileService.MaxName" required autocomplete="name" />
+                            <button class="btn btn-primary"><icon name="check" />Lưu tên</button>
+                        </div>
+                        <p class="small text-muted mt-1 mb-0">Tên hiện trong lớp học, bảng điểm và bảng xếp hạng. Mỗi lần đổi cách nhau ít nhất 7 ngày.</p>
+                    </form>
+                }
+            </section>
+            @if (ViewData["HasPassword"] is true)
+            {
+                <section class="acc-card" id="sec-password" aria-labelledby="password-title">
+                    <h2 class="section-head" id="password-title"><span class="section-icon" style="--tint:var(--warn)"><icon name="key-round" /></span>Đổi mật khẩu</h2>
+                    <p class="acc-desc">Đổi xong, máy này vẫn đăng nhập; các thiết bị khác bị đăng xuất và bạn nhận email báo.</p>
+                    <form method="post" asp-action="ChangePassword" class="acc-password-form">
+                        <label class="form-label" for="current-password">Mật khẩu hiện tại</label>
+                        <input class="form-control mb-2" id="current-password" name="currentPassword" type="password" autocomplete="current-password" required />
+                        <label class="form-label" for="new-password">Mật khẩu mới</label>
+                        <input class="form-control mb-1" id="new-password" name="newPassword" type="password" autocomplete="new-password" minlength="8" required aria-describedby="new-password-policy" />
+                        <p class="small text-muted mb-2" id="new-password-policy">Ít nhất 8 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</p>
+                        <label class="form-label" for="confirm-password">Nhập lại mật khẩu mới</label>
+                        <input class="form-control mb-3" id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required />
+                        <button class="btn btn-primary"><icon name="key-round" />Đổi mật khẩu</button>
+                    </form>
+                </section>
+            }
+        }
+        <section class="acc-card" id="sec-avatar" aria-labelledby="avatar-title">
+            <h2 class="section-head" id="avatar-title"><span class="section-icon" style="--tint:var(--blue)"><icon name="user" /></span>Ảnh đại diện</h2>
+            <partial name="_Avatar" model="Model" />
+            <p class="acc-desc">@(Model.AvatarSource == AvatarSource.Upload
+                ? "Đang dùng ảnh bạn tự tải lên. Ảnh chỉ hiện cho chính bạn."
+                : "Tải ảnh của bạn lên, hoặc dùng ảnh tài khoản Google (lấy mỗi lần bạn đăng nhập bằng Google, tải trực tiếp từ Google khi hiển thị).")</p>
+            <form method="post" asp-action="UploadAvatar" enctype="multipart/form-data" id="avatar-upload-form" class="mb-3">
+                <label class="btn btn-secondary" for="avatar-file"><icon name="upload" />Đổi ảnh đại diện</label>
+                <input class="visually-hidden" type="file" id="avatar-file" name="image" accept=".jpg,.jpeg,.png,.webp" data-max-bytes="5242880" required />
+                <span class="small text-muted ms-2">JPG, PNG hoặc WebP, tối đa 5 MB</span>
+                <noscript><button class="btn btn-primary ms-2">Tải lên</button></noscript>
+            </form>
+            <form method="post" asp-action="GoogleAvatarVisibility" data-action="GoogleAvatarVisibility" data-autosave="reload">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" id="google-avatar-visible" name="enabled" type="checkbox" value="true" checked="@(!Model.AvatarHidden)" />
+                    <label class="form-check-label" for="google-avatar-visible">Hiện ảnh đại diện</label>
+                </div>
+                <input type="hidden" name="enabled" value="false" />
+                <button class="btn btn-primary"><icon name="check" />Lưu tùy chọn</button>
+            </form>
+            @if (!string.IsNullOrEmpty(Model.AvatarUrl) || Model.AvatarSource == AvatarSource.Upload)
+            {
+                <form method="post" asp-action="RemoveAvatar" data-action="RemoveAvatar" data-confirm="Dùng ảnh mặc định (chữ cái đầu tên)? Nếu đăng nhập bằng Google, lần sau sẽ lấy lại ảnh Google." class="mt-3">
+                    <button class="btn btn-outline-danger"><icon name="trash-2" />Dùng ảnh mặc định</button>
+                </form>
+            }
+        </section>
+        <section class="acc-card" id="sec-appearance" aria-labelledby="appearance-title">
+            <div class="acc-card-top">
+                <h2 class="section-head" id="appearance-title"><span class="section-icon" style="--tint:var(--acid)"><icon name="sun" /></span>Giao diện</h2>
+                <span class="acc-state is-on acc-theme-on"><icon name="check" />Đã bật nền tối</span>
+                <span class="acc-state is-off acc-theme-off"><icon name="sun" />Chưa bật nền tối</span>
+            </div>
+            <p class="acc-desc">Chọn giao diện sáng hoặc tối dịu mắt khi ôn bài. Lựa chọn được giữ trên trình duyệt này.</p>
+            <div><button class="btn btn-outline-secondary theme-toggle" type="button" data-theme-toggle aria-pressed="false"><icon name="moon" />Giao diện tối</button></div>
+        </section>
+
+        @if (ViewData["Devices"] is DevicePage devices)
+        {
+            <partial name="_Devices" model="devices" />
+        }
+
+        <section class="acc-card" id="sec-reminders" aria-labelledby="reminders-title">
+            <div class="acc-card-top">
+                <h2 class="section-head" id="reminders-title"><span class="section-icon" style="--tint:var(--warn)"><icon name="bell" /></span>Nhắc việc</h2>
+                @if (reminderCount > 0)
+                {
+                    <span class="acc-state is-on"><icon name="check" />Đã bật (@reminderCount/2)</span>
+                }
+                else
+                {
+                    <span class="acc-state is-off"><icon name="bell-off" />Chưa bật</span>
+                }
+            </div>
+            <p class="acc-desc">Nhận lời nhắc bài sắp đến hạn và thẻ cần ôn mỗi ngày để giữ nhịp học tập.</p>
+            <div class="acc-stack">
+                <div class="acc-subcard">
+                    <div class="acc-subhead">
+                        <span class="fw-bold">Email nhắc việc hằng ngày</span>
+                        <span class="acc-state @(Model.EmailRemindersEnabled ? "is-on" : "is-off")"><icon name="@(Model.EmailRemindersEnabled ? "check" : "x")" />@(Model.EmailRemindersEnabled ? "Đã bật" : "Chưa bật")</span>
+                    </div>
+                    <form method="post" asp-action="EmailReminders" data-action="EmailReminders" data-autosave>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" id="email-reminders" name="enabled" type="checkbox" value="true" checked="@Model.EmailRemindersEnabled" />
+                            <label class="form-check-label" for="email-reminders">Nhận email nhắc việc</label>
+                        </div>
+                        <input type="hidden" name="enabled" value="false" />
+                        <p class="small text-muted mb-3">Tối đa một email tóm tắt mỗi ngày. Chuông và email bảo mật, lời mời, đặt lại mật khẩu vẫn hoạt động.</p>
+                        <button class="btn btn-primary"><icon name="mail" />Lưu tùy chọn</button>
+                    </form>
+                </div>
+
+                <div class="acc-subcard">
+                    <div class="acc-subhead">
+                        <span class="fw-bold">Chuông nhắc thẻ đến hạn ôn</span>
+                        <span class="acc-state @(Model.SrsBellEnabled ? "is-on" : "is-off")"><icon name="@(Model.SrsBellEnabled ? "check" : "x")" />@(Model.SrsBellEnabled ? "Đã bật" : "Chưa bật")</span>
+                    </div>
+                    <form method="post" asp-action="SrsBell" data-action="SrsBell" data-autosave>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" id="srs-bell" name="enabled" type="checkbox" value="true" checked="@Model.SrsBellEnabled" />
+                            <label class="form-check-label" for="srs-bell">Báo thẻ đến hạn ôn ở chuông</label>
+                        </div>
+                        <input type="hidden" name="enabled" value="false" />
+                        <p class="small text-muted mb-3">Tối đa một thông báo mỗi ngày sau 07:00 giờ Việt Nam. Tùy chọn này độc lập với email nhắc việc.</p>
+                        <button class="btn btn-primary"><icon name="bell" />Lưu tùy chọn chuông</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        @* (F11, 38A) mọi tài khoản không phải khách đều làm GV được; mục chuông chỉ hiện ở chế độ Giảng viên (chốt 12/11), lựa chọn đã lưu vẫn giữ. *@
+        @if (!Model.IsGuest && Model.CurrentMode == UserMode.Lecturer)
+        {
+            <section class="acc-card" id="sec-teaching-bell" aria-labelledby="teaching-bell-title">
+                <div class="acc-card-top">
+                    <h2 class="section-head" id="teaching-bell-title"><span class="section-icon" style="--tint:var(--pink)"><icon name="graduation-cap" /></span>Chuông khi giảng dạy</h2>
+                    @if (teachingBellCount > 0)
+                    {
+                        <span class="acc-state is-on"><icon name="check" />Đã bật (@teachingBellCount/2)</span>
+                    }
+                    else
+                    {
+                        <span class="acc-state is-off"><icon name="bell-off" />Chưa bật</span>
+                    }
+                </div>
+                <p class="acc-desc">Bật thông báo ở chuông khi học viên xin chuyển thiết bị hoặc rời màn hình làm bài.</p>
+                <p id="lecturer-bell-help" class="small text-muted mb-3">Hai tùy chọn này chỉ bật hoặc tắt thông báo ở chuông. Yêu cầu chuyển thiết bị, nút duyệt và dòng học viên được tô nổi bật vẫn luôn hiện ở trang bài giao (tab Theo dõi và Giám sát làm bài). Nếu tắt chuông và không mở trang bài giao, bạn sẽ không biết có học viên đang chờ chuyển thiết bị. Đồng hồ làm bài của học viên vẫn chạy. Thay đổi có hiệu lực từ thông báo tiếp theo.</p>
+                <div class="acc-stack">
+                    <div class="acc-subcard">
+                        <div class="acc-subhead">
+                            <span class="fw-bold">Học viên xin chuyển thiết bị</span>
+                            <span class="acc-state @(Model.DeviceChangeBellEnabled ? "is-on" : "is-off")"><icon name="@(Model.DeviceChangeBellEnabled ? "check" : "x")" />@(Model.DeviceChangeBellEnabled ? "Đã bật" : "Chưa bật")</span>
+                        </div>
+                        <form method="post" asp-action="DeviceChangeBell" data-action="DeviceChangeBell" data-autosave>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" id="device-change-bell" name="enabled" type="checkbox" role="switch" value="true" checked="@Model.DeviceChangeBellEnabled" aria-describedby="lecturer-bell-help" />
+                                <label class="form-check-label" for="device-change-bell">Báo ở chuông khi học viên xin chuyển thiết bị</label>
+                            </div>
+                            <input type="hidden" name="enabled" value="false" />
+                            <button class="btn btn-primary"><icon name="monitor-smartphone" />Lưu tùy chọn xin chuyển thiết bị</button>
+                        </form>
+                    </div>
+
+                    <div class="acc-subcard">
+                        <div class="acc-subhead">
+                            <span class="fw-bold">Học viên rời màn hình</span>
+                            <span class="acc-state @(Model.ScreenLeaveBellEnabled ? "is-on" : "is-off")"><icon name="@(Model.ScreenLeaveBellEnabled ? "check" : "x")" />@(Model.ScreenLeaveBellEnabled ? "Đã bật" : "Chưa bật")</span>
+                        </div>
+                        <form method="post" asp-action="ScreenLeaveBell" data-action="ScreenLeaveBell" data-autosave>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" id="screen-leave-bell" name="enabled" type="checkbox" role="switch" value="true" checked="@Model.ScreenLeaveBellEnabled" aria-describedby="lecturer-bell-help" />
+                                <label class="form-check-label" for="screen-leave-bell">Báo ở chuông khi học viên rời màn hình làm bài</label>
+                            </div>
+                            <input type="hidden" name="enabled" value="false" />
+                            <button class="btn btn-primary"><icon name="eye" />Lưu tùy chọn rời màn hình</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        }
+
+        @if (ViewData["ExternalLogins"] is ExternalLoginPage external)
+        {
+            <partial name="_ExternalLogins" model="external" />
+        }
+        @if (ViewData["Passkeys"] is PasskeyPage passkeys)
+        {
+            <partial name="_Passkeys" model="passkeys" />
+        }
+        @if (ViewData["TwoFactor"] is TwoFactorStatus twoFactor)
+        {
+            <partial name="_TwoFactor" model="twoFactor" />
+        }
+
+        <section class="acc-card" id="sec-gemini" aria-labelledby="gemini-title">
+            <div class="acc-card-top">
+                <h2 class="section-head" id="gemini-title"><span class="section-icon" style="--tint:var(--pink)"><icon name="sparkles" /></span>API key Gemini</h2>
+                @if (geminiLastFour != null)
+                {
+                    <span class="acc-state is-on"><icon name="check" />Đã bật</span>
+                }
+                else
+                {
+                    <span class="acc-state is-off"><icon name="x" />Chưa bật</span>
+                }
+            </div>
+            <p class="acc-desc">API key Gemini là mã riêng do Google cấp để bạn dùng trợ lý AI miễn phí với hạn mức riêng. Mã được bảo vệ khi lưu và không thể xem lại.</p>
+            <ol class="small ps-3 mb-3">
+                <li>Bấm <b>Lấy API key Gemini</b> và đăng nhập tài khoản Google (tab mới).</li>
+                <li>Bấm <b>Create API key</b> (tạo mã), rồi bấm <b>Copy key</b> (sao chép mã). API key Gemini thường bắt đầu bằng <code>AQ.</code>, loại cũ bắt đầu bằng <code>AIza</code>.</li>
+                <li>Quay lại đây, dán vào ô dưới và bấm <b>Lưu API key Gemini</b>. Hệ thống sẽ kiểm tra ngay.</li>
+            </ol>
+            <p class="mb-3"><a class="btn btn-outline-primary" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"><icon name="external-link" />Lấy API key Gemini <span class="visually-hidden">(mở Google AI Studio trong tab mới)</span></a></p>
+            @if (geminiLastFour != null)
+            {
+                <div class="acc-subcard mb-3">
+                    <p class="mb-2">Đã lưu API key Gemini kết thúc bằng <b>••••@geminiLastFour</b>.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form method="post" asp-controller="ApiKeys" asp-action="Check"><button class="btn btn-outline-secondary"><icon name="shield-check" />Kiểm tra API key Gemini</button></form>
+                        <form method="post" asp-controller="ApiKeys" asp-action="Delete" data-confirm="Xóa API key Gemini? Bạn vẫn làm bài bình thường."><button class="btn btn-outline-danger"><icon name="trash-2" />Xóa API key Gemini</button></form>
+                    </div>
+                </div>
+                @if (ViewData["GeminiNoticeAccepted"] is false)
+                {
+                    @* Key lưu trước khi có thông báo: trợ lý không gửi gì sang Gemini cho tới khi đồng ý. *@
+                    <form method="post" asp-controller="ApiKeys" asp-action="AcceptNotice" class="acc-subcard mb-3" id="gemini-notice">
+                        <p class="mb-2">Trước khi dùng trợ lý AI, hãy đọc thông báo dưới đây và đồng ý.</p>
+                        <partial name="_AiNotice" />
+                        <div class="consent-check">
+                            <input id="gemini-notice-existing" name="aiNoticeAccepted" type="checkbox" value="true" class="form-check-input" required />
+                            <label for="gemini-notice-existing" class="form-check-label">Tôi đã hiểu và đồng ý</label>
+                        </div>
+                        <button class="btn btn-primary">Đồng ý</button>
+                    </form>
+                }
+            }
+            <form method="post" asp-controller="ApiKeys" asp-action="Save">
+                <label class="form-label" for="gemini-api-key">Dán API key Gemini mới</label>
+                <input type="password" name="apiKey" id="gemini-api-key" class="form-control mb-2" autocomplete="off" spellcheck="false" maxlength="200" required />
+                <p class="small text-muted">Dán thừa dấu cách hoặc ngoặc kép cũng được, hệ thống tự lấy đúng phần cần dùng.</p>
+                <partial name="_AiNotice" />
+                <div class="consent-check">
+                    <input id="gemini-notice-new" name="aiNoticeAccepted" type="checkbox" value="true" class="form-check-input" required />
+                    <label for="gemini-notice-new" class="form-check-label">Tôi đã hiểu và đồng ý</label>
+                </div>
+                <button class="btn btn-primary"><icon name="key-round" />Lưu API key Gemini</button>
+            </form>
+            <div class="acc-links">
+                <a class="acc-inline-link" asp-controller="Ai" asp-action="Index"><icon name="message-square" />Lịch sử trợ lý</a>
+            </div>
+        </section>
+
+        <section class="acc-card is-danger" id="protective-lock" aria-labelledby="protective-lock-title">
+            <div class="acc-card-top">
+                <h2 class="section-head" id="protective-lock-title"><span class="section-icon" style="--tint:var(--bad)"><icon name="lock" /></span>Khóa bảo vệ</h2>
+            </div>
+            <p class="acc-desc">Tạm khóa tài khoản từ xa nếu nghi ngờ có người lạ đăng nhập trái phép.</p>
+            <p class="small text-muted mb-3">Nếu nghi tài khoản bị chiếm, bấm nút dưới để nhận email xác nhận; tài khoản chỉ bị khóa khi bạn bấm link trong email. Khi khóa, mọi thiết bị bị đăng xuất và các lượt đang làm dừng ngay. Bạn mở khóa bằng Quên mật khẩu.</p>
+            <form method="post" asp-action="RequestLock">
+                <button class="btn btn-outline-danger"><icon name="lock" />Gửi email xác nhận khóa tài khoản</button>
+            </form>
+        </section>
+
+        @* Pháp lý C9 (docs/PHAP_LY_VAN_BAN.md). *@
+        <section class="acc-card is-danger" id="sec-delete-account" aria-labelledby="delete-account-title">
+            <div class="acc-card-top">
+                <h2 class="section-head" id="delete-account-title"><span class="section-icon" style="--tint:var(--bad)"><icon name="trash-2" /></span>Xóa tài khoản</h2>
+            </div>
+            <p class="acc-desc mb-1">Khi xóa tài khoản, MindSprint AI xóa:</p>
+            <ul class="small mb-2">
+                <li>email, tên, ảnh và các cách đăng nhập;</li>
+                <li>API key Gemini;</li>
+                <li>danh sách máy;</li>
+                <li>lịch sử hỏi trợ lý AI;</li>
+                <li>thông báo;</li>
+                <li>bộ học bạn tạo.</li>
+            </ul>
+            <p class="small mb-1">Bài làm và điểm của bạn trong các lớp vẫn nằm trong bảng điểm của giảng viên, với tên "Người dùng đã xóa".</p>
+            <p class="small fw-bold mb-3">Không khôi phục được.</p>
+            @if (ViewData["DeleteBlock"] is string deleteBlock)
+            {
+                <p class="alert alert-warning small mb-2">@deleteBlock</p>
+                <button class="btn btn-danger" disabled><icon name="trash-2" />Xóa tài khoản</button>
+            }
+            else
+            {
+                <form method="post" asp-action="DeleteAccount" data-confirm="Gửi thư xác nhận xóa tài khoản tới email của bạn?">
+                    <button class="btn btn-danger"><icon name="trash-2" />Xóa tài khoản</button>
+                </form>
+            }
+        </section>
+    </div>
+</div>
+@section Scripts { <script src="~/js/passkey.js" asp-append-version="true"></script><script src="~/js/avatar-upload.js" asp-append-version="true"></script> }

@@ -1,0 +1,22 @@
+@model AdminLockModel
+@{ ViewData["Title"] = "Khóa tài khoản"; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Quản trị</a>
+<div class="col-lg-6">
+    <h1 class="h3 mt-2">Khóa tài khoản: @Model.DisplayName</h1>
+    <p>Các lượt đang làm sẽ dừng ngay và mọi thiết bị bị đăng xuất.</p>
+    <form method="post" asp-action="Lock">
+        <input type="hidden" asp-for="UserId" /><input type="hidden" asp-for="ReportId" />
+        @if (Model.ReportId != null)
+        { <input type="hidden" name="Kind" value="2" /><p>Khóa vi phạm từ báo cáo #@Model.ReportId</p> }
+        else
+        {
+            <label asp-for="Kind" class="form-label">Kiểu khóa</label>
+            <select asp-for="Kind" class="form-select mb-3"><option value="1">Khóa bảo vệ</option><option value="2">Khóa vi phạm</option></select>
+        }
+        <label asp-for="Reason" class="form-label">Lý do (bắt buộc khi khóa vi phạm)</label>
+        <textarea asp-for="Reason" class="form-control mb-3" maxlength="500" required="@(Model.ReportId != null)"></textarea>
+        <label asp-for="EndsAt" class="form-label">Hạn khóa vi phạm (giờ Việt Nam, có thể để trống)</label>
+        <input asp-for="EndsAt" type="datetime-local" class="form-control mb-3" />
+        <button class="btn btn-danger">Khóa tài khoản</button>
+    </form>
+</div>

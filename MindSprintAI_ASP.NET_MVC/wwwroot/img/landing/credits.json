@@ -1,0 +1,45 @@
+{
+  "note": "Credits for the photographs in this folder: photos.mjs credits prints the footer block for the ones the pages use.",
+  "photos": [
+    {
+      "file": "photo-d183.webp",
+      "files": [
+        "photo-d183.webp"
+      ],
+      "id": "d183",
+      "alt": "Sổ tay mở cùng bút chì trên bàn gỗ",
+      "by": "Jan Kahánek",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://commons.wikimedia.org/wiki/File:Tabel_day_1_(Unsplash).jpg",
+      "source": "Wikimedia Commons"
+    },
+    {
+      "file": "photo-c822.webp",
+      "files": [
+        "photo-c822.webp"
+      ],
+      "id": "c822",
+      "alt": "Hai bút chì trên nền vàng",
+      "by": "Joanna Kosinska",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "page": "https://commons.wikimedia.org/wiki/File:Minimal_pencils_on_yellow_(Unsplash).jpg",
+      "source": "Wikimedia Commons"
+    }
+  ],
+  "conversion": "Taste library fetch; JPEG to WebP, sharp 0.34.5, quality 82; no content edits.",
+  "illustrations": [
+    {
+      "file": "study-ai-solo.webp",
+      "alt": "Học viên ghi chép bên sổ tay và thẻ câu hỏi",
+      "variant": "A — một học viên ghi chép",
+      "source": "Tranh minh họa tạo bằng AI",
+      "tool": "Built-in image_gen",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 114492,
+      "edited": "2026-11-12: image_gen EDIT (bản v7) xoay cuốn vở cho nếp gấp hướng ra trước mặt người viết, mép dưới bìa thẳng; WebP chất lượng 0.9 bằng canvas trình duyệt"
+    }
+  ]
+}

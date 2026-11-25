@@ -1,0 +1,26 @@
+@model MasterySettings
+<div data-mastery-settings class="row g-2">
+    <div class="col-sm-6">
+        <label class="form-label" for="MasteryThreshold">Làm chủ</label>
+        <select class="form-select" name="MasteryThreshold" id="MasteryThreshold">
+            <option value="">Tắt</option>
+            @foreach (var threshold in new[] { 80, 90, 100 })
+            {
+                <option value="@threshold" selected="@(Model.MasteryThreshold == threshold)">@threshold%</option>
+            }
+        </select>
+    </div>
+    <div class="col-sm-6" data-mastery-dependent>
+        <label class="form-label" for="AnswersPerQuestion">Số lần trả lời mỗi câu</label>
+        <input class="form-control" type="number" id="AnswersPerQuestion" name="AnswersPerQuestion" min="1" value="@Model.AnswersPerQuestion" placeholder="Không giới hạn" aria-describedby="answers-per-question-help" />
+        <div id="answers-per-question-help" class="form-text">Tính cả lần đầu. Để trống là không giới hạn.</div>
+    </div>
+    <p class="col-12 small text-muted mb-0">Làm chủ: câu chọn đáp án nào trả lời sai thì học viên được trả lời lại cho tới khi đúng. Ví dụ quiz 10 câu, mốc 80%: trả lời đúng (kể cả đúng ở lần làm lại) 8 câu là đạt mốc. Câu điền chữ, điền số không tính.</p>
+    <div class="col-12" data-mastery-dependent>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="ScoreRetries" name="ScoreRetries" value="true" checked="@Model.ScoreRetries" />
+            <label class="form-check-label" for="ScoreRetries">Tính điểm khi làm lại</label>
+        </div>
+        <p class="text-warning small mb-0" data-mastery-warning>@AssignmentService.MasteryWarning</p>
+    </div>
+</div>

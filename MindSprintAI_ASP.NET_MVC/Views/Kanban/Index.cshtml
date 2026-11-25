@@ -1,0 +1,116 @@
+@using MindSprintAI_ASP.NET_MVC.Data.Entities
+@model List<KanbanTask>
+@{
+    ViewData["Title"] = "Công việc";
+    // Bố cục theo trang "Công việc" của nhóm (docs/giao-dien-nhom/10, 12, 13).
+    var columns = new[] { (KanbanStatus.Todo, "Chưa bắt đầu"), (KanbanStatus.Doing, "Đang làm"), (KanbanStatus.Done, "Hoàn thành") };
+    string PriorityLabel(KanbanPriority p) => p switch { KanbanPriority.Low => "Thấp", KanbanPriority.High => "Cao", _ => "Trung bình" };
+}
+<header class="kanban-head">
+    <h1>Công việc</h1>
+    <p>Sắp xếp việc cần làm, theo dõi tiến độ và hạn hoàn thành.</p>
+</header>
+
+<div class="kanban-toolbar">
+    <input id="kanban-search" class="form-control" type="search" placeholder="Tìm công việc..." aria-label="Tìm công việc">
+    <select id="kanban-priority" class="form-select" aria-label="Lọc mức ưu tiên">
+        <option value="">Tất cả mức ưu tiên</option>
+        <option value="High">Ưu tiên cao</option>
+        <option value="Medium">Ưu tiên trung bình</option>
+        <option value="Low">Ưu tiên thấp</option>
+    </select>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#task-modal" data-status="Todo"><icon name="plus" />Thêm công việc</button>
+</div>
+<p id="kanban-status" class="kanban-status" role="status" aria-live="polite">@(Model.Count == 0 ? "Chưa có công việc nào. Bấm \"Thêm công việc\" để bắt đầu." : "")</p>
+
+<div class="kanban-board" data-move="@Url.Action("Move")">
+    @foreach (var (status, label) in columns)
+    {
+        var tasks = Model.Where(t => t.Status == status).ToList();
+        <section class="kanban-column" aria-labelledby="col-@status">
+            <div class="kanban-column-head">
+                <h2 id="col-@status">@label <span class="kanban-count">@tasks.Count</span></h2>
+                <button type="button" class="kanban-round-btn" data-bs-toggle="modal" data-bs-target="#task-modal" data-status="@status" aria-label="Thêm việc vào cột @label" title="Thêm việc vào cột @label"><icon name="plus" /></button>
+            </div>
+            <div class="kanban-list" data-status="@status">
+                @if (tasks.Count == 0)
+                {
+                    <p class="kanban-empty">Không có công việc nào trong cột này</p>
+                }
+                @for (var i = 0; i < tasks.Count; i++)
+                {
+                    var t = tasks[i];
+                    <article class="kanban-card" draggable="true" data-id="@t.Id" data-priority="@t.Priority" data-search="@($"{t.Title} {t.Description}".ToLowerInvariant())">
+                        <div class="kanban-card-top">
+                            <span class="kanban-badge kanban-badge-@t.Priority.ToString().ToLowerInvariant()"><icon name="flag" />@PriorityLabel(t.Priority)</span>
+                            <div class="kanban-card-actions">
+                                <button type="button" class="kanban-round-btn" data-bs-toggle="modal" data-bs-target="#task-modal"
+                                        data-id="@t.Id" data-title="@t.Title" data-description="@t.Description" data-priority="@t.Priority"
+                                        data-status="@t.Status" data-due="@t.DueDate?.ToString("yyyy-MM-dd")" aria-label="Sửa công việc @t.Title" title="Sửa công việc"><icon name="pencil" /></button>
+                                <form method="post" asp-action="Delete" asp-route-id="@t.Id" data-confirm="Xóa công việc &quot;@t.Title&quot;?">
+                                    <button class="kanban-round-btn" aria-label="Xóa công việc @t.Title" title="Xóa công việc"><icon name="trash-2" /></button>
+                                </form>
+                            </div>
+                        </div>
+                        <h3 class="kanban-card-title">@t.Title</h3>
+                        @if (t.Description != null) { <p class="kanban-card-desc">@t.Description</p> }
+                        <div class="kanban-card-foot">
+                            @if (t.DueDate is { } due) { <span class="kanban-due" title="Hạn hoàn thành"><icon name="calendar" />@due.ToString("dd/MM/yyyy")</span> } else { <span></span> }
+                            <div class="kanban-card-actions">
+                                @* Nút mũi tên: dùng được bằng bàn phím và trên điện thoại (không kéo thả được). *@
+                                @if (status != KanbanStatus.Todo)
+                                {
+                                    <form method="post" asp-action="Move" asp-route-id="@t.Id"><input type="hidden" name="status" value="@(status - 1)" /><input type="hidden" name="position" value="10000" />
+                                        <button class="kanban-round-btn" aria-label="Chuyển về cột @columns[(int)status - 1].Item2" title="Chuyển về cột @columns[(int)status - 1].Item2">←</button></form>
+                                }
+                                @if (status != KanbanStatus.Done)
+                                {
+                                    <form method="post" asp-action="Move" asp-route-id="@t.Id"><input type="hidden" name="status" value="@(status + 1)" /><input type="hidden" name="position" value="10000" />
+                                        <button class="kanban-round-btn" aria-label="Chuyển sang cột @columns[(int)status + 1].Item2" title="Chuyển sang cột @columns[(int)status + 1].Item2">→</button></form>
+                                }
+                                <form method="post" asp-action="Move" asp-route-id="@t.Id"><input type="hidden" name="status" value="@status" /><input type="hidden" name="position" value="@Math.Max(i - 1, 0)" />
+                                    <button class="kanban-round-btn" aria-label="Đưa lên" title="Đưa lên" disabled="@(i == 0)">↑</button></form>
+                                <form method="post" asp-action="Move" asp-route-id="@t.Id"><input type="hidden" name="status" value="@status" /><input type="hidden" name="position" value="@(i + 1)" />
+                                    <button class="kanban-round-btn" aria-label="Đưa xuống" title="Đưa xuống" disabled="@(i == tasks.Count - 1)">↓</button></form>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+<div class="modal fade" id="task-modal" tabindex="-1" aria-labelledby="task-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <form method="post" asp-action="Create" id="task-form" data-create="@Url.Action("Create")" data-edit="@Url.Action("Edit")">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="task-modal-title">Tạo công việc mới</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label" for="task-title">Tiêu đề</label>
+                    <input class="form-control" id="task-title" name="Title" required maxlength="200" placeholder="Ví dụ: Ôn tập chương 3"></div>
+                <div class="mb-3"><label class="form-label" for="task-desc">Mô tả</label>
+                    <textarea class="form-control" id="task-desc" name="Description" maxlength="5000" rows="3"></textarea></div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6"><label class="form-label" for="task-priority">Ưu tiên</label>
+                        <select class="form-select" id="task-priority" name="Priority"><option value="Low">Thấp</option><option value="Medium" selected>Trung bình</option><option value="High">Cao</option></select></div>
+                    <div class="col-6"><label class="form-label" for="task-status">Trạng thái</label>
+                        <select class="form-select" id="task-status" name="Status">@foreach (var (s, l) in columns) { <option value="@s">@l</option> }</select></div>
+                </div>
+                <div><label class="form-label" for="task-due">Hạn hoàn thành</label>
+                    <input class="form-control" id="task-due" name="DueDate" type="date"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button class="btn btn-primary">Lưu công việc</button>
+            </div>
+        </form>
+    </div></div>
+</div>
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="~/js/kanban.js" asp-append-version="true"></script>
+}

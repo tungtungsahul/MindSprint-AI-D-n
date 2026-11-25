@@ -1,0 +1,25 @@
+@model AuthenticatorSetup
+@{ ViewData["Title"] = "Bật ứng dụng xác thực"; }
+<a class="btn btn-sm b-back" asp-action="Index"><icon name="chevron-right" class="b-back-icon" />Quay lại Tài khoản của tôi</a>
+<h1 class="h3">Bật ứng dụng xác thực (ví dụ Google Authenticator)</h1>
+@if (ViewData["AdminRequired"] is true)
+{
+    <p class="alert alert-warning">Quản trị viên cần ứng dụng xác thực hoặc passkey trước khi vào trang quản trị. Hãy cài đặt ứng dụng xác thực theo hướng dẫn dưới đây hoặc <a asp-action="Index" asp-fragment="passkey-title">thêm passkey ở trang Tài khoản</a>.</p>
+}
+<div class="card card-body col-lg-7">
+    <p>Mở ứng dụng xác thực, thêm tài khoản và quét ảnh mã vuông. Đặt giờ điện thoại tự động để mã khớp.</p>
+    <div id="authenticator-qr" data-authenticator-uri="@Model.Uri" class="mb-3" style="max-width: 240px" role="img" aria-label="Ảnh mã vuông để cài đặt ứng dụng xác thực"></div>
+    <p id="qr-error" class="text-danger" hidden>Không hiện được ảnh mã vuông. Hãy nhập mã bên dưới vào ứng dụng.</p>
+    <p>Không quét được? Nhập mã này vào ứng dụng: <code class="text-break user-select-all">@Model.Key</code></p>
+    <p class="small">Giữ kín ảnh mã vuông và mã cài đặt này. Tiếp theo, nhập một mã trong ứng dụng xác thực để xác nhận.</p>
+    <form method="post" asp-action="SetupAuthenticator" data-action="SetupAuthenticator">
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        <label for="setup-code" class="form-label">Mã 6 số trong ứng dụng xác thực</label>
+        <input id="setup-code" name="code" class="form-control mb-3" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9 ]{6,9}" maxlength="9" required />
+        <button class="btn btn-primary">Xác nhận và nhận mã dự phòng</button>
+    </form>
+</div>
+@section Scripts {
+    <script src="~/lib/qrcode-generator/qrcode.js" asp-append-version="true"></script>
+    <script src="~/js/two-factor.js" asp-append-version="true"></script>
+}

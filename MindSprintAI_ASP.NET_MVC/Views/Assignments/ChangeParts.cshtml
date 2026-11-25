@@ -1,0 +1,13 @@
+@model Assignment
+@{ ViewData["Title"] = "Đổi phần bắt buộc"; var names = (List<string>)ViewData["CompletedNames"]!; var parts = (RequiredParts)ViewData["Parts"]!; }
+<h1 class="h3">Đổi phần bắt buộc thành: @DisplayText.Of(parts)</h1>
+<p>Học viên chưa Hoàn thành sẽ phải làm xong phần bắt buộc mới thì mới được tính Hoàn thành.</p>
+@if (names.Count > 0)
+{
+    <p class="alert alert-warning">Đã có @names.Count học viên Hoàn thành trước khi đổi, họ giữ nguyên trạng thái:</p>
+    <ul>@foreach (var name in names) { <li>@name</li> }</ul>
+}
+<form method="post" asp-action="SaveParts" asp-route-id="@Model.Id">
+    <input type="hidden" name="parts" value="@((int)parts)" /><button class="btn btn-primary">Lưu thay đổi</button>
+    <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Hủy</a>
+</form>

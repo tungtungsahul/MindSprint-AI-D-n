@@ -1,0 +1,7 @@
+# Chi lap graph cho code ung dung.
+bin/
+obj/
+.vs/
+graphify-out/
+wwwroot/lib/
+*.csproj.user

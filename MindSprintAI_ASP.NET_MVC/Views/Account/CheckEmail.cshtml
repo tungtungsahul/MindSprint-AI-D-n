@@ -1,0 +1,20 @@
+@model string
+@inject IConfiguration Config
+@{
+    ViewData["Title"] = "Kiểm tra email";
+    // Địa chỉ gửi thật (Gmail của hệ thống) để người nhận tìm thư trong mục Thư rác; máy dev không cấu hình SMTP thì không hiện.
+    var sender = Config["Smtp:FromAddress"] ?? Config["Smtp:UserName"];
+}
+<div class="alert alert-info">@Model</div>
+<div class="alert alert-warning" id="spam-hint">
+    <p class="mb-1"><b>Không thấy thư?</b> Thư có thể nằm trong mục <b>Thư rác (Spam)</b> hoặc <b>Quảng cáo</b>.</p>
+    <ul class="mb-0">
+        @if (!string.IsNullOrWhiteSpace(sender)) { <li>Thư gửi từ <b>MindSprint AI</b> &lt;@sender&gt;.</li> }
+        <li>Nếu thấy thư trong Thư rác, hãy bấm <b>"Không phải thư rác" (Report not spam)</b>. Các thư sau của MindSprint AI sẽ vào hộp thư chính.</li>
+        <li>Kiểm tra lại địa chỉ email đã nhập, hoặc chờ vài phút rồi xem lại.</li>
+    </ul>
+</div>
+@if (User.Identity?.IsAuthenticated == true)
+{ <a class="btn btn-primary" asp-controller="Account" asp-action="Index">Về Tài khoản của tôi</a> }
+else
+{ <a asp-action="Login">Về trang đăng nhập</a> }

@@ -1,0 +1,49 @@
+@model RegisterModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+@* Cùng thẻ với trang Đăng nhập (theo hộp đăng nhập của bản nhóm). Đăng ký không đặt mật khẩu ở đây: link đặt mật khẩu gửi qua email. *@
+<div class="auth-shell">
+    <section class="auth-card" aria-labelledby="auth-title">
+        <header class="auth-card-header">
+            <div class="auth-logo-row"><span class="auth-logo-icon"><icon name="copy" /></span><span class="auth-logo-name">MindSprint AI</span></div>
+            <h1 class="auth-title" id="auth-title">Tạo tài khoản mới</h1>
+            <p class="auth-sub">Đăng ký miễn phí và bắt đầu học ngay hôm nay.</p>
+        </header>
+        <div class="auth-card-body">
+            <nav class="auth-tabs" aria-label="Đăng nhập hoặc tạo tài khoản">
+                <a class="auth-tab" asp-action="Login"><icon name="log-in" />Đăng nhập</a>
+                <a class="auth-tab active" asp-action="Register" aria-current="page"><icon name="user-plus" />Đăng ký</a>
+            </nav>
+            <form method="post">
+                <div asp-validation-summary="ModelOnly" class="auth-errors"></div>
+                <label asp-for="Email" class="visually-hidden">Email</label>
+                <div class="auth-field">
+                    <icon name="mail" class="auth-field-icon" />
+                    <input asp-for="Email" class="form-control auth-input" autocomplete="email" placeholder="Địa chỉ email" required maxlength="256" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small d-block mb-2"></span>
+                <label asp-for="DisplayName" class="visually-hidden"></label>
+                <div class="auth-field">
+                    <icon name="user" class="auth-field-icon" />
+                    <input asp-for="DisplayName" class="form-control auth-input" autocomplete="name" placeholder="Tên hiển thị của bạn" required maxlength="100" />
+                </div>
+                <span asp-validation-for="DisplayName" class="text-danger small d-block mb-2"></span>
+                <div class="consent-check">
+                    <input asp-for="AcceptTerms" type="checkbox" class="form-check-input" />
+                    <label asp-for="AcceptTerms" class="form-check-label">Tôi từ đủ 16 tuổi, đã đọc và đồng ý với <a asp-controller="Home" asp-action="Terms" target="_blank">Điều khoản sử dụng</a>.</label>
+                </div>
+                <span asp-validation-for="AcceptTerms" class="text-danger small d-block mb-2"></span>
+                <div class="consent-check">
+                    <input asp-for="AcceptPrivacy" type="checkbox" class="form-check-input" />
+                    <label asp-for="AcceptPrivacy" class="form-check-label">Tôi đồng ý để MindSprint AI xử lý dữ liệu của tôi như <a asp-controller="Home" asp-action="Privacy" target="_blank">Chính sách quyền riêng tư</a> mô tả.</label>
+                </div>
+                <span asp-validation-for="AcceptPrivacy" class="text-danger small d-block mb-2"></span>
+                <partial name="_Turnstile" />
+                <button class="btn btn-primary w-100 auth-submit"><icon name="user-plus" />Tạo tài khoản</button>
+            </form>
+            <p class="auth-note text-center"><icon name="mail" />MindSprint AI sẽ gửi link vào email này để bạn đặt mật khẩu.</p>
+            <p class="auth-foot">Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></p>
+        </div>
+    </section>
+</div>

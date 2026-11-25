@@ -1,0 +1,78 @@
+@model List<ClassMember>
+@{
+    var learner = ViewData["LearnerMode"] is true;
+    ViewData["Title"] = learner ? "Lớp của tôi" : "Lớp tôi dạy";
+    var teaching = Model.Where(m => m.Role != ClassRole.Student && m.Status == ClassMemberStatus.Active).ToList();
+    var tints = new[] { "var(--acid)", "var(--pink)", "var(--blue)", "var(--warn)" };
+    var summaries = ViewData["LecturerSummaries"] as IReadOnlyDictionary<int, LecturerClassroomSummary>;
+}
+@if (learner)
+{
+    var joined = Model.Where(m => m.Role == ClassRole.Student).ToList();
+    <div class="learn-head">
+        <div>
+            <h1 class="h3 mb-2 mindsprint-title">Lớp của tôi</h1>
+            <p class="learn-summary mb-0">@(joined.Count == 0 ? "Bạn chưa vào lớp nào." : $"Bạn đang học {joined.Count(m => m.Status == ClassMemberStatus.Active)} lớp.")</p>
+        </div>
+        <a class="btn btn-primary" asp-action="Join"><icon name="ticket" />Tham gia bằng mã</a>
+    </div>
+    @if (joined.Count > 0) { <partial name="_MyClasses" model="joined" /> }
+    else { <p>Xin giảng viên mã vào lớp hoặc quét mã QR trên bảng, rồi bấm <b>Tham gia bằng mã</b>.</p> }
+}
+else
+{
+<div class="b-class-list">
+<div class="learn-head">
+    <div>
+        <h1 class="h3 mb-2 mindsprint-title">Lớp tôi dạy</h1>
+        <p class="learn-summary mb-0">@(teaching.Count == 0 ? "Bạn chưa dạy lớp nào." : $"Bạn đang dạy {teaching.Count} lớp.")</p>
+    </div>
+</div>
+<form method="post" asp-action="Create" class="class-create row g-3 align-items-end">
+    <div class="col-12"><h2 class="h5 mb-0">Tạo lớp mới</h2></div>
+    <div class="col-md-6"><label for="new-class-name" class="form-label">Tên lớp mới</label><input id="new-class-name" name="name" maxlength="200" class="form-control" placeholder="Ví dụ: Lập trình Web – Nhóm 1" required /></div>
+    <div class="col-md-3">
+        <label for="new-class-policy" class="form-label">Cách vào lớp</label>
+        <select id="new-class-policy" name="joinPolicy" class="form-select" aria-label="Cách vào lớp">
+            <option value="@((int)ClassJoinPolicy.Immediate)">Vào ngay bằng mã</option>
+            <option value="@((int)ClassJoinPolicy.RequireApproval)">Chờ giảng viên duyệt</option>
+        </select>
+    </div>
+    <div class="col-md-3"><button class="btn btn-primary w-100"><icon name="plus" />Tạo lớp</button></div>
+</form>
+
+@if (teaching.Count == 0)
+{
+    <ol class="class-empty">
+        <li><b>Tạo lớp</b>Đặt tên lớp ở khung bên trên.</li>
+        <li><b>Gửi mã cho học viên</b>Mỗi lớp có mã và mã QR để chiếu lên bảng.</li>
+        <li><b>Giao bài</b>Chọn bộ học, đặt hạn nộp hoặc mở giờ kiểm tra.</li>
+    </ol>
+}
+<div class="class-grid">
+    @for (var i = 0; i < teaching.Count; i++)
+    {
+        var m = teaching[i];
+        var stats = summaries?.GetValueOrDefault(m.ClassroomId) ?? new LecturerClassroomSummary(m.ClassroomId, 0, 0, 0, 0);
+        <a class="class-card" asp-action="Details" asp-route-id="@m.ClassroomId">
+            <span class="class-initial" style="--tint:@tints[i % tints.Length]" aria-hidden="true">@(m.Classroom.Name.Trim().FirstOrDefault())</span>
+            <span class="class-name">@m.Classroom.Name</span>
+            <span class="class-tags">
+                <span class="badge bg-primary">@(m.Role == ClassRole.MainLecturer ? "Giảng viên chính" : "Giảng viên phụ")</span>
+                <span class="class-tag">@(m.Classroom.JoinPolicy == ClassJoinPolicy.RequireApproval ? "Chờ duyệt khi vào" : "Vào ngay bằng mã")</span>
+            </span>
+            <span class="class-stats">
+                <span><b>@stats.Students</b> học viên
+                    @if (stats.PendingStudents > 0) { <small> · @stats.PendingStudents chờ duyệt</small> }
+                </span>
+                <span><b>@stats.OpenAssignments</b> bài đang mở</span>
+                <span><b class="@(stats.NeedsReview > 0 ? "class-stats-attention" : null)">@stats.NeedsReview</b> cần xem</span>
+            </span>
+            @* Ghi rõ từng loại việc; trước đây chỉ có ở chú thích khi rê chuột, điện thoại không thấy. *@
+            @if (stats.Work?.Describe().ToList() is { Count: > 0 } parts) { <span class="class-review-parts">@string.Join(" · ", parts)</span> }
+            <span class="class-foot"><span>Tạo @VnTime.Format(m.Classroom.CreatedAt)</span><span class="class-open">Mở lớp →</span></span>
+        </a>
+    }
+</div>
+</div>
+}

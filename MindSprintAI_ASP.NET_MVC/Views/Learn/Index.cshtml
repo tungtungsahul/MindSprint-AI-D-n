@@ -1,0 +1,145 @@
+@model List<Assignment>
+@{
+    ViewData["Title"] = "Luyện tập";
+    var participations = (List<Participant>)ViewData["Participations"]!;
+    var classes = (List<ClassMember>)ViewData["Classes"]!;
+    CompletionStatus StatusOf(Assignment a) => participations.FirstOrDefault(x => x.AssignmentId == a.Id)?.CompletionStatus ?? CompletionStatus.NotStarted;
+    // Chỉ sắp xếp để trình bày: kiểm tra đang mở → còn hạn (gần nhất trước) → không hạn → đã quá hạn.
+    DateTime? DeadlineOf(Assignment a) => a.Mode == AssignmentMode.Test ? a.TestEndsAt : a.DueAt;
+    var now = DateTime.UtcNow;
+    int Rank(Assignment a) => DeadlineOf(a) is not { } d ? 2 : d <= now ? 3 : a.Mode == AssignmentMode.Test ? 0 : 1;
+    var open = Model.Where(a => StatusOf(a) != CompletionStatus.Completed)
+        .OrderBy(Rank).ThenBy(a => DeadlineOf(a) ?? DateTime.MaxValue).ToList();
+    // Chỉ bài còn làm được mới vào "Cần làm" và ô nổi bật; bài đã nộp chờ điểm và bài quá hạn tách nhóm riêng
+    // để không mời học viên bấm "Bắt đầu làm" vào bài đã hết giờ.
+    var waiting = open.Where(a => StatusOf(a) == CompletionStatus.SubmittedAwaitingScore).ToList();
+    var overdue = open.Where(a => !waiting.Contains(a) && Rank(a) == 3).ToList();
+    var todo = open.Where(a => !waiting.Contains(a) && !overdue.Contains(a)).ToList();
+    var done = Model.Where(a => StatusOf(a) == CompletionStatus.Completed).ToList();
+    var next = todo.FirstOrDefault();
+    string WhenText(Assignment a) => DeadlineOf(a) is { } past && past <= now ? "Đã hết hạn · " + VnTime.Format(past) : a.Mode == AssignmentMode.Test
+        ? (a.TestEndsAt == null ? "Chờ giảng viên bắt đầu" : "Kết thúc lúc " + VnTime.Format(a.TestEndsAt))
+        : a.DueAt == null ? "Không có hạn" : "Hạn " + VnTime.Format(a.DueAt);
+    bool Soon(Assignment a) => DeadlineOf(a) is { } d && d > DateTime.UtcNow && d - DateTime.UtcNow < TimeSpan.FromHours(24);
+}
+<div class="learn-head">
+    <div>
+        <h1 class="mindsprint-title mb-2">Luyện tập</h1>
+        <p class="learn-summary mb-0">
+            @if (Model.Count == 0)
+            {
+                @if (classes.Count == 0) { <text>Bạn chưa vào lớp nào.</text> }
+                else if (!classes.Any(m => m.Status == ClassMemberStatus.Active)) { <text>Bạn đang chờ giảng viên duyệt vào lớp. Khi được duyệt, bài của lớp sẽ hiện ở đây.</text> }
+                else { <text>Lớp của bạn chưa có bài nào. Khi giảng viên giao bài, bạn sẽ thấy ở đây và ở mục Thông báo.</text> }
+            }
+            else if (todo.Count == 0) { <text>Không còn bài nào cần làm ngay · đã xong <b>@done.Count</b> bài@(waiting.Count > 0 ? $" · {waiting.Count} bài chờ điểm" : "").</text> }
+            else { <text>Còn <b>@todo.Count</b> bài cần làm · đã xong <b>@done.Count</b> bài@(waiting.Count > 0 ? $" · {waiting.Count} bài chờ điểm" : "").</text> }
+        </p>
+        @if (Model.Count > 0)
+        {
+            var percent = done.Count * 100 / Model.Count;
+            <div class="learn-progress" role="img" aria-label="Đã xong @done.Count trên @Model.Count bài được giao">
+                <span class="learn-progress-bar" style="--p:@(percent)%"></span>
+            </div>
+            <p class="learn-progress-label">@done.Count/@Model.Count bài đã xong</p>
+        }
+    </div>
+    <div class="page-head-actions">
+        <a class="btn btn-primary" asp-controller="Classrooms" asp-action="Join"><icon name="ticket" />Tham gia bằng mã</a>
+    </div>
+</div>
+<partial name="_PracticeTabs" model="@("assigned")" />
+
+@if (Model.Count == 0 && classes.Count == 0)
+{
+    <section class="learn-empty">
+        <img src="~/img/landing/study-ai-solo.webp" width="960" height="640" alt="" loading="lazy" decoding="async" />
+        <div>
+            <h2 class="h4">Vào lớp để nhận bài đầu tiên</h2>
+            <ol class="learn-empty-steps">
+                <li>Xin giảng viên <b>mã vào lớp</b> hoặc quét mã QR trên bảng.</li>
+                <li>Bấm <b>Tham gia bằng mã</b> và nhập mã.</li>
+                <li>Bài được giao sẽ hiện ở đây, kèm hạn nộp.</li>
+            </ol>
+            <a class="btn btn-primary" asp-controller="Classrooms" asp-action="Join">Nhập mã vào lớp</a>
+        </div>
+    </section>
+}
+
+@if (next != null)
+{
+    var nextStatus = StatusOf(next);
+    <a class="learn-next" asp-action="Assignment" asp-route-id="@next.Id">
+        <span class="learn-next-tag">@(nextStatus == CompletionStatus.NotStarted ? "Bắt đầu làm" : "Làm tiếp")</span>
+        <span class="learn-next-title">@(next.Quiz?.Title ?? next.PaperTitle ?? "Thẻ ghi nhớ")</span>
+        <span class="learn-next-meta">@next.Classroom?.Name · @DisplayText.Of(next.Mode)</span>
+        <span class="learn-next-when @(Soon(next) ? "is-soon" : "")">@WhenText(next)@(Soon(next) ? " · sắp hết hạn" : "")</span>
+        <span class="btn learn-next-go"><icon name="play" />@(nextStatus == CompletionStatus.NotStarted ? "Bắt đầu làm" : "Làm tiếp")</span>
+    </a>
+}
+else if (Model.Count > 0)
+{
+    <section class="learn-clear" aria-labelledby="learn-clear-title">
+        <span class="learn-next-tag">Hết bài cần làm</span>
+        <h2 id="learn-clear-title" class="learn-clear-title">Bạn đã làm hết bài được giao.</h2>
+        <p class="mb-0">@(waiting.Count > 0 ? $"Còn {waiting.Count} bài đang chờ giảng viên công bố điểm. " : "")Có bài mới, MindSprint AI sẽ báo ở mục Thông báo.</p>
+    </section>
+}
+
+@{
+    async Task Card(Assignment a, string extra = "")
+    {
+        var status = StatusOf(a);
+        <a class="learn-card @(a.Mode == AssignmentMode.Test ? "is-test" : "") @extra" asp-action="Assignment" asp-route-id="@a.Id">
+            <span class="learn-card-top"><span class="learn-mode">@DisplayText.Of(a.Mode)</span><span class="badge @(status == CompletionStatus.NotStarted ? "bg-warning" : "bg-info")">@DisplayText.Of(status)</span></span>
+            <span class="learn-card-title">@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</span>
+            <span class="learn-card-class">@a.Classroom?.Name</span>
+            <span class="learn-card-when @(Soon(a) ? "is-soon" : "")">@WhenText(a)</span>
+            @if (extra == "is-overdue" && ViewData["SelfReviewAssignmentIds"] is HashSet<int> reviewIds && reviewIds.Contains(a.Id)) { <span class="d-review-available">Ôn lại được</span> }
+        </a>
+    }
+}
+
+@if (todo.Count > 1)
+{
+    <h2 class="learn-group">Cần làm <span>@(todo.Count - 1)</span></h2>
+    <div class="learn-grid">
+        @foreach (var a in todo.Skip(1)) { await Card(a); }
+    </div>
+}
+
+@if (waiting.Count > 0)
+{
+    <h2 class="learn-group">Chờ công bố điểm <span>@waiting.Count</span></h2>
+    <div class="learn-grid">
+        @foreach (var a in waiting) { await Card(a); }
+    </div>
+}
+
+@if (overdue.Count > 0)
+{
+    <details class="learn-done">
+        <summary><h2 class="learn-group mb-0">Đã quá hạn <span>@overdue.Count</span></h2></summary>
+        <div class="learn-grid mt-3">
+            @foreach (var a in overdue) { await Card(a, "is-overdue"); }
+        </div>
+    </details>
+}
+
+@if (done.Count > 0)
+{
+    <details class="learn-done">
+        <summary><h2 class="learn-group mb-0">Đã xong <span>@done.Count</span></h2></summary>
+        <ul class="learn-done-list">
+            @foreach (var a in done)
+            {
+                <li><a asp-action="Assignment" asp-route-id="@a.Id"><span class="learn-done-title">@(a.Quiz?.Title ?? a.PaperTitle ?? "Thẻ ghi nhớ")</span><span class="learn-card-class">@a.Classroom?.Name · @DisplayText.Of(a.Mode)</span><span class="badge bg-success">@DisplayText.Of(CompletionStatus.Completed)</span></a></li>
+            }
+        </ul>
+    </details>
+}
+
+@if (classes.Count > 0)
+{
+    <p class="learn-classes-link"><a class="btn btn-outline-secondary" asp-controller="Classrooms" asp-action="Index"><icon name="users" />Lớp của tôi (@classes.Count)</a></p>
+}

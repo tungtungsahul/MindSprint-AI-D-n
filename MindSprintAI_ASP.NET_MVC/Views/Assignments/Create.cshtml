@@ -1,0 +1,155 @@
+@model AssignmentCreateModel
+@{
+    ViewData["Title"] = "Giao bài";
+    var f = Model.Form;
+}
+<a class="btn btn-sm b-back" asp-controller="Classrooms" asp-action="Details" asp-route-id="@Model.Classroom.Id"><icon name="chevron-right" class="b-back-icon" />Quay lại @DisplayText.ClassName(Model.Classroom.Name)</a>
+<h1 class="h3 mb-3">Giao bài</h1>
+<partial name="_AssignKind" model="(Model.Classroom.Id, false)" />
+
+@if (Model.StudySets.Count == 0)
+{
+    <div class="alert alert-info">Chưa có bộ học. <a asp-controller="StudySets" asp-action="Index">Vào Bộ học</a> để soạn quiz hoặc thẻ ghi nhớ.</div>
+}
+else
+{
+    <form method="post" class="row g-3" style="max-width: 720px" id="assignment-form"
+          data-practice-preset="@System.Text.Json.JsonSerializer.Serialize(Model.PracticePreset)"
+          data-test-preset="@System.Text.Json.JsonSerializer.Serialize(Model.TestPreset)">
+        <input type="hidden" name="ClassroomId" value="@f.ClassroomId" />
+        @* Thứ tự theo việc GV làm: chọn bài → đặt giờ → cài đặt thêm (thu gọn). Trước đây khối giám sát máy nằm đầu trang. *@
+        <div class="col-12"><h2 class="h5 mb-0">1. Giao bài gì</h2></div>
+        <div class="col-sm-6">
+            <label class="form-label" for="Mode">Chế độ</label>
+            <select class="form-select" id="Mode" name="Mode" aria-describedby="mode-help">
+                <option value="1" selected="@(f.Mode == AssignmentMode.Practice)">Ôn tập</option><option value="2" selected="@(f.Mode == AssignmentMode.Test)">Kiểm tra</option>
+            </select>
+            <div id="mode-help" class="form-text">Ôn tập: học viên tự làm trước hạn, thấy đúng/sai ngay sau mỗi câu, có thể làm nhiều lượt. Kiểm tra: bạn bấm Bắt đầu, cả lớp làm theo một đồng hồ chung, không thấy đúng/sai khi đang làm; điểm và đáp án chỉ hiện khi bạn công bố.</div>
+        </div>
+        <div class="col-sm-6" id="assignment-form-kind">
+            <label class="form-label" for="Form">Hình thức</label><select class="form-select" id="Form" name="Form"><option value="1" selected="@(f.Form == AssignmentForm.QuizOnly)">Chỉ quiz</option><option value="2" selected="@(f.Form == AssignmentForm.FlashcardOnly)">Chỉ thẻ ghi nhớ</option><option value="3" selected="@(f.Form == AssignmentForm.Combined)">Kết hợp</option></select>
+        </div>
+        <div class="col-sm-6 d-none" id="required-parts-field"><label class="form-label" for="RequiredParts">Phần bắt buộc</label><select class="form-select" id="RequiredParts" name="RequiredParts"><option value="1" selected="@(f.RequiredParts == RequiredParts.Quiz)">Quiz</option><option value="2" selected="@(f.RequiredParts == RequiredParts.Flashcards)">Thẻ ghi nhớ</option><option value="3" selected="@(f.RequiredParts == RequiredParts.Both)">Cả hai</option></select><div class="form-text">Phần học viên phải làm xong mới được tính Hoàn thành. Phần còn lại là tự nguyện.</div></div>
+        <div class="col-12 d-none" id="study-set-field"><label class="form-label" for="StudySetId">Bộ học chứa thẻ</label><select class="form-select" id="StudySetId" name="StudySetId">@foreach (var set in Model.StudySets) { <option value="@set.Id" selected="@(set.Id == f.StudySetId)">@set.Title</option> }</select></div>
+        <div class="col-12 d-none" id="cards-after-due-field"><div class="form-check"><input class="form-check-input" type="checkbox" id="AllowFlashcardsAfterDue" name="AllowFlashcardsAfterDue" value="true" checked="@f.AllowFlashcardsAfterDue" /><input type="hidden" name="AllowFlashcardsAfterDue" value="false" /><label class="form-check-label" for="AllowFlashcardsAfterDue">Cho học thẻ sau hạn</label></div><p class="small text-muted">Bài kết hợp dùng thẻ trong bộ học chứa quiz được chọn. Học sau hạn không đổi trạng thái đã chốt.</p></div>
+        <div class="col-12" id="quiz-field">
+            <label class="form-label" for="QuizId">Quiz</label>
+            <select class="form-select" id="QuizId" name="QuizId" required>
+                @foreach (var q in Model.ReadyQuizzes)
+                {
+                    <option value="@q.Id" selected="@(q.Id == f.QuizId)">@q.Title</option>
+                }
+            </select>
+            @if (Model.ReadyQuizzes.Count == 0)
+            {
+                <p class="alert alert-warning mt-2 mb-0">Chưa có quiz nào sẵn sàng giao. Vào <a asp-controller="StudySets" asp-action="Index">Bộ học</a>, mở quiz rồi bấm "Sẵn sàng giao"; hoặc chọn Hình thức "Chỉ thẻ ghi nhớ" để giao thẻ ghi nhớ.</p>
+            }
+        </div>
+        <div class="col-12"><h2 class="h5 mb-0 mt-2">2. Thời gian và số lượt</h2></div>
+        <div class="col-sm-6 d-none" data-test-field>
+            <label class="form-label" for="DurationMinutes">Thời lượng (1–180 phút)</label>
+            <input class="form-control" id="DurationMinutes" name="DurationMinutes" type="number" min="1" max="180" value="@(f.DurationMinutes ?? 45)" disabled />
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label" for="OpensAt">Mở lúc (giờ Việt Nam, để trống = mở ngay)</label>
+            <input class="form-control" id="OpensAt" name="OpensAt" type="datetime-local" value="@f.OpensAt?.ToString("yyyy-MM-ddTHH:mm")" />
+        </div>
+        <div class="col-sm-6" data-practice-field>
+            <label class="form-label" for="DueAt">Hạn nộp (giờ Việt Nam, để trống = không có hạn)</label>
+            <input class="form-control" id="DueAt" name="DueAt" type="datetime-local" value="@f.DueAt?.ToString("yyyy-MM-ddTHH:mm")" />
+        </div>
+        <div class="col-sm-6" data-practice-field>
+            <label class="form-label" for="MaxAttempts">Số lượt tối đa (tính cả lượt đầu, tối đa 100; để trống = không giới hạn)</label>
+            <input class="form-control" id="MaxAttempts" name="MaxAttempts" type="number" min="1" max="100" value="@f.MaxAttempts" />
+        </div>
+        <div class="col-sm-6" data-practice-field>
+            <label class="form-label" for="ScoreSelection">Cách lấy điểm khi có nhiều lượt</label>
+            <select class="form-select" id="ScoreSelection" name="ScoreSelection">
+                @foreach (var v in Enum.GetValues<ScoreSelection>())
+                {
+                    <option value="@((int)v)" selected="@(v == f.ScoreSelection)">@DisplayText.Of(v)</option>
+                }
+            </select>
+        </div>
+        <details class="col-12 b-more-settings" open="@(!ViewData.ModelState.IsValid)">
+            <summary><span class="h5">3. Cài đặt thêm</span> <span class="small text-muted">điểm, đảo câu, ôn lại sau hạn, người ngoài lớp, điểm liệt, giám sát thiết bị làm bài</span></summary>
+            <div class="row g-3 mt-1">
+            <div class="col-sm-6">
+                <label class="form-label" for="ScoreScale">Thang điểm hiển thị</label>
+                <select class="form-select" id="ScoreScale" name="ScoreScale">
+                    @foreach (var v in Enum.GetValues<ScoreScale>())
+                    {
+                        <option value="@((int)v)" selected="@(v == f.ScoreScale)">@DisplayText.Of(v)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-6">
+                <label class="form-label" for="Rounding">Làm tròn điểm</label>
+                <select class="form-select" id="Rounding" name="Rounding">
+                    @foreach (var v in Enum.GetValues<RoundingMode>())
+                    {
+                        <option value="@((int)v)" selected="@(v == f.Rounding)">@DisplayText.Of(v)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="AudiencePolicy">Người nhận</label>
+                <select class="form-select" id="AudiencePolicy" name="AudiencePolicy">
+                    @foreach (var v in Enum.GetValues<AudiencePolicy>())
+                    {
+                        <option value="@((int)v)" selected="@(v == f.AudiencePolicy)">@DisplayText.Of(v)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 form-check ms-2">
+                <input class="form-check-input" type="checkbox" name="ShuffleQuestions" id="ShuffleQuestions" value="true" checked="@f.ShuffleQuestions" />
+                <input type="hidden" name="ShuffleQuestions" value="false" />
+                <label class="form-check-label" for="ShuffleQuestions">Đảo vị trí các câu hỏi</label>
+            </div>
+            <div class="col-12 form-check ms-2">
+                <input class="form-check-input" type="checkbox" name="ShuffleOptions" id="ShuffleOptions" value="true" checked="@f.ShuffleOptions" />
+                <input type="hidden" name="ShuffleOptions" value="false" />
+                <label class="form-check-label" for="ShuffleOptions">Đảo vị trí các đáp án lựa chọn</label>
+            </div>
+            <div class="col-12 form-check ms-2">
+                <input class="form-check-input" type="checkbox" id="IgnoreQuestionTimers" name="IgnoreQuestionTimers" value="true" checked="@f.IgnoreQuestionTimers" />
+                <input type="hidden" name="IgnoreQuestionTimers" value="false" />
+                <label class="form-check-label" for="IgnoreQuestionTimers">Bỏ giờ riêng từng câu trong bài giao này</label>
+            </div>
+            <div class="col-12" data-practice-field>
+                <h2 class="h5">Ôn lại sau hạn</h2>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="AllowQuizSelfReview" name="AllowQuizSelfReview" value="true" checked="@f.AllowQuizSelfReview" />
+                    <input type="hidden" name="AllowQuizSelfReview" value="false" />
+                    <label class="form-check-label" for="AllowQuizSelfReview">Cho học viên tự ôn lại quiz sau hạn (không tính điểm)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="AllowCardSelfReview" name="AllowCardSelfReview" value="true" checked="@f.AllowCardSelfReview" />
+                    <input type="hidden" name="AllowCardSelfReview" value="false" />
+                    <label class="form-check-label" for="AllowCardSelfReview">Cho học viên tự ôn lại thẻ sau hạn (không tính tiến độ)</label>
+                </div>
+            </div>
+            <div class="col-12"><partial name="_MasterySettings" model="@(new MasterySettings(f.MasteryThreshold, f.AnswersPerQuestion, f.ScoreRetries))" /></div>
+            <div class="col-12"><partial name="_StrangerPolicy" model="f.StrangerPolicy" /></div>
+            <div class="col-12" id="flashcard-mode-field"><partial name="_FlashcardMode" model="f.FlashcardMode" />
+                @* Người dùng chốt 15/11: mặc định giữ "lưu xong mới chuyển thẻ"; GV tự quyết cho ôn tiếp khi mất mạng. *@
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="AllowOfflineCards" name="AllowOfflineCards" value="true" checked="@f.AllowOfflineCards" />
+                    <input type="hidden" name="AllowOfflineCards" value="false" />
+                    <label class="form-check-label" for="AllowOfflineCards">Cho học viên ôn thẻ tiếp khi mất mạng (đánh giá lưu tạm trên máy, tự gửi khi có mạng lại)</label>
+                </div>
+            </div>
+            <div class="col-12"><partial name="_CriticalSettings" model="@(new CriticalSettingsView(f.CriticalSettings(), Model.CriticalQuestions))" /></div>
+            <div class="col-12"><partial name="_DeviceSettings" model="f" /></div>
+            </div>
+        </details>
+        <div class="col-12"><button class="btn btn-primary"><icon name="send" />Giao bài</button></div>
+    </form>
+    <form method="post" asp-action="ResetPreset" class="mt-3">
+        <input type="hidden" name="classroomId" value="@Model.Classroom.Id" />
+        <input type="hidden" name="mode" id="reset-assignment-mode" value="@((int)f.Mode)" />
+        <button class="btn btn-outline-secondary">Đặt lại cài đặt mặc định</button>
+        <span class="small text-muted">Chỉ đặt lại chế độ đang chọn. Các ô bạn vừa nhập trên trang sẽ mất. Cài đặt được nhớ sau khi giao bài thành công.</span>
+    </form>
+}
+@section Scripts { <script src="~/js/setting-presets.js" asp-append-version="true"></script><script src="~/js/assignment-cards.js" asp-append-version="true"></script><script src="~/js/mastery-settings.js" asp-append-version="true"></script><script src="~/js/critical-settings.js" asp-append-version="true"></script> }

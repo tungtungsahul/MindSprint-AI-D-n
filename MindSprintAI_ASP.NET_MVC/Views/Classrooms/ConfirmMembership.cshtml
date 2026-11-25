@@ -1,0 +1,18 @@
+@model MembershipConfirmation
+@{ ViewData["Title"] = Model.Leaving ? "Xác nhận rời lớp" : "Xác nhận xóa học viên"; }
+<div class="card card-body mx-auto" style="max-width: 40rem" role="alertdialog" aria-labelledby="membership-title" aria-describedby="membership-warning">
+    <h1 id="membership-title" class="h4">@ViewData["Title"]</h1>
+    <div id="membership-warning">
+        @foreach (var title in Model.AssignmentTitles)
+        {
+            <p>@(Model.Leaving ? $"Bạn đang làm bài {title}. Rời lớp thì lượt này kết thúc ngay. Các câu đã trả lời vẫn được chấm và lượt này tính là đã dùng." : $"{Model.Name} đang làm bài {title}. Xóa thì lượt này kết thúc ngay. Các câu đã trả lời vẫn được chấm và lượt này tính là đã dùng; nếu xóa nhầm, thêm lại vào lớp rồi dùng Hủy lượt.")</p>
+        }
+    </div>
+    <form method="post" asp-action="@(Model.Leaving ? "Leave" : "RemoveMember")" asp-route-id="@Model.ClassroomId" class="d-flex flex-wrap gap-2">
+        <input type="hidden" name="memberId" value="@Model.MemberId" />
+        <input type="hidden" name="confirmed" value="true" />
+        <button class="btn btn-danger" autofocus>@(Model.Leaving ? "Rời lớp và kết thúc lượt" : "Xóa và kết thúc lượt")</button>
+        @if (Model.Leaving) { <a class="btn btn-outline-secondary" asp-controller="Learn" asp-action="Index">Hủy</a> }
+        else { <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.ClassroomId">Hủy</a> }
+    </form>
+</div>

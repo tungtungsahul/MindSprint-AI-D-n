@@ -1,0 +1,15 @@
+{
+  "name": "MindSprint AI",
+  "short_name": "MindSprint",
+  "description": "Học mỗi ngày, tiến bộ một chút: thẻ ghi nhớ, quiz, lịch học và sổ tay AI.",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFEFA",
+  "theme_color": "#FFFEFA",
+  "icons": [
+    { "src": "/img/app/icon-192.jpg", "type": "image/jpeg", "sizes": "192x192" },
+    { "src": "/img/app/icon-512.jpg", "type": "image/jpeg", "sizes": "512x512" }
+  ]
+}
