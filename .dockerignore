@@ -1,4 +1,11 @@
-# Không đưa vào ảnh: kết quả build cũ, test, dữ liệu riêng trên máy dev (App_Data có mật khẩu thử, khóa mã hóa), cấu hình dev.
+# Dockerfile chỉ cần mã MVC và manifest công cụ .NET trong ngữ cảnh build.
+*
+!Dockerfile
+!dotnet-tools.json
+!MindSprintAI_ASP.NET_MVC/
+!MindSprintAI_ASP.NET_MVC/**
+
+# Loại đầu ra build, dữ liệu chạy tại máy và cấu hình riêng trong project MVC.
 **/bin/
 **/obj/
 **/App_Data/
@@ -7,7 +14,5 @@
 **/node_modules/
 **/appsettings.Development.json
 **/*.user
-graphify-out/
-.git/
-.vs/
-deploy/.env
+**/.env
+**/.env.*

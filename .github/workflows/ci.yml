@@ -1,4 +1,4 @@
-# Kiểm tra tự động trên GitHub (thay cho .github/workflows/ci-cd.yml của nhóm): mỗi lần push/PR thì
+# Kiểm tra bản MVC trên GitHub sau mỗi push hoặc pull request.
 # 1) build + chạy toàn bộ test với một SQL Server tạm (test tự tạo database MindSprintAI_Tests bằng migration thật),
 # 2) đóng gói Docker image đúng như lúc triển khai (không đẩy image đi đâu).
 # Không triển khai tự động: server cá nhân cập nhật bằng tay theo docs/TRIEN_KHAI_SERVER.md.
@@ -31,14 +31,14 @@ jobs:
       MINDSPRINT_TEST_DB: Server=localhost,1433;Database=MindSprintAI_Tests;User Id=sa;Password=Ci_Only_Pa55w0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True
       DOTNET_NOLOGO: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - run: dotnet restore MindSprintAI_ASP.NET_MVC.slnx
       - run: dotnet build MindSprintAI_ASP.NET_MVC.slnx --no-restore
       - run: dotnet test MindSprintAI_ASP.NET_MVC.slnx --no-build --logger "trx;LogFileName=test.trx"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: test-results
@@ -48,5 +48,5 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: docker build -t mindsprint:ci .
