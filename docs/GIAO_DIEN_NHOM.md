@@ -1,14 +1,16 @@
-# Giao diện chuẩn của nhóm MindSprint (đối chiếu bắt buộc)
+# Giao diện tham chiếu của nhóm MindSprint
 
-**Nguồn sự thật:** giao diện **đang chạy** của repo nhóm cũ `MindSprint-AI-D-n`, nhánh `main` (commit `452426d`, 13/11/2026), mở thật bằng trình duyệt ngày 15/11/2026 — **không** phải `frontend/tokens.css` (cam, 06/10) hay ảnh `design-reference/*-v39.png` (đã lỗi thời). File quyết định màu là `frontend/ui-refresh.css` (nạp sau cùng, 02–04/11).
+Ảnh tham chiếu lấy từ bản frontend/API tại commit `452426d` của `MindSprint-AI-D-n`, mở trong trình duyệt ngày 15/11/2026. Bảng màu bên dưới lấy từ `frontend/ui-refresh.css` của bản đó.
 
 Ảnh chụp: `docs/giao-dien-nhom/` (00–18). Trước khi sửa giao diện, mở ảnh tương ứng để so; sửa xong chụp màn hình MVC đặt cạnh.
 
-## Cách chạy lại bản nhóm để đối chiếu (chỉ đọc, không sửa repo nhóm)
+## Chạy bản tham chiếu
+
+Từ thư mục gốc của bản frontend/API tại commit `452426d`, chạy các lệnh sau.
 
 ```powershell
 # Backend .NET 8 chạy trên runtime .NET 10 của máy; DB riêng MindSprintGroupRef (tự tạo + dữ liệu mẫu).
-cd LapTrinhWeb\DangTrienKhai\MindSprint-AI-D-n\backend\MindSprint.Api
+cd backend\MindSprint.Api
 $env:DOTNET_ROLL_FORWARD='Major'; $env:ASPNETCORE_ENVIRONMENT='Development'; $env:ASPNETCORE_URLS='http://localhost:5000'
 $env:ConnectionStrings__Default='Server=localhost;Database=MindSprintGroupRef;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
 dotnet run --no-launch-profile
@@ -56,13 +58,9 @@ Font: tiêu đề **Manrope** 700–800 (chữ -0.03 → -0.045em), nội dung *
 | Điện thoại | Header thu gọn (tìm kiếm + nút + chuông + avatar); **thanh tab dưới đáy**: Hôm nay · Thư viện · Luyện tập · Công việc · Khác | 18 |
 | Chế độ tối | Nền `#191721`, khung `#25212f`, nút vẫn xanh chanh | 17 |
 
-## Chênh lệch MindSprintAI_ASP.NET_MVC so với bản nhóm (15/11/2026)
+## Giao diện bản MVC hiện tại
 
-1. ~~Màu cam~~ → đã đổi sang bảng màu trên (15/11). Font Manrope/DM Sans đã đổi.
-2. Sidebar thiếu **thẻ người dùng** dưới logo; tiêu đề nhóm chưa IN HOA giãn chữ; thiếu link "Trợ giúp" ở đáy.
-3. Header: avatar đang tròn + hiện vai trò (Học viên/Giảng viên); nhóm: avatar vuông bo góc nền xanh nhạt + email. Chưa có nút thư (thuộc Sổ tay AI — làm khi chuyển Sổ tay).
-4. Đầu trang chưa có nút nhỏ ẩn/hiện sidebar cạnh tiêu đề (MVC đặt nút này trong sidebar).
-5. Nút phụ: MVC nền xanh nhạt; nhóm nền trắng viền xám (hover xanh nhạt).
-6. Điện thoại: MVC dùng nút ☰ + menu thả; nhóm dùng **thanh tab dưới đáy**.
-7. Trang chủ người đã đăng nhập: MVC chuyển thẳng sang "Bài của tôi"; nhóm có trang chủ bảng điều khiển (lời chào, tiến độ hôm nay, mục tiêu, gợi ý, góc học tập) — làm cùng các chức năng nhóm (Tổng quan, streak).
-8. Kanban, Lịch học, Điểm yếu, Sổ tay AI, Tổng quan, Thư viện từ vựng hệ thống, Game ghép thẻ, Cài đặt (âm thanh, PWA): **chưa có** trong MVC — chuyển theo `docs/AI_HANDOFF.md`.
+- Thanh bên có thẻ người dùng, các nhóm điều hướng và liên kết **Trợ giúp**. Thanh trên có ô tìm kiếm, nút **Tham gia bằng mã**, lối tắt Sổ tay AI và chuông thông báo.
+- Điện thoại có thanh điều hướng dưới cùng gồm **Hôm nay**, **Thư viện**, **Luyện tập**, **Công việc** và **Khác**. Mục **Khác** mở toàn bộ menu.
+- Trang chủ học viên hiện tiến độ và mục tiêu hôm nay, gợi ý bộ học và bài cần làm. Trang chủ giảng viên có lối tắt tạo lớp, giao bài và xem việc cần xử lý.
+- Thư viện, từ vựng, luyện tập, Sổ tay AI, Tổng quan, Điểm yếu, Lịch học, Công việc và Cài đặt đều có trong bản MVC. [Bảng đối chiếu chức năng](DOI_CHIEU_CHUC_NANG.md)

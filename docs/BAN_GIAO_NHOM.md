@@ -14,7 +14,7 @@ dotnet run --project MindSprintAI_ASP.NET_MVC                    # hoặc bấm 
 ```
 
 - Mở địa chỉ in ra (Visual Studio dùng `http://localhost:5144`).
-- Muốn xem nhanh: trang Đăng nhập → **Dùng thử tài khoản demo** (có sẵn bộ học, sổ tay, công việc, lịch học). Nút này chỉ hiện khi chạy trên máy.
+- Muốn xem nhanh: trang Đăng nhập → **Dùng thử tài khoản demo** (có sẵn bộ học, sổ tay, công việc, lịch học). Nút này hiện khi chạy ở chế độ phát triển từ chính máy đang chạy ứng dụng.
 - Muốn dùng AI: trang **Tài khoản → API key Gemini**, dán key của chính mình (lấy miễn phí ở Google AI Studio). Key miễn phí có giới hạn lượt mỗi ngày; hết lượt thì app báo "đang hết lượt dùng".
 
 ## 2. Phần của từng bạn giờ nằm ở đâu
@@ -52,14 +52,14 @@ Cần biết: thêm/sửa/xóa là form thường nên vẫn chạy khi JS lỗi
 ### Chiến · API, triển khai
 | Bản cũ | Bản mới |
 |---|---|
-| Các controller `/api/...`, Dockerfile, Render | `Controllers/` (mỗi API cũ thành một action MVC, xem bảng 2 trong trang bằng chứng). Triển khai: **chưa làm**, sẽ lên server cá nhân |
+| Các controller `/api/...`, Dockerfile, Render | `Controllers/` (xem bảng 2 trong trang bằng chứng). Bộ triển khai MVC gồm `Dockerfile`, `deploy/docker-compose.yml` và hướng dẫn chạy migration. [Hướng dẫn triển khai máy chủ](TRIEN_KHAI_SERVER.md) |
 
 Cần biết: lỗi nghiệp vụ ném `BusinessException`; `BusinessExceptionFilter` tự trả `{ "error": "…" }` cho lời gọi `fetch`, hoặc hiện thông báo đỏ cho form thường.
 
 ### Sơn · QA, tài liệu
 | Bản cũ | Bản mới |
 |---|---|
-| Test case, báo cáo, UML | `tests/MindSprintAI_ASP.NET_MVC.Tests/` (81 tệp, 1811 test), `docs/KICH_BAN_DEMO.md`, `docs/cnpm/TAI_LIEU_KIEN_TRUC_MOI.md` (sơ đồ cho kiến trúc mới) |
+| Test case, báo cáo, UML | `tests/MindSprintAI_ASP.NET_MVC.Tests/`, `docs/KICH_BAN_DEMO.md`, `docs/cnpm/TAI_LIEU_KIEN_TRUC_MOI.md` (sơ đồ cho kiến trúc mới) |
 
 Cần biết: test dùng database riêng `MindSprintAI_Tests`, tự tạo; chạy `tools/run-tests.ps1` (PowerShell) hoặc `bash tools/run-tests.sh`.
 
@@ -90,7 +90,9 @@ Giả sử thêm "ghi chú cho công việc Kanban":
 6. `tests/.../KanbanTests.cs`: thêm một test cho quy tắc mới.
 7. Chạy toàn bộ test, rồi thử trên trình duyệt (sáng, tối, khổ điện thoại).
 
-## 5. Những gì còn lại
-- Thử tiếp các tính năng AI khi key hồi lượt: Nghe tổng quan, Flashcard / Trắc nghiệm làm thử trong Studio, Gia sư 4 chế độ, đọc chữ từ ảnh, nguồn từ link, "Tạo thẻ bằng AI" ở Thư viện, trợ lý AI trong bộ học.
-- Đăng nhập Google: cần mã ứng dụng (xem hướng dẫn riêng).
-- Triển khai lên server cá nhân, sau đó thử trên điện thoại thật (ôn thẻ khi mất mạng, cài ứng dụng).
+## 5. Kiểm tra trước buổi demo
+
+- Kiểm tra đổi tên hiển thị và đổi mật khẩu trong **Tài khoản**. Dùng hai phiên đăng nhập để xác nhận phiên đang dùng còn hiệu lực sau khi đổi mật khẩu.
+- Dùng key Gemini còn lượt để thử Nghe tổng quan, Flashcard và Trắc nghiệm trong Studio, Gia sư, đọc chữ từ ảnh, nguồn từ link và trợ lý AI trong bộ học.
+- Cấu hình mã ứng dụng nếu trình diễn đăng nhập Google. [Hướng dẫn đăng nhập Google](HUONG_DAN_DANG_NHAP_GOOGLE.md)
+- Mở bản triển khai trên điện thoại để kiểm tra ôn thẻ khi mất mạng và cài ứng dụng. [Hướng dẫn triển khai máy chủ](TRIEN_KHAI_SERVER.md)

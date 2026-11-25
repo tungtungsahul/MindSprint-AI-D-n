@@ -20,7 +20,13 @@ dotnet ef database update --project MindSprintAI_ASP.NET_MVC   # tạo database 
 dotnet run --project MindSprintAI_ASP.NET_MVC          # mở địa chỉ in ra trong terminal
 ```
 
-Chuỗi kết nối nằm ở `MindSprintAI_ASP.NET_MVC/appsettings.Development.json` (`Server=localhost`). Máy dùng SQL Express thì đổi thành `Server=localhost\\SQLEXPRESS`.
+Chuỗi kết nối mặc định dùng `Server=localhost` trong `MindSprintAI_ASP.NET_MVC/appsettings.Development.json`. Nếu dùng SQL Express, đặt `Server=localhost\\SQLEXPRESS` trong tệp JSON và truyền cùng chuỗi kết nối cho lệnh cập nhật cơ sở dữ liệu.
+
+```bash
+dotnet ef database update --project MindSprintAI_ASP.NET_MVC --connection "Server=localhost\SQLEXPRESS;Database=MindSprintAI;Trusted_Connection=True;TrustServerCertificate=True"
+```
+
+Sau khi cập nhật mã, chạy lại bước `dotnet ef database update` trước khi mở ứng dụng để áp dụng các migration còn thiếu, gồm `DoiTenHienThi` cho trang Tài khoản.
 
 ## 3. Xem nhanh bằng tài khoản demo (một cú bấm)
 
@@ -32,9 +38,13 @@ Chuỗi kết nối nằm ở `MindSprintAI_ASP.NET_MVC/appsettings.Development.
 
 Nút demo **chỉ hiện khi chạy ở chế độ phát triển và mở từ chính máy đó** — bản triển khai thật không có.
 
+Để trình diễn lớp học có sẵn bài giao và kết quả, quản trị viên mở **Quản trị → Tạo dữ liệu mẫu lớp học**. Tác vụ tạo 36 học viên mẫu, 2 giảng viên mẫu và 4 lớp. Tải lại trang để xem kết quả và mật khẩu của tài khoản mẫu.
+
 ## 4. Tài khoản thật và vai trò
 
 - Đăng ký tài khoản mới ở trang Đăng ký. Khi chạy trên máy, thư xác nhận được lưu thành tệp trong `App_Data/emails` (trang Đăng ký có link mở thư thử).
+- Trong **Tài khoản → Thông tin cá nhân**, đổi tên hiển thị bằng nút **Lưu tên**. Hai lần đổi tên cách nhau ít nhất 7 ngày.
+- Tài khoản đã có mật khẩu có thể đổi tại **Tài khoản → Đổi mật khẩu**. Thiết bị đang dùng giữ phiên đăng nhập và các thiết bị khác bị đăng xuất.
 - Đổi **Học viên ⇄ Giảng viên** ở menu tài khoản. Giảng viên tạo lớp, giao bài, xem báo cáo; học viên vào lớp bằng mã.
 - Email trong `Admin:Emails` của `appsettings.Development.json` có thêm trang **Quản trị**.
 
@@ -45,13 +55,16 @@ Các tính năng AI (tạo câu hỏi, Sổ tay AI, Gia sư) dùng **API key Gem
 ## 6. Chạy test
 
 ```bash
-bash MindSprintAI_ASP.NET_MVC/tools/run-tests.sh            # hoặc tools/run-tests.ps1 trên PowerShell
+bash MindSprintAI_ASP.NET_MVC/tools/run-tests.sh
 ```
 
-Test dùng database riêng `MindSprintAI_Tests` (tự tạo). Máy ít RAM: tắt app đang chạy trước khi chạy test.
+Trên PowerShell, chạy `.\MindSprintAI_ASP.NET_MVC\tools\run-tests.ps1` từ thư mục gốc. Bộ test tạo lại cơ sở dữ liệu riêng `MindSprintAI_Tests`. Có thể trỏ `MINDSPRINT_TEST_DB` đến một SQL Server kiểm thử khác với tên cơ sở dữ liệu này.
 
 ## 7. Tài liệu cho nhóm
 
-- `docs/KICH_BAN_DEMO.md` — kịch bản trình diễn 10 phút
-- `docs/DOI_CHIEU_CHUC_NANG.md` — đối chiếu tính năng với bản nhóm cũ và QuizEdu
-- `docs/GIAO_DIEN_NHOM.md` + `docs/giao-dien-nhom/` — giao diện chuẩn của nhóm
+- [Kịch bản trình diễn 10 phút](docs/KICH_BAN_DEMO.md)
+- [Bàn giao mã nguồn cho nhóm](docs/BAN_GIAO_NHOM.md)
+- [Đối chiếu tính năng với bản nhóm cũ và QuizEdu](docs/DOI_CHIEU_CHUC_NANG.md)
+- [Giao diện tham chiếu của nhóm](docs/GIAO_DIEN_NHOM.md)
+- [Triển khai và cập nhật trên máy chủ](docs/TRIEN_KHAI_SERVER.md)
+- [Bản frontend/API và hồ sơ đồ án trước khi chuyển sang MVC](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/9c86527291ae1e2ddf538fac804a371ba09e8a86)
