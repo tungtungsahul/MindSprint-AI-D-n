@@ -4,7 +4,7 @@ Mô hình: **Trình duyệt → Cloudflare → Cloudflare Tunnel (cloudflared tr
 
 > **Cổng 80/443 là gì?** Là "cửa" mặc định của web (80 = http, 443 = https). Vì dùng **Cloudflare Tunnel**, server tự kết nối ra Cloudflare nên **không cần mở cửa nào** trên server; Cloudflare lo phần https. App chỉ mở `127.0.0.1:8080` cho chính server.
 
-> **Server của nhóm (đã chạy Rekal / QuizEdu)** dùng cách riêng ở cuối tài liệu: mục "Server đã có Rekal". Phần Docker dưới đây dành cho server mới. Image đã được build thử ngày 17/11/2026 (có sẵn LibreOffice; đã đổi thử Word sang PDF trong container thành công); phần chạy container bằng `docker compose` chưa chạy thử trên server thật.
+> Server đã chạy Rekal dùng quy trình systemd ở cuối tài liệu. Phần Docker Compose dành cho máy chủ triển khai qua container. GitHub Actions đã dựng thành công ảnh của bản MVC tại `be7352f`. Khi cài trên máy đích, thực hiện các bước kiểm tra ở mục 5 và mục 7. [Kết quả CI](https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/runs/45703769120)
 
 ## 0. Chuẩn bị (làm trên trình duyệt, một lần)
 
@@ -17,8 +17,8 @@ Mô hình: **Trình duyệt → Cloudflare → Cloudflare Tunnel (cloudflared tr
 ## 1. Lấy code lên server
 
 ```bash
-git clone <địa chỉ repo nhóm> mindsprint && cd mindsprint      # lần đầu
-# hoặc: cd mindsprint && git pull                               # các lần sau
+git clone --branch main https://github.com/tungtungsahul/MindSprint-AI-D-n.git mindsprint
+cd mindsprint
 ```
 
 ## 2. Tìm thông tin container SQL Server
@@ -66,7 +66,7 @@ App tự khởi động lại khi server khởi động lại (`restart: unless-
 
 Cloudflare dashboard → **Zero Trust → Networks → Tunnels** → chọn tunnel của server → **Public Hostname → Add**:
 - *Subdomain/Domain*: tên miền của app
-- *Service*: `HTTP` — `localhost:8080`
+- *Service* dùng `HTTP` tại `127.0.0.1:8080`
 
 Mở `https://<tên-miền>` trên điện thoại và máy tính.
 
@@ -80,7 +80,9 @@ Mở `https://<tên-miền>` trên điện thoại và máy tính.
 ## 8. Cập nhật phiên bản mới
 
 ```bash
-cd mindsprint && git pull && cd deploy
+cd mindsprint
+git pull --ff-only
+cd deploy
 docker compose build
 docker compose run --rm --entrypoint sh mindsprint -c './efbundle --connection "$ConnectionStrings__Default"'
 docker compose up -d
@@ -108,7 +110,13 @@ docker compose start mindsprint
 
 Bản `.bak` nên chép sang máy khác (một bản sao lưu chỉ nằm trên chính server thì hỏng server là mất cả hai). Thử khôi phục một lần trên máy dev để chắc bản sao lưu dùng được.
 
-**Ổ dữ liệu `mindsprint-data`** (khóa mã hóa key Gemini và phiên đăng nhập, ảnh đại diện người dùng tải lên, nhật ký): `docker run --rm -v deploy_mindsprint-data:/d -v "$PWD":/b alpine tar czf /b/mindsprint-data.tgz -C /d .` (tên ổ xem bằng `docker volume ls`). Mất ổ này thì mọi người phải đăng nhập lại, dán lại key Gemini và tải lại ảnh đại diện.
+Sao lưu **ổ `mindsprint-data`** cùng với SQL Server. Ổ này chứa `App_Data`, gồm khóa mã hóa phiên đăng nhập và key Gemini, ảnh đại diện, tệp đề và tệp đính kèm bài nộp, cùng nhật ký. Dùng `docker volume ls` để lấy tên ổ thực tế rồi đặt tên đó vào lệnh sao lưu.
+
+```bash
+docker run --rm -v deploy_mindsprint-data:/d:ro -v "$PWD":/b alpine tar czf /b/mindsprint-data.tgz -C /d .
+```
+
+Khi diễn tập khôi phục, sử dụng cả bản sao SQL Server và `App_Data` tương ứng để kiểm tra đăng nhập và mở lại tệp bài nộp.
 
 ## 10. Lỗi thường gặp
 

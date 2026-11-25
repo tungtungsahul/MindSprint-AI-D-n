@@ -59,8 +59,9 @@ Nguồn đã đối chiếu: 201 action + 107 view + toàn bộ service/JS của
 | Không chặn tệp quá cỡ/sai loại trước khi gửi | phân công 5B | `data-max-bytes` + kiểm loại theo `accept` |
 | Chế độ tối: nút "Bắt đầu ngay" 1,7:1; chữ đỏ giao diện sáng 4,3:1 | đo WCAG 25 trang | đều ≥ 4,5:1 |
 
-Có ở nhóm nhưng **cố ý không chuyển**: số "phút học" (nhóm cộng 1 phút mỗi thẻ — số giả); bật/tắt lịch (API có, giao diện nhóm không gọi; GAP-04 của nhóm); `.doc/.docx` (máy chủ nhóm từ chối); job tự tạo task ôn từ câu sai (nhóm chưa làm); AI lập kế hoạch FR-23 (nhóm chưa làm, GAP-01).
-**Học khi mất mạng FR-21/22:** đã làm theo quyết định của người dùng 15/11 — tự học luôn được; bài giao mặc định giữ "lưu xong mới chuyển thẻ", GV tự bật "Cho học viên ôn thẻ tiếp khi mất mạng".
+Phạm vi MVC sử dụng số lượt ôn và câu đã trả lời, lịch tạo/sửa/xóa và bộ ôn từ điểm yếu. Tệp Word `.docx` được đọc qua `OfficeText`. Tự tạo công việc ôn tập và lập kế hoạch bằng AI thuộc các mục của bản đặc tả trước.
+
+**Học khi mất mạng (FR-21/22).** Người học có thể tiếp tục ôn trên trang tự học đã mở. Bài giao mặc định lưu đánh giá rồi mới chuyển thẻ. Giảng viên có thể bật **Cho học viên ôn thẻ tiếp khi mất mạng**.
 
 ## Rà lần 4 (15/11, tối) — từng cột database, từng service backend, NFR-01→14, CI/CD, giao diện
 Nguồn: bảng/cột cả hai project (QuizEdu 516/516 cột có đủ), mọi service + endpoint backend nhóm (53 endpoint, đều có chỗ tương ứng trừ các mục cố ý không chuyển dưới đây), `docs` NFR của nhóm, `.github/workflows`, `vocab_seed.json`, toàn bộ tab Cài đặt / hộp thoại thẻ / menu tài khoản.
@@ -86,3 +87,9 @@ Cố ý **không** chuyển (giữ cách hiện tại, có lý do):
 - **Đọc trang web cần chạy JavaScript (Playwright)**: phải cài trình duyệt Chromium trong ảnh Docker (nặng ~300 MB) và chạy trình duyệt ẩn trên server; chưa làm, chờ quyết định. Trang thường, PDF, Word, PowerPoint, Excel, RSS vẫn đọc được.
 - JWT/refresh token, bộ nhớ đệm kết quả Studio, `tutor/file` (giao diện nhóm không gọi), tệp `.doc` (máy chủ nhóm cũng từ chối), nút giả lập chuỗi ngày, "phút học" giả.
 - Hiệu năng NFR-01 chưa đo trên server thật (có sẵn `tools/loadtest`).
+
+## Đối chiếu bản MVC trên main (26/11/2026)
+
+Bản MVC trên `main` có trang hồ sơ với đổi tên hiển thị và đổi mật khẩu, giao diện 403, lớp học và dữ liệu mẫu, cùng thư viện hiển thị riêng quiz, thẻ và nguồn. Các yêu cầu và ca nghiệm thu của bản hiện tại được cập nhật trong Wiki. [Yêu cầu chức năng](https://github.com/tungtungsahul/MindSprint-AI-D-n/wiki/Yeu-cau-chuc-nang) · [Yêu cầu phi chức năng](https://github.com/tungtungsahul/MindSprint-AI-D-n/wiki/Yeu-cau-phi-chuc-nang)
+
+CI của `be7352f` chạy đạt 1.844 kiểm thử với SQL Server và dựng thành công ảnh Docker. [Kết quả CI](https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/runs/45703769120)

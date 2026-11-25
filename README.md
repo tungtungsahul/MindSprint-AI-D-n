@@ -12,7 +12,12 @@ ASP.NET Core MVC (.NET 10) · Razor Views · EF Core + SQL Server · ASP.NET Cor
 
 ## 2. Chạy lần đầu
 
-Mở terminal ở thư mục chứa `MindSprintAI_ASP.NET_MVC.slnx`:
+Lấy nhánh `main` của kho nhóm rồi mở terminal ở thư mục chứa `MindSprintAI_ASP.NET_MVC.slnx`.
+
+```bash
+git clone --branch main https://github.com/tungtungsahul/MindSprint-AI-D-n.git
+cd MindSprint-AI-D-n
+```
 
 ```bash
 dotnet tool restore                                   # cài dotnet-ef đúng phiên bản của project
@@ -65,6 +70,9 @@ Trên PowerShell, chạy `.\MindSprintAI_ASP.NET_MVC\tools\run-tests.ps1` từ t
 - [Kịch bản trình diễn 10 phút](docs/KICH_BAN_DEMO.md)
 - [Bàn giao mã nguồn cho nhóm](docs/BAN_GIAO_NHOM.md)
 - [Đối chiếu tính năng với bản nhóm cũ và QuizEdu](docs/DOI_CHIEU_CHUC_NANG.md)
+- [Kiến trúc ASP.NET Core MVC](docs/cnpm/TAI_LIEU_KIEN_TRUC_MOI.md)
+- [Yêu cầu chức năng trong Wiki](https://github.com/tungtungsahul/MindSprint-AI-D-n/wiki/Yeu-cau-chuc-nang)
+- [Yêu cầu phi chức năng trong Wiki](https://github.com/tungtungsahul/MindSprint-AI-D-n/wiki/Yeu-cau-phi-chuc-nang)
 - [Giao diện tham chiếu của nhóm](docs/GIAO_DIEN_NHOM.md)
 - [Triển khai và cập nhật trên máy chủ](docs/TRIEN_KHAI_SERVER.md)
 - [Bản frontend/API và hồ sơ đồ án trước khi chuyển sang MVC](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/9c86527291ae1e2ddf538fac804a371ba09e8a86)

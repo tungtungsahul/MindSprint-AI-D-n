@@ -35,7 +35,7 @@ Cần biết:
 ### Linh · Database, bảo mật
 | Bản cũ | Bản mới |
 |---|---|
-| EF Core + Npgsql, 12 bảng, JWT + refresh token | `Data/AppDbContext.cs`, `Data/Entities/` (49 bảng), `Data/Migrations/`; ASP.NET Identity + `Services/LoginService.cs`, `Services/DeviceSessionService.cs` (phiên thiết bị) |
+| EF Core + Npgsql, 12 bảng, JWT + refresh token | `Data/AppDbContext.cs`, `Data/Entities/` và `Data/Migrations/` (51 bảng nghiệp vụ và 8 bảng Identity). Đăng nhập và phiên thiết bị nằm ở `Services/LoginService.cs` và `Services/DeviceSessionService.cs`. |
 
 Cần biết:
 - **Migration chỉ thêm** bảng/cột (cột mới có mặc định hoặc cho phép rỗng), không xóa, không đổi tên.
@@ -78,17 +78,16 @@ Cần biết: test dùng database riêng `MindSprintAI_Tests`, tự tạo; chạ
 6. **Quy tắc nghiệp vụ** (ngưỡng, giới hạn, cách chấm): muốn đổi thì hỏi nhóm trưởng trước.
 7. **Chạy toàn bộ test trước khi đẩy code.** Máy ít RAM thì tắt app trước khi chạy test.
 
-## 4. Thêm một chức năng mới: ví dụ đi hết một vòng
+## 4. Ví dụ đọc một thay đổi từ cơ sở dữ liệu đến giao diện
 
-Giả sử thêm "ghi chú cho công việc Kanban":
+Luồng đổi tên hiển thị nằm trong các tệp sau.
 
-1. `Data/Entities/Kanban.cs`: thêm `public string? Note { get; set; }` (cho phép rỗng).
-2. `dotnet ef migrations add ThemGhiChuCongViec --project MindSprintAI_ASP.NET_MVC` → mở tệp migration, chắc chắn chỉ có `AddColumn`.
-3. `Services/KanbanService.cs`: kiểm độ dài, lưu.
-4. `Controllers/KanbanController.cs`: nhận thêm trường.
-5. `Views/Kanban/Index.cshtml`: thêm ô nhập.
-6. `tests/.../KanbanTests.cs`: thêm một test cho quy tắc mới.
-7. Chạy toàn bộ test, rồi thử trên trình duyệt (sáng, tối, khổ điện thoại).
+1. `Data/Entities/Accounts.cs` định nghĩa `DisplayNameChangedAt` để lưu thời điểm đổi gần nhất.
+2. `Data/Migrations/20261119051538_DoiTenHienThi.cs` thêm cột cho phép rỗng trên `AspNetUsers`.
+3. `Services/ProfileService.cs` kiểm tra tên, giới hạn mỗi lần đổi cách nhau ít nhất 7 ngày và ghi nhật ký.
+4. `Controllers/AccountProfile.cs` nhận biểu mẫu và đưa người dùng về trang Tài khoản sau khi lưu.
+5. `Views/Account/Index.cshtml` hiển thị ô đổi tên hoặc thời điểm có thể đổi tiếp.
+6. `tests/MindSprintAI_ASP.NET_MVC.Tests/HoSoCaNhanTests.cs` kiểm tra đổi tên và đổi mật khẩu.
 
 ## 5. Kiểm tra trước buổi demo
 

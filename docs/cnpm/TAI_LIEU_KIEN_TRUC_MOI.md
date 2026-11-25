@@ -1,6 +1,6 @@
 # Tài liệu kiến trúc MindSprint AI (bản ASP.NET Core MVC)
 
-> **Dành cho nhóm môn Công nghệ phần mềm (CNPM).** Tài liệu này giúp nhóm hiểu project mới khi đọc lại các sơ đồ cũ (`MindSprint-AI-D-n/docs/architecture/`). Nó **không thay** tài liệu nộp của nhóm CNPM; nhóm tự quyết có cập nhật sơ đồ của mình hay không. Mọi tên bảng, lớp, đường dẫn dưới đây lấy từ mã nguồn project mới ngày 15/11/2026.
+Tài liệu mô tả bản MVC đã gộp vào `main` tại `be7352f`, rà lại ngày 26/11/2026. Các bảng đối chiếu sử dụng sơ đồ frontend/API của nhóm tại mốc trước khi chuyển sang MVC. [Kiến trúc phiên bản trước](https://github.com/tungtungsahul/MindSprint-AI-D-n/tree/9c86527291ae1e2ddf538fac804a371ba09e8a86/docs/architecture)
 
 ## 1. Thay đổi lớn nhất trong một câu
 
@@ -9,11 +9,11 @@ Bản cũ là **hai phần tách rời** (giao diện HTML/JS gọi API bằng J
 | | Bản cũ (MindSprint-AI-D-n) | Bản mới (MindSprintAI_ASP.NET_MVC) |
 |---|---|---|
 | Kiến trúc | Frontend tĩnh (Vercel) + Web API .NET 8 (Render) | Một project ASP.NET Core MVC .NET 10 |
-| Database | PostgreSQL (Render) / SQL Server, 12 bảng | SQL Server, 49 bảng + bảng tài khoản của Identity |
-| Đăng nhập | JWT + refresh token | ASP.NET Identity (cookie) + phiên thiết bị, xác thực 2 bước, passkey, Google |
+| Database | PostgreSQL (Render) / SQL Server, 12 bảng | SQL Server, 59 bảng gồm 51 bảng nghiệp vụ và 8 bảng Identity |
+| Đăng nhập | JWT + refresh token | ASP.NET Core Identity (cookie), phiên thiết bị, xác thực hai bước, passkey, Google và Microsoft khi đã cấu hình |
 | Logic | Nhiều logic nằm trong `script.js` (218 KB, chạy trên trình duyệt) | Quy tắc nghiệp vụ nằm trong `Services/` (chạy trên máy chủ) |
 | Thời gian thực | Không | SignalR (`Hubs/LearnHub.cs`): thông báo, theo dõi bài làm |
-| Vai trò người dùng | Một loại người học | Học viên, Giảng viên, Quản trị viên, Khách vào lớp bằng mã |
+| Vai trò người dùng | Một loại người học | Học viên, Giảng viên, Quản trị viên và khách tham gia bài cho phép khách |
 
 ## 2. Sơ đồ thành phần (mới, bản cũ không có)
 
@@ -28,7 +28,7 @@ flowchart LR
     end
     DB[("SQL Server")]
     Gemini["Google Gemini API<br/>(key riêng của từng người)"]
-    GoogleId["Google Identity<br/>(đăng nhập Google)"]
+    IdentityProvider["Google Identity hoặc Microsoft Account<br/>(đăng nhập khi đã cấu hình)"]
     Smtp["Máy chủ thư SMTP<br/>(xác nhận email)"]
     Web["Trang web công khai<br/>(nguồn từ link)"]
     Browser -- "HTTP: trang + form + fetch" --> C
@@ -37,7 +37,7 @@ flowchart LR
     H --> S
     S --> Gemini
     S --> Web
-    C --> GoogleId
+    C --> IdentityProvider
     S --> Smtp
 ```
 
@@ -49,12 +49,12 @@ Giữ nguyên số UC1–UC18 của nhóm; UC19 trở đi là phần thêm từ 
 
 ```mermaid
 flowchart LR
-    Guest["Khách vào lớp bằng mã"]
+    Guest["Khách tham gia bài bằng mã"]
     Learner["Học viên"]
     Lecturer["Giảng viên"]
     Admin["Quản trị viên"]
     AI["Google Gemini"]
-    Google["Google Identity"]
+    IdentityProvider["Google Identity hoặc Microsoft Account"]
     Web["Nguồn URL công khai"]
     subgraph App["MindSprint AI (MVC)"]
         UC1(["UC1: Ôn thẻ lặp lại ngắt quãng"])
@@ -71,7 +71,7 @@ flowchart LR
         UC12(["UC12: Công việc Kanban"])
         UC13(["UC13: Chuỗi ngày học"])
         UC14(["UC14: Đăng ký, đăng nhập, đăng xuất"])
-        UC15(["UC15: Đăng nhập Google"])
+        UC15(["UC15: Đăng nhập Google hoặc Microsoft"])
         UC16(["UC16: Gửi bù đánh giá khi có mạng"])
         UC17(["UC17: Ôn thẻ khi mất mạng"])
         UC18(["UC18: Điểm yếu → tạo thẻ ôn / luyện tập"])
@@ -88,7 +88,7 @@ flowchart LR
     Lecturer --> UC2 & UC20 & UC21 & UC23 & UC24
     Admin --> UC25
     UC2 & UC8 & UC9 & UC10 --> AI
-    UC15 --> Google
+    UC15 --> IdentityProvider
     UC7 --> Web
 ```
 
@@ -101,7 +101,7 @@ flowchart LR
 
 ## 4. ERD (đối chiếu với `erd.mmd` cũ)
 
-Chỉ vẽ các bảng chính; danh sách đủ 49 bảng ở mục 4.2.
+Sơ đồ thể hiện các quan hệ chính. Mục 4.2 liệt kê 59 bảng trong mô hình EF Core.
 
 ```mermaid
 erDiagram
@@ -114,12 +114,14 @@ erDiagram
     Flashcards ||--o{ FlashcardReviews : "FlashcardId"
     Classrooms ||--o{ ClassMembers : "ClassroomId"
     AspNetUsers ||--o{ ClassMembers : "UserId"
-    Classrooms ||--o{ Assignments : "ClassroomId"
-    StudySets ||--o{ Assignments : "StudySetId"
+    Classrooms |o--o{ Assignments : "ClassroomId"
+    StudySets |o--o{ Assignments : "StudySetId"
     Assignments ||--o{ Participants : "AssignmentId"
     Participants ||--o{ Attempts : "ParticipantId"
     Attempts ||--o{ AttemptQuestions : "AttemptId"
     AttemptQuestions ||--o{ AnswerSubmissions : "AttemptQuestionId"
+    Attempts ||--o| PaperSubmissions : "AttemptId"
+    PaperSubmissions ||--o{ PaperFiles : "AttemptId"
     AspNetUsers ||--o{ KanbanTasks : "UserId"
     AspNetUsers ||--o{ StudySlots : "UserId"
     AspNetUsers ||--o{ Notebooks : "UserId"
@@ -132,6 +134,7 @@ erDiagram
         string Id PK
         string Email
         string DisplayName
+        datetime DisplayNameChangedAt "Thời điểm đổi tên gần nhất"
         int CurrentMode "Học viên / Giảng viên"
         bool IsGuest
     }
@@ -156,10 +159,22 @@ erDiagram
     }
     Assignments {
         int Id PK
-        int ClassroomId FK
-        int StudySetId FK
+        int ClassroomId FK "Có thể rỗng"
+        int StudySetId FK "Có thể rỗng"
         int Mode "Ôn tập / Kiểm tra"
+        int Form "Quiz / Thẻ / Kết hợp / Bài theo đề"
         bool AllowOfflineCards
+    }
+    PaperSubmissions {
+        long AttemptId PK, FK
+        string Text
+        decimal Score "Rỗng khi chờ chấm"
+    }
+    PaperFiles {
+        long Id PK
+        long AttemptId FK
+        string FileName
+        string StoredName
     }
     KanbanTasks {
         int Id PK
@@ -205,14 +220,17 @@ erDiagram
 | StudySchedules | StudySlots | Bỏ "bật/tắt" (giao diện cũ không dùng) |
 | WeakAreas | — | Tính ngay khi mở trang Điểm yếu |
 
-### 4.2 Đủ 49 bảng theo nhóm
+### 4.2 Các bảng trong mô hình hiện tại
+
+Mô hình có 51 bảng nghiệp vụ và 8 bảng Identity. `DoiTenHienThi` bổ sung cột `AspNetUsers.DisplayNameChangedAt`. [Mô hình EF Core](../../MindSprintAI_ASP.NET_MVC/Data/Migrations/AppDbContextModelSnapshot.cs) · [Migration hồ sơ](../../MindSprintAI_ASP.NET_MVC/Data/Migrations/20261119051538_DoiTenHienThi.cs)
 
 - **Học liệu:** StudySets, Quizzes, Questions, QuestionOptions, QuestionBlanks, BlankAnswers, QuestionRevisions, Flashcards, FlashcardProgresses, FlashcardReviews, SourceTexts
 - **Lớp và bài giao:** Classrooms, ClassMembers, JoinCodes, JoinCodeFailures, Invitations, ClassTransfers, Assignments, AssignmentChanges, Participants, Guests, RetakeRequests, UnhideRequests
-- **Làm bài và chấm:** Attempts, AttemptQuestions, AnswerSubmissions, Regrades, ScoreHistories, DeviceChangeRequests, ScreenLeaves
+- **Làm bài và chấm:** Attempts, AttemptQuestions, AnswerSubmissions, Regrades, ScoreHistories, DeviceChangeRequests, ScreenLeaves, PaperSubmissions, PaperFiles
 - **Tài khoản và an toàn:** KnownDevices, AccountLocks, UserApiKeys, UserSettingPresets, AdminAccessLogs, AdminRoleChanges, AuditEntries, ContentReports
 - **AI:** AiConversations, AiMessages, AiCitations, Notebooks, NotebookSources, NotebookNotes
 - **Tổ chức:** KanbanTasks, StudySlots, Notifications, Reminders, ReminderDigests
+- **Identity:** AspNetUsers, AspNetRoles, AspNetUserRoles, AspNetUserClaims, AspNetRoleClaims, AspNetUserLogins, AspNetUserTokens, AspNetUserPasskeys
 
 ## 5. Sơ đồ tuần tự: đăng nhập + ôn thẻ (thay `sequence-auth-flashcard.mmd`)
 

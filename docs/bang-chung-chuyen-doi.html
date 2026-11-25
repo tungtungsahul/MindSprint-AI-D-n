@@ -82,17 +82,17 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
 <div class="wrap">
   <header>
     <div class="eyebrow">MindSprint AI · ASP.NET Core MVC</div>
-    <h1>Bằng chứng chuyển đổi hai project cũ sang project nhóm mới</h1>
-    <p class="lede">Mỗi chức năng của QuizEduManager và của bản nhóm cũ (MindSprint-AI-D-n) được ghi: nằm ở đâu trong project mới, và đã được kiểm chứng bằng cách nào. Cập nhật 15/11/2026.</p>
+    <h1>Bằng chứng chuyển đổi sang MindSprint AI MVC</h1>
+    <p class="lede">Đối chiếu chức năng và kết quả kiểm thử của bản ASP.NET Core MVC trên nhánh main. Bảng ghi thời điểm của các thử nghiệm trình duyệt từ đợt chuyển đổi. Cập nhật ngày 26/11/2026. <a href="https://github.com/tungtungsahul/MindSprint-AI-D-n/pull/130">PR #130</a></p>
   </header>
 
   <section aria-labelledby="tong-quan">
     <h2 id="tong-quan">Tóm tắt</h2>
     <div class="stats">
-      <div class="stat"><b>1811/1811</b><span>test tự động đang qua (81 tệp test)</span></div>
-      <div class="stat"><b>201/201</b><span>action của QuizEdu có trong project mới</span></div>
-      <div class="stat"><b>19/23</b><span>yêu cầu FR của nhóm đủ; 3 có giới hạn, 1 nhóm chưa từng làm</span></div>
-      <div class="stat"><b>9 + 10</b><span>tab và hộp thoại của giao diện nhóm đều có chỗ tương ứng</span></div>
+      <div class="stat"><b>1.844/1.844</b><span>ca kiểm thử đạt với SQL Server</span></div>
+      <div class="stat"><b>59</b><span>bảng trong mô hình EF Core, gồm 8 bảng Identity</span></div>
+      <div class="stat"><b>30 và 14</b><span><a href="https://github.com/tungtungsahul/MindSprint-AI-D-n/wiki/Yeu-cau-chuc-nang">FR</a> và <a href="https://github.com/tungtungsahul/MindSprint-AI-D-n/wiki/Yeu-cau-phi-chuc-nang">NFR</a> trong Wiki</span></div>
+      <div class="stat"><b>2/2</b><span>job test và Docker đạt trên <a href="https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/runs/45703769120">CI của be7352f</a></span></div>
     </div>
     <div class="legend" aria-label="Chú thích nhãn">
       <span><span class="chip c-test">Có test</span> có test tự động trong <code>tests/</code></span>
@@ -113,7 +113,7 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
       <div><h3>Project mới</h3><ul>
         <li>Một project ASP.NET Core MVC (.NET 10), SQL Server, EF Core</li>
         <li>Thứ tự lớp: Database → Service (quy tắc nghiệp vụ) → Controller → View (Razor) + JS nhỏ theo trang</li>
-        <li>Đăng nhập ASP.NET Identity: phiên thiết bị, xác thực 2 bước, passkey, Google</li>
+        <li>ASP.NET Core Identity quản lý phiên thiết bị, xác thực hai bước, passkey, Google và Microsoft khi đã cấu hình.</li>
         <li>Giao diện theo bản nhóm: màu xanh chanh, menu, bố cục, đối chiếu ảnh <code>docs/giao-dien-nhom/01–18</code></li>
       </ul></div>
     </div>
@@ -174,7 +174,7 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
         <tr data-s="test"><td>Đọc DOCX / PPTX / XLSX / RSS (NotebookDocumentExtractor)</td><td class="where"><code>OfficeText.cs</code>, <code>NotebookUrlReader.cs</code>, <code>AiGenerateService.ExtractAsync</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Tải tệp và đường link đều dùng</span></td></tr>
         <tr data-s="test"><td>Bộ từ vựng phía backend (<code>vocab_seed.json</code>)</td><td class="where"><code>tools/vocab/extract-vocab.cjs</code> → <code>Data/Vocab/vocab.json</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Thêm 740 thẻ chưa có, tổng 2572</span></td></tr>
         <tr data-s="test web"><td>/healthz, /readyz (NFR-08), header bảo mật</td><td class="where"><code>Program.cs</code></td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã gọi thử: ok / ready, có nosniff + Referrer-Policy</span></td></tr>
-        <tr data-s="todo"><td>CI trên GitHub (ci-cd.yml)</td><td class="where"><code>.github/workflows/ci.yml</code>: build + test với SQL Server tạm + đóng gói Docker</td><td class="proof"><span class="chips"><span class="chip c-todo">Chưa kiểm</span></span><span class="note">Chạy lần đầu khi đẩy lên GitHub</span></td></tr>
+        <tr data-s="test"><td>CI trên GitHub</td><td class="where"><code>.github/workflows/ci.yml</code> build, chạy xUnit với SQL Server tạm và dựng ảnh Docker.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note"><a href="https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/runs/45703769120">CI của main đạt cả hai job tại be7352f</a></span></td></tr>
       </tbody>
     </table></div>
   </section>
@@ -208,7 +208,7 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
   </section>
 
   <section aria-labelledby="yeucau">
-    <h2 id="yeucau">4. Yêu cầu FR-01 → FR-23 của nhóm</h2>
+    <h2 id="yeucau">4. Yêu cầu chức năng của bản MVC</h2>
     <div class="table-wrap"><table>
       <thead><tr><th>Yêu cầu</th><th>Trong project mới</th><th>Bằng chứng</th></tr></thead>
       <tbody>
@@ -219,11 +219,14 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
         <tr data-s="test web"><td>FR-08 · Tài liệu → AI → chọn → lưu thẻ</td><td class="where">Trang xem trước + tách thẻ dự phòng</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Thử key thật 16/11</span></td></tr>
         <tr data-s="test web"><td>FR-09 → FR-16 · Sổ tay, nguồn, hỏi đáp, Studio, ghi chú, Gia sư, giọng nói</td><td class="where">Sổ tay AI</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã thử key thật 15–16/11</span></td></tr>
         <tr data-s="test web"><td>FR-17 · Kanban</td><td class="where">Công việc</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
-        <tr data-s="test skip"><td>FR-18 · Lịch định kỳ (bật/tắt)</td><td class="where">Tạo / sửa / xóa có; bật/tắt không</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-skip">Không chuyển</span></span></td></tr>
-        <tr data-s="test skip"><td>FR-19 · Ngày học, số thẻ / phút, chuỗi</td><td class="where">Thẻ + chuỗi có; phút không</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-skip">Không chuyển</span></span></td></tr>
+        <tr data-s="test"><td>FR-18 · Lịch định kỳ và nhắc giờ</td><td class="where">Lịch học tạo, sửa, xóa và nhắc theo cài đặt trình duyệt.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span></td></tr>
+        <tr data-s="test"><td>FR-19 · Hoạt động và chuỗi ngày học</td><td class="where">Lượt ôn và câu đã trả lời được tính theo ngày UTC+7.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span></td></tr>
         <tr data-s="test web"><td>FR-20 · Điểm yếu → luyện tập</td><td class="where">Điểm yếu</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
-        <tr data-s="test web todo"><td>FR-21, 22 · Học khi mất mạng, hàng đợi gửi bù</td><td class="where">Tự học luôn được; bài giao do GV bật</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span><span class="chip c-todo">Chưa kiểm</span></span></td></tr>
-        <tr data-s="skip"><td>FR-23 · AI đề xuất kế hoạch học</td><td class="where">Không có</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Bản nhóm chưa từng làm (GAP-01 trong tài liệu nhóm)</span></td></tr>
+        <tr data-s="test web todo"><td>FR-21, 22 · Ôn thẻ khi mất mạng, hàng đợi gửi bù</td><td class="where">Ôn tiếp trên trang đã mở. Bài giao áp dụng tùy chọn của giảng viên.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span><span class="chip c-todo">Chưa kiểm</span></span></td></tr>
+        <tr data-s="skip"><td>FR-23 · AI đề xuất kế hoạch học</td><td class="where">Yêu cầu trong đặc tả lịch sử của nhóm.</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span></td></tr>
+        <tr data-s="test"><td>FR-24–27 · Lớp, giao bài, làm bài và công bố kết quả</td><td class="where">Lớp học, Luyện tập và Báo cáo, gồm chấm tay bài theo đề.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">DuLieuMauLopTests và các ca lượt làm</span></td></tr>
+        <tr data-s="test"><td>FR-28 · Hồ sơ và bảo mật</td><td class="where">Tài khoản, đổi tên hiển thị và mật khẩu. Migration <code>DoiTenHienThi</code>.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">HoSoCaNhanTests</span></td></tr>
+        <tr data-s="test"><td>FR-29–31 · Thông báo, quản trị và soạn bộ học</td><td class="where">Thông báo và lời mời, trang Quản trị, soạn quiz và nhập mẫu Excel.</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Bao gồm dữ liệu mẫu lớp và trang 403</span></td></tr>
       </tbody>
     </table></div>
   </section>
@@ -238,7 +241,7 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
         <tr data-s="test"><td>Linh · Database, bảo mật</td><td class="where"><code>Data/AppDbContext.cs</code>, <code>Data/Migrations/</code>, <code>LoginService.cs</code>, <code>DeviceSessionService.cs</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">JWT được thay bằng Identity cookie (hợp với MVC)</span></td></tr>
         <tr data-s="test web"><td>TV3 · Kanban kéo thả</td><td class="where"><code>Controllers/KanbanController.cs</code>, <code>Services/KanbanService.cs</code>, <code>Views/Kanban/</code>, <code>wwwroot/js/kanban.js</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
         <tr data-s="test web"><td>Chiến · API, triển khai</td><td class="where"><code>Controllers/</code> (thay cho API REST)</td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span><span class="note">Đã chạy ở https://mindsprint.rekal.id.vn (deploy/setup-mindsprint.sh)</span></td></tr>
-        <tr data-s="test todo"><td>Sơn · QA, tài liệu</td><td class="where"><code>tests/</code> (81 tệp, 1811 test), <code>docs/KICH_BAN_DEMO.md</code>, <code>README.md</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-todo">Chưa kiểm</span></span><span class="note">UML, ERD, báo cáo CNPM vẫn mô tả kiến trúc cũ</span></td></tr>
+        <tr data-s="test"><td>Sơn · QA, tài liệu</td><td class="where"><code>tests/</code>, <code>docs/KICH_BAN_DEMO.md</code>, <code>README.md</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span></span><span class="note">Use case và ERD hiện tại trong <a href="cnpm/TAI_LIEU_KIEN_TRUC_MOI.md">tài liệu kiến trúc MVC</a></span></td></tr>
         <tr data-s="test web"><td>Hùng · Flashcard, lật thẻ 3D, kiểm tra dữ liệu, giao diện điện thoại</td><td class="where"><code>Views/Flashcards/Study.cshtml</code>, <code>js/flashcards.js</code>, <code>site.js</code> (<code>MindSprintFlip</code>, <code>data-max-bytes</code>), <code>css/mindsprint-pages-d.css</code></td><td class="proof"><span class="chips"><span class="chip c-test">Có test</span><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
       </tbody>
     </table></div>
@@ -254,13 +257,13 @@ footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--lin
         <tr data-s="web"><td>Đăng nhập Google</td><td class="where">Xong 16/11</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
         <tr data-s="skip"><td>Ôn ngắt quãng SM-2 của nhóm</td><td class="where">Giữ hộp Leitner của QuizEdu (bài giao, báo cáo GV, thẻ đến hạn đều dựa vào)</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Đổi thuật toán là đổi quy tắc nghiệp vụ, cần cả nhóm quyết</span></td></tr>
         <tr data-s="skip"><td>Đọc trang web phải chạy JavaScript (Playwright)</td><td class="where">Cần cài Chromium trong ảnh Docker (~300 MB)</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Chờ quyết định; trang thường, PDF, Office, RSS vẫn đọc được</span></td></tr>
-        <tr data-s="web"><td>Đưa lên Internet</td><td class="where">Xong 16/11: https://mindsprint.rekal.id.vn, chạy cùng server với Rekal</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
+        <tr data-s="web"><td>Thử bản triển khai đợt chuyển đổi</td><td class="where">Thử trên máy chủ dùng chung với Rekal ngày 16/11/2026.</td><td class="proof"><span class="chips"><span class="chip c-web">Đã thử Chrome</span></span></td></tr>
         <tr data-s="skip"><td>Dữ liệu trên bản nhóm đang chạy (Render)</td><td class="where">Bản Render không có người dùng thật</td><td class="proof"><span class="chips"><span class="chip c-skip">Không chuyển</span></span><span class="note">Đã xác nhận 15/11: không cần chuyển</span></td></tr>
       </tbody>
     </table></div>
   </section>
 
-  <footer>Chi tiết từng lần rà: <code>docs/DOI_CHIEU_CHUC_NANG.md</code> · cách chạy: <code>README.md</code>. Số test lấy từ lần chạy toàn bộ ngày 15/11/2026.</footer>
+  <footer>Số ca kiểm thử lấy từ CI của <code>be7352f</code> ngày 26/11/2026. <a href="DOI_CHIEU_CHUC_NANG.md">Đối chiếu từng lần rà</a> · <a href="../README.md">Cách chạy bản MVC</a> · <a href="https://github.com/tungtungsahul/MindSprint-AI-D-n/actions/runs/45703769120">Kết quả CI</a></footer>
 </div>
 
 <script>

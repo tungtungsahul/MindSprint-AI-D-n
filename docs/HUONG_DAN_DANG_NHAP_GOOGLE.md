@@ -47,5 +47,6 @@ Nhớ thêm `https://<tên-miền-server>/signin-google` vào *Authorized redire
 ## 4. Thử
 
 1. Trang Đăng nhập → **Đăng nhập bằng Google** → chọn một Gmail nằm trong *Test users*.
-2. Gmail chưa có tài khoản MindSprint thì app tạo tài khoản mới. Gmail trùng email một tài khoản đã có thì app báo "Email này đã có tài khoản": đăng nhập bằng cách cũ, rồi bấm **Nối với Google/Microsoft** ở trang Tài khoản (để không ai chiếm được tài khoản chỉ bằng cách đăng nhập Google trùng email).
-3. Lỗi `redirect_uri_mismatch`: địa chỉ ở bước 1.4 chưa khớp đúng địa chỉ app đang chạy (khác cổng, khác http/https).
+2. Với địa chỉ chưa đăng ký, đăng nhập Google tạo tài khoản MindSprint. Với tài khoản MindSprint đã xác nhận email, đăng nhập bằng cách cũ rồi chọn **Nối với Google** trong trang **Tài khoản**.
+3. Với tài khoản MindSprint đang chờ xác nhận email, chủ địa chỉ đã được Google xác minh có thể hoàn tất xác nhận bằng Google. Hệ thống yêu cầu chấp nhận lại chính sách và hủy mật khẩu đã đặt trước khi xác nhận.
+4. Khi Google báo `redirect_uri_mismatch`, kiểm tra lại giao thức, tên miền và cổng của địa chỉ ở bước 1.4.
