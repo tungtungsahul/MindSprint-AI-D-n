@@ -215,7 +215,7 @@ public partial class AttemptService
         var header = await db.Attempts.Where(a => a.Id == id).Select(a => new { a.ParticipantId, a.Participant.AssignmentId, a.Participant.UserId }).SingleOrDefaultAsync();
         if (header == null) return;
         await using var tx = await db.Database.BeginTransactionAsync();
-        await AttemptLock.LearnerAsync(db, header.AssignmentId, header.UserId);
+        await AttemptLock.LearnerAsync(db, header.AssignmentId, header.UserId ?? "participant:" + header.ParticipantId);
         await AttemptLock.ParticipantAsync(db, header.ParticipantId);
         var a = await AttemptLock.LoadAsync(db, id);
         // Đọc người làm trước khi khóa: khách vừa gộp vào tài khoản thì lượt đã sang người khác → thả khóa, đọc lại (13/11/2026).

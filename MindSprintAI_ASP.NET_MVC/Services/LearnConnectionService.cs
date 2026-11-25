@@ -69,7 +69,7 @@ public sealed class LearnConnectionService(AppDbContext db, AttemptService attem
         await using var tx = await db.Database.BeginTransactionAsync();
         var header = await db.Attempts.Where(a => a.Id == tracked.AttemptId)
             .Select(a => new { a.ParticipantId, a.Participant.AssignmentId, a.Participant.UserId }).SingleAsync();
-        await AttemptLock.LearnerAsync(db, header.AssignmentId, header.UserId);
+        await AttemptLock.LearnerAsync(db, header.AssignmentId, header.UserId ?? "participant:" + header.ParticipantId);
         await AttemptLock.ParticipantAsync(db, header.ParticipantId);
         var attempt = await AttemptLock.LoadAsync(db, tracked.AttemptId);
         // Đọc người làm trước khi khóa: khách vừa gộp vào tài khoản thì lượt đã sang người khác → thả khóa, đọc lại (13/11/2026).
@@ -99,7 +99,7 @@ public sealed class LearnConnectionService(AppDbContext db, AttemptService attem
         foreach (var id in ids)
         {
             await using var tx = await db.Database.BeginTransactionAsync();
-            await AttemptLock.LearnerAsync(db, id.AssignmentId, id.UserId);
+            await AttemptLock.LearnerAsync(db, id.AssignmentId, id.UserId ?? "participant:" + id.ParticipantId);
             await AttemptLock.ParticipantAsync(db, id.ParticipantId);
             var a = await AttemptLock.LoadAsync(db, id.Id);
             if (a.ParticipantId != id.ParticipantId) { await tx.RollbackAsync(); continue; } // lượt vừa đổi người làm (gộp khách)
